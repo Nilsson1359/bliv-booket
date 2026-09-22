@@ -75,6 +75,8 @@ footer{background:var(--stage);color:var(--ink3);border-color:var(--line)}
 .fx-sub{color:var(--ink3)}
 .swap .arrow{color:var(--accent)}
 .js .quote.strike.in{color:var(--ink3)}
+/* booking widget blends into dark card */
+.bk-body{padding:0}.bk-body::after{height:0}.bk-body iframe{background:var(--card);border-radius:0;min-height:100%}.bk-load{inset:0;border-radius:0;background:var(--card)}
 '''
 themes={
  'dark-green':dict(name='Mørk & grøn · Syne',
