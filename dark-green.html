@@ -635,47 +635,49 @@ footer .legal a{color:inherit;text-decoration:none;border-bottom:1px solid rgba(
 /* ===== DARK THEME OVERRIDES ===== */
 :root{color-scheme:dark}
 body{background:var(--bg);color:var(--ink)}
-body::before{mix-blend-mode:screen;opacity:.18}
-.nav.scrolled{background:color-mix(in srgb,var(--bg) 82%,transparent)}
+body::before{mix-blend-mode:screen;opacity:.16}
+.nav.scrolled{background:color-mix(in srgb,var(--bg) 84%,transparent)}
 .hero::before{background:conic-gradient(from 165deg at 50% 0%,transparent 0deg,color-mix(in srgb,var(--accent) 22%,transparent) 12deg,transparent 30deg)}
 .hero-blob.a{background:color-mix(in srgb,var(--accent) 18%,var(--bg))}
-.tagpill{background:var(--card);border-color:var(--line2);color:var(--ink)}
+.bg-stage::before{background:radial-gradient(ellipse 34% 60% at 50% 0%,color-mix(in srgb,var(--accent) 26%,transparent),color-mix(in srgb,var(--accent) 6%,transparent) 45%,transparent 70%)}
+.final .glow{background:radial-gradient(closest-side,color-mix(in srgb,var(--accent) 18%,transparent),transparent 70%)}
+/* text on stage sections */
+.bg-stage,.bg-stage h2,.bg-stage h3,.bg-stage .big,.bg-stage .bigserif,.talent-lines p,.tl li,.final h2,.fx-body .bigserif{color:var(--ink)}
+.bg-stage .lead,.talent-lines p.sm,.final p{color:var(--ink2)}
+.bg-stage .eyebrow,.final h2 em{color:var(--accent2)}
+.bg-stage .dim{color:var(--ink3)}
+/* pills, buttons */
+.tagpill,.hero-tag .pill{background:var(--card);border-color:var(--line2);color:var(--ink)}
 .tagpill.dark{background:transparent;border-color:color-mix(in srgb,var(--accent) 45%,transparent);color:var(--accent2)}
-.hero-tag .pill{background:var(--card);color:var(--ink)}
-.btn{background:var(--accent);color:#0B0F0D}
+.btn,.btn.light,.btn.lg{background:var(--accent);color:#0B0F0D}
 .btn::before{background:var(--ink)}
 .btn:hover{color:var(--bg)}
 .btn.ghost{background:transparent;color:var(--ink);border-color:var(--line2)}
 .btn.ghost::before{background:var(--accent)}
 .btn.ghost:hover{color:#0B0F0D}
-.btn.light{background:var(--accent);color:#0B0F0D}
-.btn.light::before{background:var(--ink)}
 .nav .btn{background:var(--ink);color:var(--bg)}
 .nav .btn::before{background:var(--accent)}
 .nav .btn:hover{color:#0B0F0D}
-.hl,.mark{background:linear-gradient(transparent 60%,color-mix(in srgb,var(--accent) 35%,transparent) 60%,color-mix(in srgb,var(--accent) 35%,transparent) 95%,transparent 95%)}
+/* highlights */
+.hl,.mark,.story .letter .mark{background:linear-gradient(transparent 62%,color-mix(in srgb,var(--accent) 38%,transparent) 62%,color-mix(in srgb,var(--accent) 38%,transparent) 94%,transparent 94%)!important;color:var(--ink)}
+/* surfaces */
 .ph .lbl{background:color-mix(in srgb,var(--bg) 80%,transparent);color:var(--ink2)}
 .vsl-fb{color:var(--ink)}
 .vsl-fb .play{background:var(--accent);color:#0B0F0D}
-.pola{background:var(--card);box-shadow:0 30px 50px -30px rgba(0,0,0,.8)}
+.pola{background:var(--sand);box-shadow:0 30px 50px -30px rgba(0,0,0,.8)}
 .pola .cap,.pola .yr{color:var(--ink)}
-.final h2{color:var(--ink)}
-.final h2 em{color:var(--accent2)}
-.fx-body .bigserif{color:var(--ink)}
+.ck{background:var(--sand)}
 .ck.ink{background:var(--accent)}
 .ck.ink svg{stroke:#0B0F0D}
-.dg.dark{background:var(--stage2);border-color:var(--line2)}
-.dg{background:var(--card)}
-.kpi{background:var(--card)}
-.eqbig{background:var(--card)}
-.notif{background:var(--card)}
-.tcard,.ov,.pc,.checks li,.qcloud div,.plist div,.done div,.mayb div,.cannot div,.invest div,.tpbadge,.steps>div{background:var(--card)}
-.pc.sand,.cmp div,.fsteps li,.card .two-lists .pc{background:var(--sand)}
+.dg,.dg.dark{background:var(--card);border-color:var(--line2)}
+.kpi,.eqbig,.notif,.tcard,.ov,.pc,.checks li,.qcloud div,.plist div,.done div,.mayb div,.cannot div,.invest div,.tpbadge,.card,.monday{background:var(--card);border-color:var(--line2)}
+.pc.sand,.ov-s,.cmp div,.fsteps li,.card .two-lists .pc,.tcard .av,.qcloud div::before,.steps div::before,.kbar,.notif .dot{background:var(--sand)}
+.pc.sand{border-color:transparent}
 .pc.ink,.cmp div.on,.fsteps li.on,.ov-pill{background:var(--ink);color:var(--bg)}
-.cmp div.on .k,.fsteps li.on span{color:var(--accentT)}
-.pc.ink .eyebrow{color:var(--accentT)!important}
+.cmp div.on .k,.fsteps li.on span,.pc.ink .eyebrow,.swap .pc.ink .mono{color:var(--accentD)!important}
+.cmp div.on small{color:color-mix(in srgb,var(--bg) 70%,transparent)}
 .pc.ink .bigserif,.pc.ink .big,.pc.ink p,.hope .bigserif{color:var(--bg)!important}
-.pc.ink .bigserif em,.hope .bigserif em{color:var(--accentT)!important}
+.pc.ink .bigserif em,.hope .bigserif em{color:var(--accentD)!important}
 .pc.ink .btn{background:var(--bg);color:var(--ink)}
 .pc.ink .btn::before{background:var(--accent)}
 .pc.ink .btn:hover{color:#0B0F0D}
@@ -683,26 +685,31 @@ body::before{mix-blend-mode:screen;opacity:.18}
 .chain .pill{border-color:color-mix(in srgb,var(--bg) 25%,transparent);background:color-mix(in srgb,var(--bg) 8%,transparent);color:var(--bg)}
 .chain .arr{background:color-mix(in srgb,var(--bg) 30%,transparent)}
 .chain .arr::after{border-left-color:color-mix(in srgb,var(--bg) 40%,transparent)}
-.chain .arr i{background:var(--accentT)}
-.card{background:var(--card);border-color:var(--line2);box-shadow:0 -24px 60px -34px rgba(0,0,0,.8)}
-.monday{background:var(--card);color:var(--ink);box-shadow:0 40px 80px -40px rgba(0,0,0,.9)}
+.chain .arr i{background:var(--accentD)}
+.card{box-shadow:0 -24px 60px -34px rgba(0,0,0,.8)}
+.monday{color:var(--ink);box-shadow:0 40px 80px -40px rgba(0,0,0,.9)}
+.talent .monday .stage-tag{color:var(--ink3)}
 .stage-tag.off .live::before{background:var(--ink3)}
-.bg-stage .eyebrow{color:var(--accent2)}
-.talent-lines p.sm,.bg-stage .lead{color:var(--ink2)}
 .final .mono{color:var(--ink3)}
 footer{background:var(--stage);color:var(--ink3);border-color:var(--line)}
-.kbar,.kslots i.h{background:var(--sand)}
 .kslots i.h{background:color-mix(in srgb,var(--accent) 40%,transparent)}
 .card .ph,.ph{background:var(--ph)}
 .tpbadge .tpstars{color:#00B67A}
-.swap .pc.ink .mono{color:var(--accentT)!important}
 .marquee span{color:var(--ink2)}
 .story .letter .sal,.story .shout{color:var(--ink)}
-.talent .monday .stage-tag{color:var(--ink3)}
+.fixnow{background:var(--stage);border:1px solid var(--line2)}
+.fx-media::after{background:linear-gradient(90deg,transparent 60%,var(--stage) 100%)}
+@media (max-width:980px){.fx-media::after{background:linear-gradient(180deg,transparent 60%,var(--stage) 100%)}}
+.fx-sub{color:var(--ink3)}
+.swap .arrow{color:var(--accent)}
+.js .quote.strike.in{color:var(--ink3)}
 
-:root{--bg:#0E1411;--sand:#16201B;--warm:#111A15;--amber:#132019;--card:#151F1A;--stage:#070B09;--stage2:#0C1310;--ink:#EEF3EF;--ink2:#B4C1B9;--ink3:#7E8C84;--line:rgba(238,243,239,.1);--line2:rgba(238,243,239,.2);--accent:#3DD68C;--accent2:#8CEFC0;--accentD:#8CEFC0;--accentT:#8CEFC0;--ph:#1E2B25;--ph2:#18231E;--ph3:#26352E;--display:"Syne",ui-sans-serif,system-ui,sans-serif}
+:root{--bg:#0E1411;--warm:#111A15;--amber:#101915;--sand:#1F2E27;--card:#162019;--stage:#070B09;--stage2:#0C1310;--ink:#EEF3EF;--ink2:#B4C1B9;--ink3:#7E8C84;--line:rgba(238,243,239,.1);--line2:rgba(238,243,239,.22);--accent:#3DD68C;--accent2:#8CEFC0;--accentD:#1E7A4E;--accentT:#8CEFC0;--ph:#22302A;--ph2:#1B2721;--ph3:#2B3B33}
+:root{--display:"Syne",ui-sans-serif,system-ui,sans-serif}
 h1,h2,h3,.big,.card h3,.fsteps li,.ov-p,.kpi b,.hero-meta b,.btn,.logo{font-family:"Syne",ui-sans-serif,system-ui,sans-serif;letter-spacing:-.01em}
 h1{font-weight:800;font-size:clamp(1.6rem,2.7vw,2.4rem);line-height:1.1}h2{font-weight:700;font-size:clamp(1.4rem,2.4vw,2.1rem)}
+.story .letter .q em,.story .letter .hook-a,.card .close em,.pc.ink .bigserif em,.hope .bigserif em{color:var(--accentT)!important}
+.ov-s .ov-l,.card .num,.card .two-lists .h4,.pc .h4,.kpct,.dg-f .ac,.fsteps li span,.tcard .twho span{color:var(--accentT)}
 </style>
 
 <header class="nav" id="nav"><div class="wrap">
