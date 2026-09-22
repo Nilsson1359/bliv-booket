@@ -129,6 +129,35 @@ h1{font-weight:600;font-size:clamp(2rem,3.5vw,3.1rem);line-height:1.08}h1 em{fon
 .story .shout{text-transform:none;font-style:italic;font-weight:600}
 .story .letter .q em,.story .letter .hook-a,.card .close em,.pc.ink .bigserif em,.hope .bigserif em{color:var(--accentT)!important}
 .ov-s .ov-l,.card .num,.card .two-lists .h4,.pc .h4,.kpct,.dg-f .ac,.fsteps li span,.tcard .twho span{color:var(--accentT)}'''),
+ 'forest-brass':dict(name='Skovgrøn & messing · Fraunces',
+  fonts='family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Manrope:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600',
+  vars=''':root{--bg:#0B1A14;--warm:#0F2018;--amber:#0E1E17;--sand:#1E3A2E;--card:#12251C;--stage:#06110D;--stage2:#0B1A14;--ink:#EEF4EF;--ink2:#B7C7BD;--ink3:#7F9388;--line:rgba(238,244,239,.1);--line2:rgba(238,244,239,.22);--accent:#D9B25A;--accent2:#EFD08A;--accentD:#8A6E2A;--accentT:#EFD08A;--ph:#21382E;--ph2:#1A2E25;--ph3:#2A4438}
+:root{--display:"Fraunces",Georgia,serif}
+h1,h2,h3,.big,.card h3,.ov-p,.kpi b,.hero-meta b,.logo,.story .shout{font-family:"Fraunces",Georgia,serif;font-variation-settings:"opsz" 144,"SOFT" 30;letter-spacing:-.015em}
+h1{font-weight:500;font-size:clamp(2rem,3.6vw,3.2rem);line-height:1.05}h1 em{font-style:italic;font-weight:400}h2{font-weight:500;font-size:clamp(1.7rem,3vw,2.6rem)}h3,.card h3{font-weight:500}.big,.ov-p{font-weight:500}
+.btn,.fsteps li{font-family:"Manrope",sans-serif;font-weight:700}
+.story .shout{text-transform:none;font-weight:600;font-style:italic;letter-spacing:-.01em}
+.story .letter .q em,.story .letter .hook-a,.card .close em,.pc.ink .bigserif em,.hope .bigserif em{color:var(--accentT)!important}
+.ov-s .ov-l,.card .num,.card .two-lists .h4,.pc .h4,.kpct,.dg-f .ac,.fsteps li span,.tcard .twho span{color:var(--accentT)}'''),
+ 'onyx-emerald':dict(name='Onyx & smaragd · Archivo',
+  fonts='family=Archivo:wdth,wght@100,500..900&family=Manrope:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600',
+  vars=''':root{--bg:#0A0C0B;--warm:#0E1210;--amber:#0D100F;--sand:#1C2622;--card:#121816;--stage:#050606;--stage2:#0A0C0B;--ink:#F0F3F1;--ink2:#B5BFBA;--ink3:#7B8681;--line:rgba(240,243,241,.1);--line2:rgba(240,243,241,.22);--accent:#2ECC8A;--accent2:#7FE7B9;--accentD:#177A50;--accentT:#7FE7B9;--ph:#1C2622;--ph2:#161E1B;--ph3:#243029}
+:root{--display:"Archivo",ui-sans-serif,system-ui,sans-serif}
+h1,h2,h3,.big,.card h3,.fsteps li,.ov-p,.kpi b,.hero-meta b,.btn,.logo{font-family:"Archivo",ui-sans-serif,system-ui,sans-serif;font-variation-settings:"wdth" 100;letter-spacing:-.02em}
+h1{font-weight:800}h2{font-weight:750}
+.story .letter .q em,.story .letter .hook-a,.card .close em,.pc.ink .bigserif em,.hope .bigserif em{color:var(--accentT)!important}
+.ov-s .ov-l,.card .num,.card .two-lists .h4,.pc .h4,.kpct,.dg-f .ac,.fsteps li span,.tcard .twho span{color:var(--accentT)}'''),
+ 'olive-champagne':dict(name='Oliven & champagne · Cormorant + Manrope',
+  fonts='family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Manrope:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600',
+  vars=''':root{--bg:#12160F;--warm:#171C13;--amber:#151A12;--sand:#2B3324;--card:#1A2016;--stage:#0A0D08;--stage2:#12160F;--ink:#F2F1E8;--ink2:#C1C3B2;--ink3:#868A78;--line:rgba(242,241,232,.1);--line2:rgba(242,241,232,.22);--accent:#E1CB8C;--accent2:#F1E0B2;--accentD:#8E7A3E;--accentT:#F1E0B2;--ph:#2A3223;--ph2:#22291C;--ph3:#343D2C}
+:root{--display:"Cormorant Garamond",Georgia,serif}
+h1,h2,h3,.card h3,.ov-p,.hero-meta b,.logo,.story .shout,.bigserif,.story .letter .q,.hope .bigserif{font-family:"Cormorant Garamond",Georgia,serif;letter-spacing:-.005em}
+h1{font-weight:600;font-size:clamp(2.4rem,4.4vw,4rem);line-height:1.02}h1 em{font-style:italic;font-weight:500}h2{font-weight:600;font-size:clamp(2rem,3.4vw,3rem);line-height:1.05}h3,.card h3{font-weight:600;font-size:clamp(1.6rem,2.4vw,2.2rem)}.ov-p{font-size:1.35rem;font-weight:600}
+.big{font-family:"Manrope",sans-serif;font-weight:700;letter-spacing:-.02em}.kpi b{font-family:"Manrope",sans-serif;font-weight:800;letter-spacing:-.03em}
+.btn,.fsteps li{font-family:"Manrope",sans-serif;font-weight:700}
+.story .shout{text-transform:uppercase;font-weight:700;letter-spacing:.02em}
+.story .letter .q em,.story .letter .hook-a,.card .close em,.pc.ink .bigserif em,.hope .bigserif em{color:var(--accentT)!important}
+.ov-s .ov-l,.card .num,.card .two-lists .h4,.pc .h4,.kpct,.dg-f .ac,.fsteps li span,.tcard .twho span{color:var(--accentT)}'''),
 }
 for key,t in themes.items():
     s=base
