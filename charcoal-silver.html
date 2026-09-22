@@ -256,7 +256,7 @@ section{position:relative;padding-block:var(--pad)}
 .two.top:has(> .pc):has(.dg)>.pc>.fill{margin-top:auto}
 .two.top:has(> .pc):has(.dg)>.rv:not(.pc){display:flex}
 .two.top:has(> .pc):has(.dg)>.rv:not(.pc)>.dg{display:flex;flex-direction:column;flex:1}
-.two.top:has(> .pc):has(.dg) .dg canvas{flex:1;min-height:200px}
+.two.top:has(> .pc):has(.dg) .dg canvas{flex:1 1 0;height:0;min-height:200px;max-height:420px}
 .cmp{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding-top:16px;border-top:1px solid var(--line);margin-top:16px}
 .cmp div{padding:12px 14px;border-radius:var(--rt,14px);background:var(--sand)}
 .cmp .k{font-family:var(--mono);font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);display:block;margin-bottom:6px}
@@ -1511,7 +1511,7 @@ Booker gerne Oscar igen :-)</p><div class="who"><div class="av">M</div><div clas
   document.querySelectorAll('canvas[data-viz]').forEach(cv=>{
     const dark=!!cv.closest('.dg.dark');
     const s={cv,ctx:cv.getContext('2d'),th:theme(dark),w:0,h:0,type:cv.dataset.viz,data:{},active:false};
-    const resize=()=>{const r=cv.getBoundingClientRect();if(!r.width)return;const dpr=Math.min(2,devicePixelRatio||1);s.w=r.width;s.h=r.height;cv.width=Math.round(r.width*dpr);cv.height=Math.round(r.height*dpr);s.ctx.setTransform(dpr,0,0,dpr,0,0);s.data={};};
+    const resize=()=>{const r=cv.getBoundingClientRect();if(!r.width)return;if(Math.abs(r.width-s.w)<1&&Math.abs(r.height-s.h)<1)return;const dpr=Math.min(2,devicePixelRatio||1);s.w=r.width;s.h=r.height;cv.width=Math.round(r.width*dpr);cv.height=Math.round(r.height*dpr);s.ctx.setTransform(dpr,0,0,dpr,0,0);s.data={};};
     if('ResizeObserver' in window) new ResizeObserver(resize).observe(cv); else addEventListener('resize',resize);
     resize();
     if('IntersectionObserver' in window){new IntersectionObserver(es=>{s.active=es[0].isIntersecting;},{rootMargin:'80px'}).observe(cv);}else s.active=true;
