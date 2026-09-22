@@ -158,29 +158,34 @@ h1{font-weight:600;font-size:clamp(2.4rem,4.4vw,4rem);line-height:1.02}h1 em{fon
 .story .shout{text-transform:uppercase;font-weight:700;letter-spacing:.02em}
 .story .letter .q em,.story .letter .hook-a,.card .close em{color:var(--accentT)!important}
 .ov-s .ov-l,.card .num,.card .two-lists .h4,.pc .h4,.kpct,.dg-f .ac,.fsteps li span,.tcard .twho span{color:var(--accentT)}'''),
- 'uranium':dict(name='Uranium · Space Grotesk',
-  fonts='family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600',
-  vars=''':root{--bg:#090C09;--warm:#0D110D;--amber:#0C100C;--sand:#1A2419;--card:#111711;--stage:#040604;--stage2:#090C09;--ink:#F1F5EE;--ink2:#B6C2B2;--ink3:#7C887A;--line:rgba(241,245,238,.1);--line2:rgba(241,245,238,.22);--accent:#C8FF3D;--accent2:#DDFF85;--accentD:#6E9A0E;--accentT:#DDFF85;--ph:#1A2419;--ph2:#141C14;--ph3:#222E21}
-:root{--display:"Space Grotesk",ui-sans-serif,system-ui,sans-serif}
-h1,h2,h3,.big,.card h3,.fsteps li,.ov-p,.kpi b,.hero-meta b,.btn,.logo{font-family:"Space Grotesk",ui-sans-serif,system-ui,sans-serif;letter-spacing:-.03em}
-h1{font-weight:700;font-size:clamp(1.9rem,3.4vw,3rem);line-height:1.04}h2{font-weight:700;font-size:clamp(1.6rem,2.8vw,2.4rem)}h3,.card h3{font-weight:600}.kpi b{font-weight:700}
-.story .shout{font-family:"Space Grotesk",sans-serif;font-weight:700;letter-spacing:-.02em}
-.eyebrow,.dg-h,.dg-f,.tagpill,.hero-tag,.kpi .kl,.card .num{font-family:"JetBrains Mono",monospace}
-.hero::before{background:conic-gradient(from 165deg at 50% 0%,transparent 0deg,rgba(200,255,61,.28) 12deg,transparent 30deg)}
-.btn,.btn.light,.btn.lg{box-shadow:0 0 0 0 rgba(200,255,61,.0)}.btn:hover{box-shadow:0 0 32px -6px rgba(200,255,61,.55)}
+ 'racing-gold':dict(name='Racing green & børstet guld · Cormorant + Manrope',
+  fonts='family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Manrope:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600',
+  vars=''':root{--bg:#0A1A14;--warm:#0D1F18;--amber:#0C1D16;--sand:#1B3328;--card:#10241C;--stage:#06110D;--stage2:#0A1A14;--ink:#F1EDE2;--ink2:#BFC4B6;--ink3:#84907F;--line:rgba(241,237,226,.09);--line2:rgba(241,237,226,.2);--accent:#C9AA6E;--accent2:#E0C892;--accentD:#7E6537;--accentT:#E0C892;--ph:#1E362B;--ph2:#182D24;--ph3:#274236}
+:root{--display:"Cormorant Garamond",Georgia,serif}
+h1,h2,h3,.card h3,.ov-p,.hero-meta b,.logo,.story .shout,.bigserif,.story .letter .q,.hope .bigserif{font-family:"Cormorant Garamond",Georgia,serif;letter-spacing:-.005em}
+h1{font-weight:600;font-size:clamp(2.4rem,4.4vw,4rem);line-height:1.02}h1 em{font-style:italic;font-weight:500}h2{font-weight:600;font-size:clamp(2rem,3.4vw,3rem);line-height:1.05}h3,.card h3{font-weight:600;font-size:clamp(1.6rem,2.4vw,2.2rem)}.ov-p{font-size:1.35rem;font-weight:600}
+.big{font-family:"Manrope",sans-serif;font-weight:700;letter-spacing:-.02em}.kpi b{font-family:"Manrope",sans-serif;font-weight:800;letter-spacing:-.03em}
+.btn,.fsteps li{font-family:"Manrope",sans-serif;font-weight:700}
+.story .shout{text-transform:uppercase;font-weight:700;letter-spacing:.02em}
+.btn,.btn.light,.btn.lg{background:var(--ink);color:var(--bg)}.btn::before{background:var(--accent)}.btn:hover{color:var(--bg)}
+.vsl-fb .play{background:var(--ink);color:var(--bg)}.ty-check{background:var(--ink);color:var(--bg)}
+.kbar i,.kslots i{background:var(--accent)}
 .story .letter .q em,.story .letter .hook-a,.card .close em{color:var(--accentT)!important}
 .ov-s .ov-l,.card .num,.card .two-lists .h4,.pc .h4,.kpct,.dg-f .ac,.fsteps li span,.tcard .twho span{color:var(--accentT)}'''),
- 'uranium-serif':dict(name='Uranium · DM Serif Display',
-  fonts='family=DM+Serif+Display:ital@0;1&family=Manrope:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600',
-  vars=''':root{--bg:#0A0D0A;--warm:#0E120E;--amber:#0D110D;--sand:#1C251B;--card:#121812;--stage:#050705;--stage2:#0A0D0A;--ink:#F3F6EF;--ink2:#B8C3B3;--ink3:#7E897B;--line:rgba(243,246,239,.1);--line2:rgba(243,246,239,.22);--accent:#B9F73A;--accent2:#D6FF7E;--accentD:#5F8A0C;--accentT:#D6FF7E;--ph:#1C251B;--ph2:#151D15;--ph3:#243023}
-:root{--display:"DM Serif Display",Georgia,serif}
-h1,h2,h3,.card h3,.ov-p,.hero-meta b,.logo,.story .shout,.bigserif,.story .letter .q,.hope .bigserif{font-family:"DM Serif Display",Georgia,serif;letter-spacing:-.01em;font-weight:400}
-h1{font-size:clamp(2.2rem,4vw,3.6rem);line-height:1.02}h1 em{font-style:italic}h2{font-size:clamp(1.8rem,3.1vw,2.7rem);line-height:1.05}h3,.card h3{font-size:clamp(1.5rem,2.3vw,2.1rem)}.ov-p{font-size:1.3rem}
-.big,.kpi b{font-family:"Manrope",sans-serif;font-weight:700;letter-spacing:-.02em}.btn,.fsteps li{font-family:"Manrope",sans-serif;font-weight:700}
-.story .shout{text-transform:none;font-style:italic}
-.hero::before{background:conic-gradient(from 165deg at 50% 0%,transparent 0deg,rgba(185,247,58,.26) 12deg,transparent 30deg)}
+ 'emerald-ivory':dict(name='Smaragd & elfenben · Fraunces',
+  fonts='family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Manrope:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600',
+  vars=''':root{--bg:#07130F;--warm:#0A1813;--amber:#091611;--sand:#172B23;--card:#0E1F18;--stage:#040C09;--stage2:#07130F;--ink:#F3EFE6;--ink2:#BCC6BC;--ink3:#7F9088;--line:rgba(243,239,230,.09);--line2:rgba(243,239,230,.2);--accent:#E6DCC3;--accent2:#F3ECDB;--accentD:#8C8264;--accentT:#E6DCC3;--ph:#1B3229;--ph2:#152922;--ph3:#243F34}
+:root{--display:"Fraunces",Georgia,serif}
+h1,h2,h3,.big,.card h3,.ov-p,.kpi b,.hero-meta b,.logo,.story .shout{font-family:"Fraunces",Georgia,serif;font-variation-settings:"opsz" 144,"SOFT" 30;letter-spacing:-.015em}
+h1{font-weight:500;font-size:clamp(2rem,3.6vw,3.2rem);line-height:1.05}h1 em{font-style:italic;font-weight:400}h2{font-weight:500;font-size:clamp(1.7rem,3vw,2.6rem)}h3,.card h3{font-weight:500}.big,.ov-p{font-weight:500}
+.btn,.fsteps li{font-family:"Manrope",sans-serif;font-weight:700}
+.story .shout{text-transform:none;font-weight:600;font-style:italic;letter-spacing:-.01em}
+.btn,.btn.light,.btn.lg{background:var(--ink);color:var(--bg)}.btn::before{background:#2F7A5A}.btn:hover{color:var(--ink)}
+.vsl-fb .play{background:var(--ink);color:var(--bg)}.ty-check{background:var(--ink);color:var(--bg)}
+.tagpill::before,.hero-tag .pill::before,.eyebrow::before{background:#3E9A72}
+.kbar i,.kslots i{background:#3E9A72}.kslots i.h{background:rgba(62,154,114,.4)}
 .story .letter .q em,.story .letter .hook-a,.card .close em{color:var(--accentT)!important}
-.ov-s .ov-l,.card .num,.card .two-lists .h4,.pc .h4,.kpct,.dg-f .ac,.fsteps li span,.tcard .twho span{color:var(--accentT)}'''),
+.ov-s .ov-l,.card .num,.card .two-lists .h4,.pc .h4,.kpct,.dg-f .ac,.fsteps li span,.tcard .twho span{color:#7FC9A6}'''),
 }
 for key,t in themes.items():
     s=base
