@@ -1,5 +1,8 @@
 import re
-base=open('index.html',encoding='utf-8').read()
+import sys
+SRC=sys.argv[1] if len(sys.argv)>1 else 'index.html'
+OUTP=sys.argv[2] if len(sys.argv)>2 else ''
+base=open(SRC,encoding='utf-8').read()
 DARK_COMMON='''
 /* ===== DARK THEME OVERRIDES ===== */
 :root{color-scheme:dark}
@@ -131,6 +134,7 @@ for key,t in themes.items():
     s=s.replace('<meta name="color-scheme" content="light">','<meta name="color-scheme" content="dark">')
     s=s.replace('</style>',DARK_COMMON+'\n'+t['vars']+'\n</style>',1)
     idx=[m.start() for m in re.finditer(r'<script>',s)]
-    s=s[:idx[1]]+'<script>document.querySelectorAll(".dg").forEach(d=>d.classList.add("dark"));</script>\n'+s[idx[1]:]
+    if len(idx)>1: s=s[:idx[1]]+'<script>document.querySelectorAll(".dg").forEach(d=>d.classList.add("dark"));</script>\n'+s[idx[1]:]
     s=s.replace('<title>Bliv Booket</title>',f'<title>Bliv Booket · {t["name"]}</title>')
-    open(f'{key}.html','w',encoding='utf-8').write(s); print(key,'ok')
+    s=s.replace('<title>Tak · Bliv Booket</title>',f'<title>Tak · Bliv Booket · {t["name"]}</title>')
+    open(f'{OUTP}{key}.html','w',encoding='utf-8').write(s); print(OUTP+key,'ok')
