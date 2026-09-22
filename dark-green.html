@@ -11,6 +11,7 @@
 <title>Bliv Booket · Mørk & grøn · Syne</title>
 <meta name="color-scheme" content="dark">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://link.zency.dk">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@500;600;700;800&family=Manrope:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap">
 <style>
@@ -366,6 +367,30 @@ section{position:relative;padding-block:var(--pad)}
 .fx-body .bigserif{color:var(--bg);font-size:clamp(1.7rem,2.8vw,2.5rem)}
 .fx-sub{font-family:var(--mono);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(244,239,231,.65);line-height:1.6}
 @media (max-width:980px){.fixnow{grid-template-columns:1fr}.fx-media{min-height:0;aspect-ratio:16/10}.fx-media::after{background:linear-gradient(180deg,transparent 60%,var(--stage) 100%)}}
+
+
+/* ===== Booking modal ===== */
+.bk-modal{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:clamp(12px,3vw,32px)}
+.bk-modal[hidden]{display:none}
+.bk-back{position:absolute;inset:0;background:rgba(10,9,7,.62);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);opacity:0;transition:opacity .35s ease}
+.bk-modal.open .bk-back{opacity:1}
+.bk-card{position:relative;width:min(760px,100%);max-height:calc(100dvh - 2*clamp(12px,3vw,32px));background:var(--card);color:var(--ink);border:1px solid var(--line2);border-radius:var(--rc,24px);box-shadow:0 60px 120px -40px rgba(0,0,0,.6);display:flex;flex-direction:column;overflow:hidden;transform:translateY(18px) scale(.98);opacity:0;transition:transform .45s var(--ease),opacity .35s ease}
+.bk-modal.open .bk-card{transform:none;opacity:1}
+.bk-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 18px 14px 22px;border-bottom:1px solid var(--line)}
+.bk-head .bk-t{display:flex;flex-direction:column;gap:2px}
+.bk-head b{font-family:var(--display);font-weight:600;font-size:1.05rem;letter-spacing:-.01em}
+.bk-head span{font-family:var(--mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
+.bk-x{width:40px;height:40px;border-radius:50%;border:1px solid var(--line2);background:transparent;color:var(--ink);display:grid;place-items:center;cursor:pointer;flex:none;transition:background .25s,transform .25s}
+.bk-x:hover{background:var(--sand);transform:rotate(90deg)}
+.bk-body{position:relative;flex:1;min-height:420px;overflow:auto;-webkit-overflow-scrolling:touch;background:var(--card)}
+.bk-body iframe{width:100%;min-height:640px;border:0;display:block;background:transparent}
+.bk-load{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--ink3);font-family:var(--mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;pointer-events:none;transition:opacity .3s}
+.bk-load i{width:28px;height:28px;border-radius:50%;border:2px solid var(--line2);border-top-color:var(--accent);animation:spin 1s linear infinite}
+.bk-body.ready .bk-load{opacity:0}
+.bk-foot{padding:10px 22px 12px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:.8rem;color:var(--ink3)}
+.bk-foot b{color:var(--ink2);font-weight:600}
+body.bk-lock{overflow:hidden}
+@media (max-width:640px){.bk-modal{padding:0;align-items:stretch}.bk-card{width:100%;max-height:100dvh;border-radius:0;border:0}.bk-head{padding:12px 12px 10px 16px}.bk-body iframe{min-height:720px}.bk-foot{display:none}}
 
 /* Placeholders */
 .ph.vid{background:#2A2620}
@@ -1493,5 +1518,38 @@ Booker gerne Oscar igen :-)</p><div class="who"><div class="av">M</div><div clas
 })();
 </script>
 
+
+<!-- BOOKING MODAL -->
+<div class="bk-modal" id="bkModal" hidden role="dialog" aria-modal="true" aria-labelledby="bkTitle">
+  <div class="bk-back" data-close></div>
+  <div class="bk-card">
+    <div class="bk-head">
+      <div class="bk-t"><b id="bkTitle">Book din samtale</b><span>Ansøg om en plads · 30 min · online</span></div>
+      <button class="bk-x" type="button" aria-label="Luk" data-close><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
+    </div>
+    <div class="bk-body" id="bkBody">
+      <div class="bk-load"><i></i>Henter ledige tider</div>
+      <iframe id="fI7JGGwe6o7PqtOEECqc_1790070530687" data-src="https://link.zency.dk/widget/booking/fI7JGGwe6o7PqtOEECqc" title="Book din samtale" allow="payment" scrolling="no"></iframe>
+    </div>
+    <div class="bk-foot"><span><b>Ingen binding.</b> Samtalen er gratis og uforpligtende.</span><span>Du får en kalender-invitation på mail med det samme.</span></div>
+  </div>
+</div>
+<script src="https://link.zency.dk/js/form_embed.js" type="text/javascript" defer></script>
+<script>
+(function(){
+  const m=document.getElementById('bkModal'),body=document.getElementById('bkBody'),fr=body.querySelector('iframe');
+  let last=null,loaded=false;
+  function open(e){ if(e)e.preventDefault(); last=document.activeElement; m.hidden=false; requestAnimationFrame(()=>m.classList.add('open')); document.body.classList.add('bk-lock');
+    if(!loaded){loaded=true; fr.src=fr.dataset.src; fr.addEventListener('load',()=>setTimeout(()=>body.classList.add('ready'),400),{once:true});}
+    m.querySelector('.bk-x').focus(); try{history.replaceState(null,'','#book');}catch(_){} }
+  function close(){ m.classList.remove('open'); document.body.classList.remove('bk-lock'); setTimeout(()=>{m.hidden=true;},350); if(last&&last.focus)last.focus(); try{history.replaceState(null,'',location.pathname+location.search);}catch(_){} }
+  document.querySelectorAll('a.btn[href="#ansoeg"],#applyBtn,[data-book]').forEach(a=>a.addEventListener('click',open));
+  m.querySelectorAll('[data-close]').forEach(x=>x.addEventListener('click',close));
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!m.hidden)close();});
+  if(location.hash==='#book') open();
+  // GHL resize messages → mark ready
+  window.addEventListener('message',e=>{ if(typeof e.data==='string'&&/height|resize/i.test(e.data)) body.classList.add('ready'); if(e.data&&e.data.type&&/height|resize/i.test(e.data.type)) body.classList.add('ready'); });
+})();
+</script>
 </body>
 </html>
