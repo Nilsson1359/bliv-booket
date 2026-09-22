@@ -85,7 +85,7 @@ themes={
 :root{--display:"Syne",ui-sans-serif,system-ui,sans-serif}
 h1,h2,h3,.big,.card h3,.fsteps li,.ov-p,.kpi b,.hero-meta b,.btn,.logo{font-family:"Syne",ui-sans-serif,system-ui,sans-serif;letter-spacing:-.01em}
 h1{font-weight:800;font-size:clamp(1.6rem,2.7vw,2.4rem);line-height:1.1}h2{font-weight:700;font-size:clamp(1.4rem,2.4vw,2.1rem)}
-.story .letter .q em,.story .letter .hook-a,.card .close em,.pc.ink .bigserif em,.hope .bigserif em{color:var(--accentT)!important}
+.story .letter .q em,.story .letter .hook-a,.card .close em{color:var(--accentT)!important}
 .ov-s .ov-l,.card .num,.card .two-lists .h4,.pc .h4,.kpct,.dg-f .ac,.fsteps li span,.tcard .twho span{color:var(--accentT)}'''),
  'black-gold':dict(name='Sort & guld · Archivo',
   fonts='family=Archivo:wdth,wght@100,500..900&family=Manrope:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600',
@@ -93,7 +93,7 @@ h1{font-weight:800;font-size:clamp(1.6rem,2.7vw,2.4rem);line-height:1.1}h2{font-
 :root{--display:"Archivo",ui-sans-serif,system-ui,sans-serif}
 h1,h2,h3,.big,.card h3,.fsteps li,.ov-p,.kpi b,.hero-meta b,.btn,.logo{font-family:"Archivo",ui-sans-serif,system-ui,sans-serif;font-variation-settings:"wdth" 100;letter-spacing:-.02em}
 h1{font-weight:800}h2{font-weight:750}
-.story .letter .q em,.story .letter .hook-a,.card .close em,.pc.ink .bigserif em,.hope .bigserif em{color:var(--accentT)!important}
+.story .letter .q em,.story .letter .hook-a,.card .close em{color:var(--accentT)!important}
 .ov-s .ov-l,.card .num,.card .two-lists .h4,.pc .h4,.kpct,.dg-f .ac,.fsteps li span,.tcard .twho span{color:var(--accentT)}'''),
  'burgundy':dict(name='Bordeaux & champagne · Fraunces',
   fonts='family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Manrope:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600',
@@ -103,7 +103,7 @@ h1,h2,h3,.big,.card h3,.ov-p,.kpi b,.hero-meta b,.logo,.story .shout{font-family
 h1{font-weight:500;font-size:clamp(2rem,3.6vw,3.2rem);line-height:1.05}h1 em{font-style:italic;font-weight:400}h2{font-weight:500;font-size:clamp(1.7rem,3vw,2.6rem)}h3{font-weight:500}.card h3{font-weight:500}.big{font-weight:500}.ov-p{font-weight:500}
 .btn,.fsteps li{font-family:"Manrope",sans-serif;font-weight:700}
 .story .shout{text-transform:none;font-weight:600;font-style:italic;letter-spacing:-.01em}
-.story .letter .q em,.story .letter .hook-a,.card .close em,.pc.ink .bigserif em,.hope .bigserif em{color:var(--accentT)!important}
+.story .letter .q em,.story .letter .hook-a,.card .close em{color:var(--accentT)!important}
 .ov-s .ov-l,.card .num,.card .two-lists .h4,.pc .h4,.kpct,.dg-f .ac,.fsteps li span,.tcard .twho span{color:var(--accentT)}'''),
  'charcoal-silver':dict(name='Kul & sølv · Cormorant + Manrope',
   fonts='family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Manrope:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600',
@@ -116,7 +116,7 @@ h1{font-weight:600;font-size:clamp(2.4rem,4.4vw,4rem);line-height:1.02}h1 em{fon
 .story .shout{text-transform:uppercase;font-weight:700;letter-spacing:.02em}
 .btn,.btn.light,.btn.lg{background:var(--ink);color:var(--bg)}.btn::before{background:var(--accent2)}.btn:hover{color:var(--bg)}
 .tagpill::before,.hero-tag .pill::before{background:var(--accent2)}
-.story .letter .q em,.story .letter .hook-a,.card .close em,.pc.ink .bigserif em,.hope .bigserif em{color:var(--accentD)!important}
+.story .letter .q em,.story .letter .hook-a,.card .close em{color:var(--accentD)!important}
 .ov-s .ov-l,.card .num,.card .two-lists .h4,.pc .h4,.kpct,.dg-f .ac,.fsteps li span,.tcard .twho span{color:var(--ink2)}'''),
  'espresso-copper':dict(name='Espresso & kobber · Playfair + Manrope',
   fonts='family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=Manrope:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600',
@@ -127,7 +127,7 @@ h1{font-weight:600;font-size:clamp(2rem,3.5vw,3.1rem);line-height:1.08}h1 em{fon
 .big,.kpi b{font-family:"Manrope",sans-serif;font-weight:700;letter-spacing:-.02em}
 .btn,.fsteps li{font-family:"Manrope",sans-serif;font-weight:700}
 .story .shout{text-transform:none;font-style:italic;font-weight:600}
-.story .letter .q em,.story .letter .hook-a,.card .close em,.pc.ink .bigserif em,.hope .bigserif em{color:var(--accentT)!important}
+.story .letter .q em,.story .letter .hook-a,.card .close em{color:var(--accentT)!important}
 .ov-s .ov-l,.card .num,.card .two-lists .h4,.pc .h4,.kpct,.dg-f .ac,.fsteps li span,.tcard .twho span{color:var(--accentT)}'''),
  'forest-brass':dict(name='Skovgrøn & messing · Fraunces',
   fonts='family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Manrope:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600',
@@ -137,7 +137,7 @@ h1,h2,h3,.big,.card h3,.ov-p,.kpi b,.hero-meta b,.logo,.story .shout{font-family
 h1{font-weight:500;font-size:clamp(2rem,3.6vw,3.2rem);line-height:1.05}h1 em{font-style:italic;font-weight:400}h2{font-weight:500;font-size:clamp(1.7rem,3vw,2.6rem)}h3,.card h3{font-weight:500}.big,.ov-p{font-weight:500}
 .btn,.fsteps li{font-family:"Manrope",sans-serif;font-weight:700}
 .story .shout{text-transform:none;font-weight:600;font-style:italic;letter-spacing:-.01em}
-.story .letter .q em,.story .letter .hook-a,.card .close em,.pc.ink .bigserif em,.hope .bigserif em{color:var(--accentT)!important}
+.story .letter .q em,.story .letter .hook-a,.card .close em{color:var(--accentT)!important}
 .ov-s .ov-l,.card .num,.card .two-lists .h4,.pc .h4,.kpct,.dg-f .ac,.fsteps li span,.tcard .twho span{color:var(--accentT)}'''),
  'onyx-emerald':dict(name='Onyx & smaragd · Archivo',
   fonts='family=Archivo:wdth,wght@100,500..900&family=Manrope:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600',
@@ -145,7 +145,7 @@ h1{font-weight:500;font-size:clamp(2rem,3.6vw,3.2rem);line-height:1.05}h1 em{fon
 :root{--display:"Archivo",ui-sans-serif,system-ui,sans-serif}
 h1,h2,h3,.big,.card h3,.fsteps li,.ov-p,.kpi b,.hero-meta b,.btn,.logo{font-family:"Archivo",ui-sans-serif,system-ui,sans-serif;font-variation-settings:"wdth" 100;letter-spacing:-.02em}
 h1{font-weight:800}h2{font-weight:750}
-.story .letter .q em,.story .letter .hook-a,.card .close em,.pc.ink .bigserif em,.hope .bigserif em{color:var(--accentT)!important}
+.story .letter .q em,.story .letter .hook-a,.card .close em{color:var(--accentT)!important}
 .ov-s .ov-l,.card .num,.card .two-lists .h4,.pc .h4,.kpct,.dg-f .ac,.fsteps li span,.tcard .twho span{color:var(--accentT)}'''),
  'olive-champagne':dict(name='Oliven & champagne · Cormorant + Manrope',
   fonts='family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Manrope:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600',
@@ -156,7 +156,7 @@ h1{font-weight:600;font-size:clamp(2.4rem,4.4vw,4rem);line-height:1.02}h1 em{fon
 .big{font-family:"Manrope",sans-serif;font-weight:700;letter-spacing:-.02em}.kpi b{font-family:"Manrope",sans-serif;font-weight:800;letter-spacing:-.03em}
 .btn,.fsteps li{font-family:"Manrope",sans-serif;font-weight:700}
 .story .shout{text-transform:uppercase;font-weight:700;letter-spacing:.02em}
-.story .letter .q em,.story .letter .hook-a,.card .close em,.pc.ink .bigserif em,.hope .bigserif em{color:var(--accentT)!important}
+.story .letter .q em,.story .letter .hook-a,.card .close em{color:var(--accentT)!important}
 .ov-s .ov-l,.card .num,.card .two-lists .h4,.pc .h4,.kpct,.dg-f .ac,.fsteps li span,.tcard .twho span{color:var(--accentT)}'''),
  'uranium':dict(name='Uranium · Space Grotesk',
   fonts='family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600',
@@ -168,7 +168,7 @@ h1{font-weight:700;font-size:clamp(1.9rem,3.4vw,3rem);line-height:1.04}h2{font-w
 .eyebrow,.dg-h,.dg-f,.tagpill,.hero-tag,.kpi .kl,.card .num{font-family:"JetBrains Mono",monospace}
 .hero::before{background:conic-gradient(from 165deg at 50% 0%,transparent 0deg,rgba(200,255,61,.28) 12deg,transparent 30deg)}
 .btn,.btn.light,.btn.lg{box-shadow:0 0 0 0 rgba(200,255,61,.0)}.btn:hover{box-shadow:0 0 32px -6px rgba(200,255,61,.55)}
-.story .letter .q em,.story .letter .hook-a,.card .close em,.pc.ink .bigserif em,.hope .bigserif em{color:var(--accentT)!important}
+.story .letter .q em,.story .letter .hook-a,.card .close em{color:var(--accentT)!important}
 .ov-s .ov-l,.card .num,.card .two-lists .h4,.pc .h4,.kpct,.dg-f .ac,.fsteps li span,.tcard .twho span{color:var(--accentT)}'''),
  'uranium-serif':dict(name='Uranium · DM Serif Display',
   fonts='family=DM+Serif+Display:ital@0;1&family=Manrope:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600',
@@ -179,7 +179,7 @@ h1{font-size:clamp(2.2rem,4vw,3.6rem);line-height:1.02}h1 em{font-style:italic}h
 .big,.kpi b{font-family:"Manrope",sans-serif;font-weight:700;letter-spacing:-.02em}.btn,.fsteps li{font-family:"Manrope",sans-serif;font-weight:700}
 .story .shout{text-transform:none;font-style:italic}
 .hero::before{background:conic-gradient(from 165deg at 50% 0%,transparent 0deg,rgba(185,247,58,.26) 12deg,transparent 30deg)}
-.story .letter .q em,.story .letter .hook-a,.card .close em,.pc.ink .bigserif em,.hope .bigserif em{color:var(--accentT)!important}
+.story .letter .q em,.story .letter .hook-a,.card .close em{color:var(--accentT)!important}
 .ov-s .ov-l,.card .num,.card .two-lists .h4,.pc .h4,.kpct,.dg-f .ac,.fsteps li span,.tcard .twho span{color:var(--accentT)}'''),
 }
 for key,t in themes.items():
@@ -190,5 +190,8 @@ for key,t in themes.items():
     idx=[m.start() for m in re.finditer(r'<script>',s)]
     if len(idx)>1: s=s[:idx[1]]+'<script>document.querySelectorAll(".dg").forEach(d=>d.classList.add("dark"));</script>\n'+s[idx[1]:]
     s=s.replace('<title>Bliv Booket</title>',f'<title>Bliv Booket · {t["name"]}</title>')
+    acc2=re.search(r'--accent2:(#[0-9A-Fa-f]{6})',t['vars']).group(1); acc1=re.search(r'--accent:(#[0-9A-Fa-f]{6})',t['vars']).group(1)
+    r_,g_,b_=int(acc2[1:3],16),int(acc2[3:5],16),int(acc2[5:7],16)
+    s=s.replace("acc:'#E5C077',accSoft:'rgba(229,192,119,.25)'",f"acc:'{acc2}',accSoft:'rgba({r_},{g_},{b_},.25)'").replace("acc:'#C9973A',accSoft:'rgba(201,151,58,.22)'",f"acc:'{acc1}',accSoft:'rgba({r_},{g_},{b_},.22)'")
     s=s.replace('<title>Tak · Bliv Booket</title>',f'<title>Tak · Bliv Booket · {t["name"]}</title>')
     open(f'{OUTP}{key}.html','w',encoding='utf-8').write(s); print(OUTP+key,'ok')
