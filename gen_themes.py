@@ -90,12 +90,38 @@ h1,h2,h3,.big,.card h3,.fsteps li,.ov-p,.kpi b,.hero-meta b,.btn,.logo{font-fami
 h1{font-weight:800}h2{font-weight:750}
 .story .letter .q em,.story .letter .hook-a,.card .close em,.pc.ink .bigserif em,.hope .bigserif em{color:var(--accentT)!important}
 .ov-s .ov-l,.card .num,.card .two-lists .h4,.pc .h4,.kpct,.dg-f .ac,.fsteps li span,.tcard .twho span{color:var(--accentT)}'''),
- 'navy-lime':dict(name='Navy & lime · Unbounded',
-  fonts='family=Unbounded:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600',
-  vars=''':root{--bg:#0B1220;--warm:#0F1728;--amber:#0E1626;--sand:#1F2C48;--card:#141D33;--stage:#060A14;--stage2:#0B1222;--ink:#EEF2FA;--ink2:#B3BED4;--ink3:#7B889F;--line:rgba(238,242,250,.1);--line2:rgba(238,242,250,.22);--accent:#C7F542;--accent2:#DFFF7A;--accentD:#5F7A12;--accentT:#DFFF7A;--ph:#1F2B47;--ph2:#18223A;--ph3:#293755}
-:root{--display:"Unbounded",ui-sans-serif,system-ui,sans-serif}
-h1,h2,h3,.big,.card h3,.fsteps li,.ov-p,.kpi b,.hero-meta b,.btn,.logo{font-family:"Unbounded",ui-sans-serif,system-ui,sans-serif;letter-spacing:-.03em}
-h1{font-size:clamp(1.55rem,2.6vw,2.3rem);font-weight:700;line-height:1.12}h2{font-size:clamp(1.35rem,2.3vw,2rem);font-weight:600;line-height:1.15}h3{font-weight:600}.big{font-weight:600;font-size:clamp(1.05rem,1.6vw,1.4rem)}.btn{font-weight:600;font-size:.92rem}.story .shout{font-family:"Unbounded",sans-serif;font-weight:800;font-size:clamp(1.3rem,3.4vw,2.6rem)}
+ 'burgundy':dict(name='Bordeaux & champagne · Fraunces',
+  fonts='family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Manrope:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600',
+  vars=''':root{--bg:#160B0E;--warm:#1C0F13;--amber:#1A0E12;--sand:#33202A;--card:#21131A;--stage:#0C0507;--stage2:#150A0E;--ink:#F6EEE8;--ink2:#C9B7B0;--ink3:#8E7A76;--line:rgba(246,238,232,.1);--line2:rgba(246,238,232,.22);--accent:#E3C08A;--accent2:#F2D9B0;--accentD:#8F6B3A;--accentT:#F2D9B0;--ph:#3A2630;--ph2:#2E1D26;--ph3:#46303A}
+:root{--display:"Fraunces",Georgia,serif}
+h1,h2,h3,.big,.card h3,.ov-p,.kpi b,.hero-meta b,.logo,.story .shout{font-family:"Fraunces",Georgia,serif;font-variation-settings:"opsz" 144,"SOFT" 30;letter-spacing:-.015em}
+h1{font-weight:500;font-size:clamp(2rem,3.6vw,3.2rem);line-height:1.05}h1 em{font-style:italic;font-weight:400}h2{font-weight:500;font-size:clamp(1.7rem,3vw,2.6rem)}h3{font-weight:500}.card h3{font-weight:500}.big{font-weight:500}.ov-p{font-weight:500}
+.btn,.fsteps li{font-family:"Manrope",sans-serif;font-weight:700}
+.story .shout{text-transform:none;font-weight:600;font-style:italic;letter-spacing:-.01em}
+.story .letter .q em,.story .letter .hook-a,.card .close em,.pc.ink .bigserif em,.hope .bigserif em{color:var(--accentT)!important}
+.ov-s .ov-l,.card .num,.card .two-lists .h4,.pc .h4,.kpct,.dg-f .ac,.fsteps li span,.tcard .twho span{color:var(--accentT)}'''),
+ 'charcoal-silver':dict(name='Kul & sølv · Cormorant + Manrope',
+  fonts='family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Manrope:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600',
+  vars=''':root{--bg:#0F1012;--warm:#141517;--amber:#121315;--sand:#25272B;--card:#18191C;--stage:#070708;--stage2:#0E0F11;--ink:#F2F2F0;--ink2:#B9BAB6;--ink3:#7E7F7B;--line:rgba(242,242,240,.1);--line2:rgba(242,242,240,.22);--accent:#D6D9DE;--accent2:#EEF0F3;--accentD:#6B7078;--accentT:#EEF0F3;--ph:#2A2C30;--ph2:#222327;--ph3:#343639}
+:root{--display:"Cormorant Garamond",Georgia,serif}
+h1,h2,h3,.card h3,.ov-p,.hero-meta b,.logo,.story .shout,.bigserif,.story .letter .q,.hope .bigserif{font-family:"Cormorant Garamond",Georgia,serif;letter-spacing:-.005em}
+h1{font-weight:600;font-size:clamp(2.4rem,4.4vw,4rem);line-height:1.02}h1 em{font-style:italic;font-weight:500}h2{font-weight:600;font-size:clamp(2rem,3.4vw,3rem);line-height:1.05}h3,.card h3{font-weight:600;font-size:clamp(1.6rem,2.4vw,2.2rem)}.ov-p{font-size:1.35rem;font-weight:600}
+.big{font-family:"Manrope",sans-serif;font-weight:700;letter-spacing:-.02em}.kpi b{font-family:"Manrope",sans-serif;font-weight:800;letter-spacing:-.03em}
+.btn,.fsteps li{font-family:"Manrope",sans-serif;font-weight:700}
+.story .shout{text-transform:uppercase;font-weight:700;letter-spacing:.02em}
+.btn,.btn.light,.btn.lg{background:var(--ink);color:var(--bg)}.btn::before{background:var(--accent2)}.btn:hover{color:var(--bg)}
+.tagpill::before,.hero-tag .pill::before{background:var(--accent2)}
+.story .letter .q em,.story .letter .hook-a,.card .close em,.pc.ink .bigserif em,.hope .bigserif em{color:var(--accentD)!important}
+.ov-s .ov-l,.card .num,.card .two-lists .h4,.pc .h4,.kpct,.dg-f .ac,.fsteps li span,.tcard .twho span{color:var(--ink2)}'''),
+ 'espresso-copper':dict(name='Espresso & kobber · Playfair + Manrope',
+  fonts='family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=Manrope:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600',
+  vars=''':root{--bg:#120E0B;--warm:#17120E;--amber:#15100C;--sand:#2C221B;--card:#1C1611;--stage:#090705;--stage2:#110D0A;--ink:#F4ECE3;--ink2:#C5B7A9;--ink3:#8A7B6D;--line:rgba(244,236,227,.1);--line2:rgba(244,236,227,.22);--accent:#C8834E;--accent2:#E6AE7E;--accentD:#7D4E2B;--accentT:#E6AE7E;--ph:#332820;--ph2:#2A201A;--ph3:#3E3129}
+:root{--display:"Playfair Display",Georgia,serif}
+h1,h2,h3,.card h3,.ov-p,.hero-meta b,.logo,.story .shout{font-family:"Playfair Display",Georgia,serif;letter-spacing:-.01em}
+h1{font-weight:600;font-size:clamp(2rem,3.5vw,3.1rem);line-height:1.08}h1 em{font-style:italic;font-weight:500}h2{font-weight:600;font-size:clamp(1.65rem,2.9vw,2.5rem);line-height:1.1}h3,.card h3{font-weight:600}.ov-p{font-weight:600;font-size:1.2rem}
+.big,.kpi b{font-family:"Manrope",sans-serif;font-weight:700;letter-spacing:-.02em}
+.btn,.fsteps li{font-family:"Manrope",sans-serif;font-weight:700}
+.story .shout{text-transform:none;font-style:italic;font-weight:600}
 .story .letter .q em,.story .letter .hook-a,.card .close em,.pc.ink .bigserif em,.hope .bigserif em{color:var(--accentT)!important}
 .ov-s .ov-l,.card .num,.card .two-lists .h4,.pc .h4,.kpct,.dg-f .ac,.fsteps li span,.tcard .twho span{color:var(--accentT)}'''),
 }
