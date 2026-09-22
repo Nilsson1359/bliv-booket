@@ -382,8 +382,8 @@ section{position:relative;padding-block:var(--pad)}
 .bk-head span{font-family:var(--mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
 .bk-x{width:40px;height:40px;border-radius:50%;border:1px solid var(--line2);background:transparent;color:var(--ink);display:grid;place-items:center;cursor:pointer;flex:none;transition:background .25s,transform .25s}
 .bk-x:hover{background:var(--sand);transform:rotate(90deg)}
-.bk-body{position:relative;flex:1;min-height:480px;overflow:hidden;background:#0B0B0B}
-.bk-body iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#0B0B0B;opacity:0;transition:opacity .4s}
+.bk-body{position:relative;flex:1;min-height:480px;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;background:#0B0B0B}
+.bk-body iframe{position:relative;width:100%;min-height:100%;height:auto;border:0;display:block;background:#0B0B0B;opacity:0;transition:opacity .4s}
 .bk-body.ready iframe{opacity:1}
 .bk-load{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--ink3);font-family:var(--mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;pointer-events:none;transition:opacity .3s}
 .bk-load i{width:28px;height:28px;border-radius:50%;border:2px solid var(--line2);border-top-color:var(--accent);animation:spin 1s linear infinite}
@@ -1532,7 +1532,7 @@ Booker gerne Oscar igen :-)</p><div class="who"><div class="av">M</div><div clas
     </div>
     <div class="bk-body" id="bkBody">
       <div class="bk-load"><i></i>Henter ledige tider</div>
-      <iframe id="fI7JGGwe6o7PqtOEECqc_1790070530687" data-src="https://link.zency.dk/widget/booking/fI7JGGwe6o7PqtOEECqc" title="Book din samtale" allow="payment" scrolling="yes"></iframe>
+      <iframe id="fI7JGGwe6o7PqtOEECqc_1790070530687" data-src="https://link.zency.dk/widget/booking/fI7JGGwe6o7PqtOEECqc" title="Book din samtale" allow="payment" scrolling="no"></iframe>
     </div>
     <div class="bk-foot"><span><b>Ingen binding.</b> Samtalen er gratis og uforpligtende.</span><span>Du får en kalender-invitation på mail med det samme.</span></div>
   </div>
