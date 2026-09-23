@@ -385,9 +385,9 @@ section{position:relative;padding-block:var(--pad)}
 .bk-x:hover{background:var(--sand);transform:rotate(90deg)}
 .bk-body{position:relative;flex:1;min-height:480px;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;background:var(--card);padding:12px 12px 0}
 .bk-body::after{content:"";display:block;height:12px}
-.bk-body iframe{position:relative;width:100%;min-height:calc(100% - 12px);height:auto;border:0;display:block;background:#0E0E0E;border-radius:18px;opacity:0;transition:opacity .4s}
+.bk-body iframe{position:relative;width:100%;min-height:calc(100% - 12px);height:auto;border:0;display:block;background:var(--card);border-radius:18px;opacity:0;transition:opacity .4s}
 .bk-body.ready iframe{opacity:1}
-.bk-load{position:absolute;inset:12px 12px 12px;border-radius:18px;background:#0E0E0E;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--ink3);font-family:var(--mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;pointer-events:none;transition:opacity .3s}
+.bk-load{position:absolute;inset:12px 12px 12px;border-radius:18px;background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--ink3);font-family:var(--mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;pointer-events:none;transition:opacity .3s}
 .bk-load i{width:28px;height:28px;border-radius:50%;border:2px solid var(--line2);border-top-color:var(--accent);animation:spin 1s linear infinite}
 .bk-body.ready .bk-load{opacity:0}
 .bk-foot{padding:10px 22px 12px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:.8rem;color:var(--ink3)}
@@ -679,6 +679,7 @@ footer .legal a{color:inherit;text-decoration:none;border-bottom:1px solid rgba(
   .future .quote.strike{margin-top:6px}
 }
 
+@media (max-width:380px){.nav .btn{padding:10px 14px;font-size:.82rem;gap:6px}.nav .btn .ar{display:none}.logo sup{display:none}}
 /* ---- KUNDEHISTORIE: KEVIN ---- */
 .kcase .sh{margin-bottom:clamp(24px,3.5vw,40px);align-items:end}
 .kvid{position:relative;aspect-ratio:16/9;width:100%;border-radius:var(--rc);overflow:hidden;background:#0B0B0C;box-shadow:0 40px 80px -40px rgba(27,25,21,.6);isolation:isolate}
