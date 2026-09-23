@@ -2,6 +2,8 @@
 <html lang="da">
 <head>
 <meta charset="utf-8">
+<script>if(location.protocol==="http:"&&!/^(localhost|127\.)/.test(location.hostname))location.replace("https://"+location.host+location.pathname+location.search+location.hash)</script>
+
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
 <title>Tak · Bliv Booket · Racing green & børstet guld · Cormorant + Manrope</title>
@@ -927,8 +929,9 @@ Booker gerne Oscar igen :-)</p><div class="who"><div class="av">M</div><div clas
   // Robust parsing of whatever GHL sends: ISO, "Sep 29, 2026 2:00 PM", "29/09/2026 14:00", or date + time params
   const MON={jan:0,feb:1,mar:2,apr:3,may:4,maj:4,jun:5,jul:6,aug:7,sep:8,oct:9,okt:9,nov:10,dec:11};
   function parseWhen(str){
-    if(!str)return null; str=decodeURIComponent(String(str)).replace(/\+/g,' ').trim();
+    if(!str)return null; str=String(str).trim(); try{str=decodeURIComponent(str)}catch(_){}
     let t=Date.parse(str); if(!isNaN(t)) return new Date(t);
+    str=str.replace(/\+(?!\d{2}:?\d{2}$)/g,' ').trim(); t=Date.parse(str); if(!isNaN(t)) return new Date(t);
     let m=str.match(/(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})[ T,]*(\d{1,2})?[:.]?(\d{2})?\s*(am|pm)?/i);
     if(m){let h=+(m[4]||0);const ap=(m[6]||'').toLowerCase();if(ap==='pm'&&h<12)h+=12;if(ap==='am'&&h===12)h=0;return new Date(+m[3],+m[2]-1,+m[1],h,+(m[5]||0));}
     m=str.match(/([A-Za-zæøå]{3})[a-zæøå]*\.?\s+(\d{1,2}),?\s+(\d{4})(?:[ ,at]*(\d{1,2})[:.](\d{2})\s*(am|pm)?)?/i);
