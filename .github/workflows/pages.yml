@@ -1,0 +1,32 @@
+# Bygger fuldtbooketmusiker.dk: kul & sølv-temaet serveres som forside.
+# Kildefilerne (index.html + gen_themes.py) forbliver uændrede.
+name: Deploy fuldtbooketmusiker.dk
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Byg site
+        run: |
+          mkdir _site
+          cp -r media _site/
+          cp charcoal-silver.html _site/index.html
+          cp tak-charcoal-silver.html _site/tak.html
+          echo fuldtbooketmusiker.dk > _site/CNAME
+      - uses: actions/upload-pages-artifact@v3
+      - id: deployment
+        uses: actions/deploy-pages@v4
