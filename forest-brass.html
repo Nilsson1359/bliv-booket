@@ -1364,7 +1364,7 @@ Booker gerne Oscar igen :-)</p><div class="who"><div class="av">M</div><div clas
       kv.appendChild(kvv); const pb=document.getElementById('kvidPlay'); if(pb)pb.remove(); const nm=kv.querySelector('.kvid-name'); if(nm)nm.remove();
       const go=()=>{ if(t)kvv.currentTime=t; kvv.play().catch(()=>{}); };
       if(kvv.canPlayType('application/vnd.apple.mpegurl')){ kvv.src=KSRC; kvv.addEventListener('loadedmetadata',go,{once:true}); kvv.load(); }
-      else { const sc=document.createElement('script'); sc.src='https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js';
+      else { const sc=document.createElement('script'); sc.src='https://cdn.jsdelivr.net/npm/hls.js@1.7.3/dist/hls.min.js'; sc.integrity='sha384-cciJ0zi8d1uMKC2zJd7jvPY4HQt7W4ByUI/FlMkltvBi31aW61rcpVBhpmW8/NwX'; sc.crossOrigin='anonymous';
         sc.onload=()=>{ const h=new Hls({startPosition:t||-1}); h.loadSource(KSRC); h.attachMedia(kvv); h.on(Hls.Events.MANIFEST_PARSED,()=>kvv.play().catch(()=>{})); };
         document.head.appendChild(sc); }
     }
