@@ -1665,6 +1665,8 @@ Booker gerne Oscar igen :-)</p><div class="who"><div class="av">M</div><div clas
   if(location.hash==='#book') open();
   // GHL resize messages → mark ready
   window.addEventListener('message',e=>{ if(typeof e.data==='string'&&/height|resize/i.test(e.data)) body.classList.add('ready'); if(e.data&&e.data.type&&/height|resize/i.test(e.data.type)) body.classList.add('ready'); });
+  // GHL sender ['highlevel.setHeight',{height}] men form_embed.js matcher ikke vores iframe-id → sæt højden selv, så popup'en kan scrolle
+  window.addEventListener('message',e=>{ if(!/^https:\/\/link\.zency\.dk$/.test(e.origin))return; const d=e.data; if(Array.isArray(d)&&d[0]==='highlevel.setHeight'&&d[1]&&d[1].height>0){ fr.style.height=Math.ceil(+d[1].height)+'px'; body.classList.add('ready'); } });
 })();
 </script>
 </body>
