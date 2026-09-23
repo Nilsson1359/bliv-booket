@@ -116,7 +116,8 @@ h1{font-weight:600;font-size:clamp(2.4rem,4.4vw,4rem);line-height:1.02}h1 em{fon
 .story .shout{text-transform:uppercase;font-weight:700;letter-spacing:.02em}
 .btn,.btn.light,.btn.lg{background:var(--ink);color:var(--bg)}.btn::before{background:var(--accent2)}.btn:hover{color:var(--bg)}
 .tagpill::before,.hero-tag .pill::before{background:var(--accent2)}
-.story .letter .q em,.story .letter .hook-a,.card .close em{color:var(--accentD)!important}
+.story .letter .q em,.story .letter .hook-a,.card .close em{color:#A9AEB6!important}
+.hl,.mark,.story .letter .mark{background:linear-gradient(transparent 58%,rgba(238,240,243,.16) 58%,rgba(238,240,243,.16) 96%,transparent 96%)!important;color:var(--ink)}
 .ov-s .ov-l,.card .num,.card .two-lists .h4,.pc .h4,.kpct,.dg-f .ac,.fsteps li span,.tcard .twho span{color:var(--ink2)}'''),
  'espresso-copper':dict(name='Espresso & kobber · Playfair + Manrope',
   fonts='family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=Manrope:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600',
