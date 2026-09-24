@@ -1,0 +1,13 @@
+# fuldtbooketmusiker.dk: Cloudflare Worker med statiske filer (ingen git-kobling).
+# Byg først: charcoal-silver.html -> _site/index.html (title "Bliv Booket"),
+# tak-charcoal-silver.html -> _site/tak.html, media/ -> _site/media/.
+# Deploy: npx wrangler deploy
+name = "fuldtbooketmusiker"
+compatibility_date = "2026-09-01"
+workers_dev = false
+routes = [
+  { pattern = "fuldtbooketmusiker.dk", custom_domain = true },
+  { pattern = "www.fuldtbooketmusiker.dk", custom_domain = true },
+]
+[assets]
+directory = "./_site"

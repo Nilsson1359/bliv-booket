@@ -193,8 +193,10 @@ for key,t in themes.items():
     s=re.sub(r'<link rel="stylesheet" href="https://fonts.googleapis.com/css2\?[^"]*">',f'<link rel="stylesheet" href="https://fonts.googleapis.com/css2?{t["fonts"]}&display=swap">',s,count=1)
     s=s.replace('<meta name="color-scheme" content="light">','<meta name="color-scheme" content="dark">')
     s=s.replace('</style>',DARK_COMMON+'\n'+t['vars']+'\n</style>',1)
-    idx=[m.start() for m in re.finditer(r'<script>',s)]
-    if len(idx)>1: s=s[:idx[1]]+'<script>document.querySelectorAll(".dg").forEach(d=>d.classList.add("dark"));</script>\n'+s[idx[1]:]
+    # 24/9: første <script> EFTER <body> (head har nu redirect + GTM + Meta Pixel-scripts)
+    bpos=s.find('<body')
+    idx=[m.start() for m in re.finditer(r'<script>',s) if m.start()>bpos]
+    if idx: s=s[:idx[0]]+'<script>document.querySelectorAll(".dg").forEach(d=>d.classList.add("dark"));</script>\n'+s[idx[0]:]
     s=s.replace('<title>Bliv Booket</title>',f'<title>Bliv Booket · {t["name"]}</title>')
     acc2=re.search(r'--accent2:(#[0-9A-Fa-f]{6})',t['vars']).group(1); acc1=re.search(r'--accent:(#[0-9A-Fa-f]{6})',t['vars']).group(1)
     r_,g_,b_=int(acc2[1:3],16),int(acc2[3:5],16),int(acc2[5:7],16)
