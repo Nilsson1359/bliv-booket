@@ -234,7 +234,6 @@ function drawDepth(buckets,total){
   el.innerHTML=reached.slice(0,10).map((r,i)=>`<i style="background:rgba(240,198,116,${.15+.85*r});height:10%" title="${i*10}-${i*10+10} %: ${Math.round(r*100)} % nåede hertil">${Math.round(r*100)}%</i>`).join('');
 }
 load();loadHeat();
-setInterval(load,60000);
 </script>
 </body>
 </html>

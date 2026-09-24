@@ -142,52 +142,139 @@ function tzOffsetMinutes() {
 const all = async (db, sql, ...p) => (await db.prepare(sql).bind(...p).all()).results || [];
 const one = async (db, sql, ...p) => (await db.prepare(sql).bind(...p).first()) || {};
 
+// Hvad tæller som hvad på fuldtbooketmusiker.dk
+const CONF = {
+  ctaType: 'booking_open', callsMails: false, sections: false,
+  isOpened: e => e.type === 'booking_open', isInteracted: e => e.type === 'booking_interact',
+  isBooked: e => e.type === 'pageview' && e.path === '/tak', isSeriesOpened: e => e.type === 'booking_open',
+  visitorFlags: (s, e) => {
+    if (!s) return { opened: 0, interacted: 0, booked: 0 };
+    if (e.type === 'booking_open') s.opened = 1;
+    if (e.type === 'booking_interact') s.interacted = 1;
+    if (e.type === 'pageview' && e.path === '/tak') s.booked = 1;
+  },
+};
+
+// Dashboardet læser periodens hændelser ÉN gang (sidevis i ts-orden) og regner alt i koden.
+// Før kørte hver tabel sin egen gennemsøgning (~20-40 læste rækker pr. hændelse); nu ~1-2.
+const PAGE = 10000;
+async function scanEvents(db, from, to, cols, fn) {
+  let lastTs = from, lastId = -1;
+  for (;;) {
+    const rows = await all(db, `SELECT id, ts, ${cols} FROM events INDEXED BY idx_events_ts WHERE ts >= ? AND ts <= ? AND (ts > ? OR id > ?) ORDER BY ts, id LIMIT ${PAGE}`, lastTs, to, lastTs, lastId);
+    for (const r of rows) fn(r);
+    if (rows.length < PAGE) return;
+    lastTs = rows[rows.length - 1].ts; lastId = rows[rows.length - 1].id;
+  }
+}
+// SQL-semantik: MAX ignorerer NULL, NULL sorteres først
+const mx = (a, b) => (a == null ? b : b == null ? a : (b > a ? b : a));
+const cmpK = (a, b) => (a === b ? 0 : a == null ? -1 : b == null ? 1 : a < b ? -1 : 1);
+const setOf = (m, k) => { let s = m.get(k); if (!s) m.set(k, s = new Set()); return s; };
+const nBooked = (sids, booked) => { let n = 0; for (const s of sids) if (booked.has(s)) n++; return n; };
+const sortTop = (arr, by, limit) => { arr.sort((a, b) => b[by] - a[by] || cmpK(a.k, b.k)); return limit ? arr.slice(0, limit) : arr; };
+const stampOf = (ts, off) => new Date((Math.floor(ts / 1000) + off) * 1000).toISOString();
+const bucket10 = d => (Number.isInteger(d) ? Math.trunc(d / 10) * 10 : d);
+const likeStart = (s, p) => s != null && String(s).toLowerCase().startsWith(p);
+// leave-øjebliksbilleder samles pr. sidevisning (seneste = største dur/depth)
+const addLeave = (m, e) => { const x = m.get(e.pv) || {}; m.set(e.pv, { path: mx(x.path, e.path), sid: mx(x.sid, e.sid), dur: mx(x.dur, e.dur), depth: mx(x.depth, e.depth) }); };
+
 async function statsJSON(env, url) {
   const db = env.DB, { from, to, tzMin, key } = rangeOf(url);
-  const R = 'ts BETWEEN ? AND ?';
-  const booked = `SELECT DISTINCT sid FROM events WHERE type='pageview' AND path='/tak' AND ${R}`;
-  const totals = await one(db, `SELECT
-      COUNT(DISTINCT CASE WHEN type='pageview' THEN vid END) AS visitors,
-      COUNT(DISTINCT CASE WHEN type='pageview' THEN sid END) AS sessions,
-      SUM(type='pageview') AS pageviews,
-      COUNT(DISTINCT CASE WHEN type='pageview' AND path='/' THEN sid END) AS front_sessions,
-      COUNT(DISTINCT CASE WHEN type='booking_open' THEN sid END) AS opened,
-      COUNT(DISTINCT CASE WHEN type='booking_interact' THEN sid END) AS interacted,
-      COUNT(DISTINCT CASE WHEN type='pageview' AND path='/tak' THEN sid END) AS booked,
-      (SELECT AVG(dur) FROM (SELECT pv, MAX(path) AS path, MAX(sid) AS sid, MAX(device) AS device, MAX(dur) AS dur, MAX(depth) AS depth, MIN(ts) AS ts FROM events WHERE type='leave' GROUP BY pv) WHERE path='/' AND ts BETWEEN ? AND ?) AS avg_dur,
-      (SELECT AVG(depth) FROM (SELECT pv, MAX(path) AS path, MAX(sid) AS sid, MAX(device) AS device, MAX(dur) AS dur, MAX(depth) AS depth, MIN(ts) AS ts FROM events WHERE type='leave' GROUP BY pv) WHERE path='/' AND ts BETWEEN ? AND ?) AS avg_depth,
-      COUNT(DISTINCT CASE WHEN type='pageview' AND vid IN (SELECT vid FROM events WHERE type='pageview' AND ts < ?) THEN vid END) AS returning_visitors
-    FROM events WHERE ${R}`, from, to, from, to, from, from, to);
-  const dayExpr = `strftime('%Y-%m-%d', (ts/1000 + ${tzMin * 60}), 'unixepoch')`;
-  const hourExpr = `strftime('%Y-%m-%d %H:00', (ts/1000 + ${tzMin * 60}), 'unixepoch')`;
-  const bucket = key === 'today' ? hourExpr : dayExpr;
-  const series = await all(db, `SELECT ${bucket} AS d,
-      COUNT(DISTINCT CASE WHEN type='pageview' THEN vid END) AS visitors,
-      COUNT(DISTINCT CASE WHEN type='pageview' THEN sid END) AS sessions,
-      COUNT(DISTINCT CASE WHEN type='booking_open' THEN sid END) AS opened,
-      COUNT(DISTINCT CASE WHEN type='pageview' AND path='/tak' THEN sid END) AS booked
-    FROM events WHERE ${R} GROUP BY d ORDER BY d`, from, to);
-  const top = (col, type = 'pageview', extra = '') => all(db, `SELECT ${col} AS k, COUNT(DISTINCT sid) AS sessions,
-      COUNT(DISTINCT CASE WHEN sid IN (${booked}) THEN sid END) AS booked
-    FROM events WHERE type='${type}' AND ${R} ${extra} GROUP BY k ORDER BY sessions DESC LIMIT 25`, from, to, from, to);
-  const [countries, cities, refs, utm_sources, campaigns, contents, devices, browsers, oses, pages] = await Promise.all([
-    top('country'), top(`city || ', ' || region || ' (' || country || ')'`, 'pageview', `AND city<>''`),
-    top('ref_host', 'pageview', `AND ref_host<>''`), top('utm_source', 'pageview', `AND utm_source<>''`),
-    top('utm_campaign', 'pageview', `AND utm_campaign<>''`), top('utm_content', 'pageview', `AND utm_content<>''`),
-    top('device'), top('browser'), top('os'), top('path'),
-  ]);
-  // CTA pr. sektion + pr. knap
-  const ctaSql = (grp) => all(db, `SELECT ${grp} AS k, COUNT(*) AS clicks, COUNT(DISTINCT sid) AS sessions,
-      COUNT(DISTINCT CASE WHEN sid IN (${booked}) THEN sid END) AS booked
-    FROM events WHERE type='booking_open' AND ${R} GROUP BY k ORDER BY sessions DESC`, from, to, from, to);
-  const [cta_sections, cta_buttons] = await Promise.all([ctaSql('sec'), ctaSql(`sec || ' | ' || label`)]);
-  // klik pr. sektion (alle klik, ikke kun book-knapper)
-  const clicks_sections = await all(db, `SELECT sec AS k, COUNT(*) AS clicks, COUNT(DISTINCT sid) AS sessions FROM events WHERE type='click' AND path='/' AND ${R} GROUP BY k ORDER BY clicks DESC`, from, to);
-  const depth = await all(db, `SELECT (depth/10)*10 AS b, COUNT(*) AS n FROM (SELECT pv, MAX(path) AS path, MAX(sid) AS sid, MAX(device) AS device, MAX(dur) AS dur, MAX(depth) AS depth, MIN(ts) AS ts FROM events WHERE type='leave' GROUP BY pv) WHERE path='/' AND depth IS NOT NULL AND ts BETWEEN ? AND ? GROUP BY b ORDER BY b`, from, to);
-  const points = await all(db, `SELECT lat, lon, city, COUNT(DISTINCT sid) AS sessions FROM events WHERE type='pageview' AND lat IS NOT NULL AND ${R} GROUP BY lat, lon, city ORDER BY sessions DESC LIMIT 500`, from, to);
-  const hours = await all(db, `SELECT CAST(strftime('%H', (ts/1000 + ${tzMin * 60}), 'unixepoch') AS INTEGER) AS h, COUNT(DISTINCT sid) AS sessions FROM events WHERE type='pageview' AND ${R} GROUP BY h ORDER BY h`, from, to);
-  const live = await one(db, `SELECT COUNT(DISTINCT sid) AS n FROM events WHERE ts > ?`, Date.now() - 5 * 60000);
-  return { live: live.n || 0, range: key, from, to, totals, series, countries, cities, refs, utm_sources, campaigns, contents, devices, browsers, oses, pages, cta_sections, cta_buttons, clicks_sections, depth, points, hours };
+  const off = tzMin * 60;
+  const bucketOf = key === 'today' ? ts => { const s = stampOf(ts, off); return s.slice(0, 10) + ' ' + s.slice(11, 13) + ':00'; } : ts => stampOf(ts, off).slice(0, 10);
+  const T = { visitors: new Set(), sessions: new Set(), front: new Set(), opened: new Set(), interacted: new Set(), booked: new Set(), calls: new Set(), mails: new Set() };
+  let rows = 0, pageviews = 0;
+  const series = new Map(), leaves = new Map(), hours = new Map(), points = new Map(), sections = new Map(), ctaSids = new Set();
+  const TOPS = {
+    countries: e => e.country,
+    cities: e => (e.city == null || e.city === '' ? undefined : e.region == null || e.country == null ? null : `${e.city}, ${e.region} (${e.country})`),
+    refs: e => (e.ref_host == null || e.ref_host === '' ? undefined : e.ref_host),
+    utm_sources: e => (e.utm_source == null || e.utm_source === '' ? undefined : e.utm_source),
+    campaigns: e => (e.utm_campaign == null || e.utm_campaign === '' ? undefined : e.utm_campaign),
+    contents: e => (e.utm_content == null || e.utm_content === '' ? undefined : e.utm_content),
+    devices: e => e.device, browsers: e => e.browser, oses: e => e.os, pages: e => e.path,
+  };
+  const tops = Object.fromEntries(Object.keys(TOPS).map(n => [n, new Map()]));
+  const ctaSec = new Map(), ctaBtn = new Map(), clicks = new Map();
+  const addClick = (m, k, sid) => { const x = m.get(k) || m.set(k, { clicks: 0, sids: new Set() }).get(k); x.clicks++; x.sids.add(sid); };
+  await scanEvents(db, from, to, 'type, vid, sid, pv, path, ref_host, utm_source, utm_campaign, utm_content, country, region, city, lat, lon, device, browser, os, sec, label, depth, dur', e => {
+    rows++;
+    const t = e.type, sid = e.sid;
+    let S = series.get(bucketOf(e.ts));
+    if (!S) series.set(bucketOf(e.ts), S = { visitors: new Set(), sessions: new Set(), opened: new Set(), booked: new Set() });
+    if (t === 'pageview') {
+      pageviews++;
+      if (e.vid != null) { T.visitors.add(e.vid); S.visitors.add(e.vid); }
+      if (sid != null) { T.sessions.add(sid); S.sessions.add(sid); }
+      if (e.path === '/' && sid != null) T.front.add(sid);
+      for (const n in TOPS) { const k = TOPS[n](e); if (k !== undefined && sid != null) setOf(tops[n], k).add(sid); else if (k !== undefined) setOf(tops[n], k); }
+      if (e.lat != null) { const pk = e.lat + '|' + e.lon + '|' + e.city; const p = points.get(pk) || points.set(pk, { lat: e.lat, lon: e.lon, city: e.city, sids: new Set() }).get(pk); if (sid != null) p.sids.add(sid); }
+      if (sid != null) setOf(hours, Number(stampOf(e.ts, off).slice(11, 13))).add(sid);
+    }
+    if (t === 'leave') addLeave(leaves, e);
+    if (t === 'click' && e.path === '/') addClick(clicks, e.sec, sid);
+    if (t === CONF.ctaType) {
+      addClick(ctaSec, e.sec, sid);
+      addClick(ctaBtn, e.sec == null || e.label == null ? null : e.sec + ' | ' + e.label, sid);
+      if (sid != null) ctaSids.add(sid);
+    }
+    if (t === 'view' && sid != null) setOf(sections, e.sec).add(sid);
+    if (sid == null) return;
+    if (CONF.isOpened(e)) T.opened.add(sid);
+    if (CONF.isInteracted(e)) T.interacted.add(sid);
+    if (CONF.isBooked(e)) { T.booked.add(sid); S.booked.add(sid); }
+    if (CONF.isSeriesOpened(e)) S.opened.add(sid);
+    if (t === 'cta' && likeStart(e.label, 'ring:')) T.calls.add(sid);
+    if (t === 'cta' && likeStart(e.label, 'mail:')) T.mails.add(sid);
+  });
+  const booked = T.booked;
+  // sidevisninger tælles efter starttidspunkt: dem, der startede før perioden, springes over
+  const early = new Set((await all(db, `SELECT DISTINCT pv FROM events WHERE type='leave' AND ts >= ? AND ts < ?`, from - 3600000, from)).map(r => r.pv));
+  const front = [...leaves].filter(([pv, x]) => x.path === '/' && !early.has(pv)).map(([, x]) => x);
+  const avg = k => { const v = front.map(x => x[k]).filter(x => x != null); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+  const ret = await one(db, `SELECT COUNT(*) AS n FROM (SELECT vid FROM events WHERE type='pageview' AND ts BETWEEN ? AND ? AND vid IS NOT NULL GROUP BY vid) r WHERE EXISTS (SELECT 1 FROM events o INDEXED BY idx_events_vid WHERE o.vid = r.vid AND o.type='pageview' AND o.ts < ?)`, from, to, from);
+  const live = await one(db, `SELECT COUNT(DISTINCT sid) AS n FROM events INDEXED BY idx_events_ts WHERE ts > ?`, Date.now() - 5 * 60000);
+  const totals = {
+    visitors: T.visitors.size, sessions: T.sessions.size, pageviews: rows ? pageviews : null, front_sessions: T.front.size,
+    opened: T.opened.size, interacted: T.interacted.size, booked: booked.size,
+    ...(CONF.callsMails ? { calls: T.calls.size, mails: T.mails.size } : {}),
+    avg_dur: avg('dur'), avg_depth: avg('depth'), returning_visitors: ret.n || 0,
+  };
+  const out = { live: live.n || 0, range: key, from, to, totals };
+  out.series = [...series].sort((a, b) => cmpK(a[0], b[0])).map(([d, s]) => ({ d, visitors: s.visitors.size, sessions: s.sessions.size, opened: s.opened.size, booked: s.booked.size }));
+  for (const n in TOPS) out[n] = sortTop([...tops[n]].map(([k, s]) => ({ k, sessions: s.size, booked: nBooked(s, booked) })), 'sessions', 25);
+  const ctaRows = m => sortTop([...m].map(([k, x]) => ({ k, clicks: x.clicks, sessions: nonNull(x.sids), booked: nBooked(x.sids, booked) })), 'sessions');
+  out.cta_sections = ctaRows(ctaSec); out.cta_buttons = ctaRows(ctaBtn);
+  out.clicks_sections = sortTop([...clicks].map(([k, x]) => ({ k, clicks: x.clicks, sessions: nonNull(x.sids) })), 'clicks');
+  const depth = new Map();
+  for (const x of front) if (x.depth != null) { const b = bucket10(x.depth); depth.set(b, (depth.get(b) || 0) + 1); }
+  out.depth = [...depth].sort((a, b) => a[0] - b[0]).map(([b, n]) => ({ b, n }));
+  out.points = [...points.values()].map(p => ({ lat: p.lat, lon: p.lon, city: p.city, sessions: p.sids.size })).sort((a, b) => b.sessions - a.sessions).slice(0, 500);
+  out.hours = [...hours].sort((a, b) => a[0] - b[0]).map(([h, s]) => ({ h, sessions: s.size }));
+  if (CONF.sections) out.sections = sortTop([...sections].map(([k, s]) => ({ k, sessions: s.size, booked: nBooked(s, booked), cta: nBooked(s, ctaSids) })), 'sessions');
+  return out;
+}
+const nonNull = s => { let n = 0; for (const x of s) if (x != null) n++; return n; };
+
+async function visitorsJSON(env, url) {
+  const db = env.DB, { from, to } = rangeOf(url);
+  const limit = Math.min(500, Number(url.searchParams.get('limit')) || 150);
+  const S = new Map(), leaves = new Map();
+  await scanEvents(db, from, to, 'type, vid, sid, pv, path, ip, city, region, country, device, browser, os, ref_host, utm_source, utm_campaign, label, depth, dur, vw', e => {
+    if (e.type === 'leave') addLeave(leaves, e);
+    let s = S.get(e.sid);
+    if (!s) S.set(e.sid, s = { sid: e.sid, ts: e.ts, last: e.ts, pages: 0, depth: null, ...CONF.visitorFlags(null) });
+    s.ts = Math.min(s.ts, e.ts); s.last = Math.max(s.last, e.ts);
+    for (const c of ['ip', 'city', 'region', 'country', 'device', 'browser', 'os', 'ref_host', 'utm_source', 'utm_campaign', 'vid', 'vw']) s[c] = mx(s[c], e[c]);
+    if (e.type === 'pageview') s.pages++;
+    if (e.type === 'leave') s.depth = mx(s.depth, e.depth);
+    CONF.visitorFlags(s, e);
+  });
+  const dur = new Map();
+  for (const x of leaves.values()) if (x.dur != null) dur.set(x.sid, (dur.get(x.sid) || 0) + x.dur);
+  const rows = [...S.values()].sort((a, b) => b.ts - a.ts).slice(0, limit).map(s => ({ ...s, dur: dur.has(s.sid) ? dur.get(s.sid) : null }));
+  return { rows };
 }
 
 async function heatJSON(env, url) {
@@ -197,28 +284,65 @@ async function heatJSON(env, url) {
   const devSql = device === 'all' ? '' : device === 'desktop' ? `AND device='desktop'` : `AND device<>'desktop'`;
   const points = await all(db, `SELECT x, y, sec, secy, label, device, vw FROM events WHERE type='click' AND path=? AND ts BETWEEN ? AND ? ${devSql} ORDER BY ts DESC LIMIT 6000`, path, from, to);
   const labels = await all(db, `SELECT label AS k, sec, COUNT(*) AS clicks, COUNT(DISTINCT sid) AS sessions FROM events WHERE type='click' AND path=? AND ts BETWEEN ? AND ? ${devSql} AND label<>'' GROUP BY label, sec ORDER BY clicks DESC LIMIT 40`, path, from, to);
-  const depth = await all(db, `SELECT (depth/10)*10 AS b, COUNT(*) AS n FROM (SELECT pv, MAX(path) AS path, MAX(sid) AS sid, MAX(device) AS device, MAX(dur) AS dur, MAX(depth) AS depth, MIN(ts) AS ts FROM events WHERE type='leave' GROUP BY pv) WHERE path=? AND depth IS NOT NULL AND ts BETWEEN ? AND ? ${devSql} GROUP BY b ORDER BY b`, path, from, to);
-  const total = await one(db, `SELECT COUNT(*) AS n FROM (SELECT pv, MAX(path) AS path, MAX(sid) AS sid, MAX(device) AS device, MAX(dur) AS dur, MAX(depth) AS depth, MIN(ts) AS ts FROM events WHERE type='leave' GROUP BY pv) WHERE path=? AND depth IS NOT NULL AND ts BETWEEN ? AND ? ${devSql}`, path, from, to);
+  const depth = await all(db, `SELECT (depth/10)*10 AS b, COUNT(*) AS n FROM (SELECT pv, MAX(path) AS path, MAX(sid) AS sid, MAX(device) AS device, MAX(dur) AS dur, MAX(depth) AS depth, MIN(ts) AS ts FROM events WHERE type='leave' AND ts BETWEEN ? AND ? GROUP BY pv) WHERE path=? AND depth IS NOT NULL ${devSql} GROUP BY b ORDER BY b`, from, to, path);
+  const total = await one(db, `SELECT COUNT(*) AS n FROM (SELECT pv, MAX(path) AS path, MAX(sid) AS sid, MAX(device) AS device, MAX(dur) AS dur, MAX(depth) AS depth, MIN(ts) AS ts FROM events WHERE type='leave' AND ts BETWEEN ? AND ? GROUP BY pv) WHERE path=? AND depth IS NOT NULL ${devSql}`, from, to, path);
   return { path, device, points, labels, depth, leaves: total.n || 0 };
 }
 
-async function visitorsJSON(env, url) {
-  const db = env.DB, { from, to } = rangeOf(url);
-  const limit = Math.min(500, Number(url.searchParams.get('limit')) || 150);
-  const rows = await all(db, `SELECT sid, MIN(ts) AS ts, MAX(ts) AS last, MAX(ip) AS ip, MAX(city) AS city, MAX(region) AS region, MAX(country) AS country,
-      MAX(device) AS device, MAX(browser) AS browser, MAX(os) AS os, MAX(ref_host) AS ref_host, MAX(utm_source) AS utm_source, MAX(utm_campaign) AS utm_campaign,
-      SUM(type='pageview') AS pages, MAX(CASE WHEN type='booking_open' THEN 1 ELSE 0 END) AS opened,
-      MAX(CASE WHEN type='booking_interact' THEN 1 ELSE 0 END) AS interacted,
-      MAX(CASE WHEN type='pageview' AND path='/tak' THEN 1 ELSE 0 END) AS booked,
-      MAX(CASE WHEN type='leave' THEN depth END) AS depth, (SELECT SUM(dur) FROM (SELECT pv, MAX(path) AS path, MAX(sid) AS sid, MAX(device) AS device, MAX(dur) AS dur, MAX(depth) AS depth, MIN(ts) AS ts FROM events WHERE type='leave' GROUP BY pv) x WHERE x.sid = events.sid) AS dur,
-      MAX(vid) AS vid, MAX(vw) AS vw
-    FROM events WHERE ts BETWEEN ? AND ? GROUP BY sid ORDER BY ts DESC LIMIT ?`, from, to, limit);
-  return { rows };
+
+// ───────── læsebudget + cache for dashboardet ─────────
+// D1 gratis = 5 mio. læste rækker pr. døgn (UTC) for HELE Cloudflare-kontoen, delt med den anden side.
+// Dashboardet opdaterer kun ved genindlæsning; svar caches kort, og hvert site må højst bruge READ_BUDGET pr. døgn.
+const READ_BUDGET = 1000000;
+const CACHE_TTL = { today: 60, '7d': 120, '30d': 300, '90d': 600, '365d': 1800 };
+const utcDay = () => new Date().toISOString().slice(0, 10);
+
+// env med en D1 der tæller læste rækker (meta.rows_read) for alle forespørgsler
+function meteredEnv(env, meter) {
+  const DB = { prepare: sql => ({ bind: (...p) => {
+    const st = env.DB.prepare(sql).bind(...p);
+    const run = async () => { const r = await st.all(); meter.rows += (r.meta && r.meta.rows_read) || 0; return r; };
+    return { all: run, first: async () => ((await run()).results || [])[0] || null };
+  } }) };
+  return new Proxy(env, { get: (t, k) => (k === 'DB' ? DB : t[k]) });
+}
+async function usedToday(env) {
+  try { return ((await env.DB.prepare('SELECT rows FROM usage WHERE day = ?').bind(utcDay()).first()) || {}).rows || 0; }
+  catch { await env.DB.prepare('CREATE TABLE IF NOT EXISTS usage (day TEXT PRIMARY KEY, rows INTEGER NOT NULL DEFAULT 0)').run().catch(() => {}); return 0; }
+}
+const addUsage = (env, rows) => env.DB.prepare('INSERT INTO usage (day, rows) VALUES (?, ?) ON CONFLICT(day) DO UPDATE SET rows = rows + excluded.rows').bind(utcDay(), rows).run().catch(() => {});
+// Antal hændelser i perioden ud fra id'erne (læser 2 rækker i stedet for at tælle dem alle)
+async function eventsInRange(env, url) {
+  const { from, to } = rangeOf(url);
+  const a = await env.DB.prepare('SELECT id FROM events WHERE ts >= ? ORDER BY ts LIMIT 1').bind(from).first();
+  const b = await env.DB.prepare('SELECT id FROM events WHERE ts <= ? ORDER BY ts DESC LIMIT 1').bind(to).first();
+  return a && b ? Math.max(0, b.id - a.id + 1) : 0;
+}
+// cost = ca. læste rækker pr. hændelse i perioden for dette endpoint (målt)
+// Læste rækker pr. hændelse i perioden (målt 24/9 på 60.000 testhændelser: stats 1,9 / heat 1,7 / visitors 1,0 / form 1,3), rundet op
+const COST = { stats: 2.5, heat: 2, visitors: 1.2, form: 1.5, outcomes: 0.2, quality: 0.5, calls: 0.2 };
+async function adminApi(env, ctx, url, fn, cost) {
+  const cache = caches.default;
+  const key = new Request(url.origin + '/__admin-cache' + url.pathname + url.search);
+  const hit = await cache.match(key).catch(() => null);
+  if (hit) return new Response(hit.body, { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'X-Cache': 'HIT' } });
+  const used = await usedToday(env);
+  const est = Math.round((await eventsInRange(env, url)) * cost);
+  if (used + est > READ_BUDGET) {
+    return json({ error: 'Dagens læsebudget er brugt', detail: `${used.toLocaleString('da-DK')} af ${READ_BUDGET.toLocaleString('da-DK')} rækker (denne visning ville koste ca. ${est.toLocaleString('da-DK')}). Vælg en kortere periode, eller kig igen efter kl. 02.`, used, est, budget: READ_BUDGET }, 429);
+  }
+  const meter = { rows: 0 };
+  const data = await fn(meteredEnv(env, meter), url);
+  await addUsage(env, meter.rows + 5);
+  const body = JSON.stringify(data);
+  const ttl = CACHE_TTL[url.searchParams.get('range') || '7d'] || 120;
+  if (!data.error) ctx.waitUntil(cache.put(key, new Response(body, { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=' + ttl } })).catch(() => {}));
+  return new Response(body, { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'X-Cache': 'MISS', 'X-Rows-Read': String(meter.rows), 'X-Rows-Today': String(used + meter.rows + 5) } });
 }
 
 // ───────── router ─────────
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const p = url.pathname;
     try {
@@ -244,9 +368,9 @@ export default {
         const ok = await isAuthed(request, env);
         if (!ok) return p.startsWith('/admin/api/') ? json({ error: 'unauthorized' }, 401) : html(LOGIN_HTML(false), 401);
         if (p === '/admin' || p === '/admin/') return html(ADMIN_HTML, 200, { 'X-Robots-Tag': 'noindex' });
-        if (p === '/admin/api/stats') return json(await statsJSON(env, url));
-        if (p === '/admin/api/heat') return json(await heatJSON(env, url));
-        if (p === '/admin/api/visitors') return json(await visitorsJSON(env, url));
+        if (p === '/admin/api/stats') return await adminApi(env, ctx, url, statsJSON, COST.stats);
+        if (p === '/admin/api/heat') return await adminApi(env, ctx, url, heatJSON, COST.heat);
+        if (p === '/admin/api/visitors') return await adminApi(env, ctx, url, visitorsJSON, COST.visitors);
         return json({ error: 'not found' }, 404);
       }
     } catch (e) {
