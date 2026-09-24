@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Statistik · Bliv Booket</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha384-c6Rcwz4e4CITMbu/NBmnNS8yN2sC3cUElMEMfP3vqqKFp7GOYaaBBCqmaWBjmkjb" crossorigin="anonymous">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" integrity="sha384-bs/nf9FbdNouRbMiFcrcZfLXYPKiPaGVGplVbv7dLGECccEXDW+S3zjqSKR5ZEaD" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha384-NElt3Op+9NBMCYaef5HxeJmU4Xeard/Lku8ek6hoPTvYkQPh3zLIrJP7KiRocsxO" crossorigin="anonymous"></script>
+<style>
+:root{--bg:#121212;--card:#1b1b1b;--card2:#222;--line:#2c2c2c;--ink:#ececec;--ink2:#a9a9a9;--ink3:#777;--acc:#d9d9d9;--good:#7fd1a5;--warn:#f0c674;--bad:#f28b82;--mono:"JetBrains Mono",monospace}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Manrope,system-ui,sans-serif;font-size:14px;line-height:1.45}
+a{color:inherit}
+header{position:sticky;top:0;z-index:5;background:rgba(18,18,18,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:12px 20px;display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
+header h1{font-size:1rem;margin:0;letter-spacing:.02em}header h1 span{color:var(--ink3);font-weight:500}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}.seg button{background:none;border:0;color:var(--ink2);padding:7px 13px;cursor:pointer;font:inherit;font-weight:600}.seg button.on{background:var(--acc);color:#111}
+header .sp{flex:1}header a{color:var(--ink3);font-size:.85rem;text-decoration:none}
+main{padding:18px 20px 60px;max-width:1500px;margin:0 auto}
+.grid{display:grid;gap:14px}.kpis{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;min-width:0}
+.kpi .l{font-family:var(--mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}.kpi .v{font-size:1.9rem;font-weight:800;letter-spacing:-.02em;margin:4px 0 2px}.kpi .s{color:var(--ink2);font-size:.8rem}
+h2{font-size:.72rem;font-family:var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);margin:0 0 12px;font-weight:500}
+.row{display:grid;gap:14px;margin-top:14px}.c2{grid-template-columns:1fr 1fr}.c3{grid-template-columns:repeat(3,1fr)}.c31{grid-template-columns:2fr 1fr}
+@media(max-width:900px){.c2,.c3,.c31{grid-template-columns:1fr}}
+table{width:100%;border-collapse:collapse;font-size:.85rem}th{font-family:var(--mono);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);text-align:left;font-weight:500;padding:6px 8px;border-bottom:1px solid var(--line)}td{padding:7px 8px;border-bottom:1px solid #202020;vertical-align:top}td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.bar{height:6px;border-radius:3px;background:#2e2e2e;overflow:hidden;margin-top:4px}.bar i{display:block;height:100%;background:var(--acc)}
+.funnel{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.fstep{background:var(--card2);border-radius:12px;padding:14px}.fstep .l{font-size:.75rem;color:var(--ink2)}.fstep .v{font-size:1.6rem;font-weight:800}.fstep .p{font-family:var(--mono);font-size:.7rem;color:var(--good)}.fstep .bar{margin-top:10px}
+@media(max-width:700px){.funnel{grid-template-columns:1fr 1fr}}
+.pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:.7rem;font-weight:700;background:#2a2a2a;color:var(--ink2)}.pill.g{background:rgba(127,209,165,.18);color:var(--good)}.pill.y{background:rgba(240,198,116,.18);color:var(--warn)}
+#map{height:380px;border-radius:12px;background:#0d0d0d}.leaflet-tile{filter:invert(1) hue-rotate(180deg) brightness(.8) contrast(.9) saturate(.4)}.leaflet-container{font:inherit}
+.heatwrap{display:grid;grid-template-columns:minmax(0,1.4fr) 60px minmax(0,1fr);gap:14px;align-items:start}@media(max-width:1100px){.heatwrap{grid-template-columns:1fr}}
+.frameScroll{max-height:900px;overflow:auto;border-radius:12px;width:100%}.frame{position:relative;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#000}.frame iframe{display:block;border:0;background:#fff}.frame canvas{position:absolute;inset:0;pointer-events:none}
+.depthbar{position:relative;width:60px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}.depthbar i{display:block;height:10%;font-family:var(--mono);font-size:.6rem;color:#111;text-align:center;line-height:1}.depthbar .lbl{position:absolute;left:0;right:0;font-family:var(--mono);font-size:.6rem;color:#111;text-align:center}
+.muted{color:var(--ink3)}.mono{font-family:var(--mono);font-size:.78rem}
+.ctl{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}select{background:#0f0f0f;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font:inherit}
+.scroll{max-height:520px;overflow:auto}
+.empty{color:var(--ink3);padding:20px;text-align:center}
+</style>
+</head>
+<body>
+<header>
+  <h1>Bliv Booket <span>· statistik</span></h1>
+  <div class="seg" id="range">
+    <button data-r="today">I dag</button><button data-r="7d" class="on">7 dage</button><button data-r="30d">30 dage</button><button data-r="90d">90 dage</button><button data-r="365d">1 år</button>
+  </div>
+  <span class="muted" id="upd"></span>
+  <span class="sp"></span>
+  <a href="/" target="_blank">Se siden ↗</a>
+  <a href="/admin/logout">Log ud</a>
+</header>
+<main>
+  <div class="grid kpis" id="kpis"></div>
+
+  <div class="row c31">
+    <div class="card"><h2>Funnel: forside → booking → tak</h2><div class="funnel" id="funnel"></div><p class="muted" style="margin:12px 0 0;font-size:.8rem">Tal er unikke sessioner (30 min uden aktivitet = ny session). "Formular rørt" = klik inde i bookingvinduet. "Booket" = landet på tak-siden.</p></div>
+    <div class="card"><h2>Besøg pr. time (hele perioden)</h2><canvas id="hours" height="170"></canvas></div>
+  </div>
+
+  <div class="row">
+    <div class="card"><h2>Besøgende og bookinger over tid</h2><canvas id="series" height="90"></canvas></div>
+  </div>
+
+  <div class="row c2">
+    <div class="card"><h2>Hvilke sektioner konverterer: klik på "book"-knappen pr. sektion</h2><div id="cta"></div></div>
+    <div class="card"><h2>Pr. knap</h2><div class="scroll" id="ctabtn"></div></div>
+  </div>
+
+  <div class="row c2">
+    <div class="card"><h2>Hvor i landet</h2><div id="map"></div></div>
+    <div class="card"><h2>Byer</h2><div class="scroll" id="cities"></div></div>
+  </div>
+
+  <div class="row c3">
+    <div class="card"><h2>Lande</h2><div id="countries"></div></div>
+    <div class="card"><h2>Henvisninger</h2><div id="refs"></div></div>
+    <div class="card"><h2>Kilder (utm / fbclid / gclid)</h2><div id="utm"></div><h2 style="margin-top:16px">Kampagner</h2><div id="campaigns"></div><h2 style="margin-top:16px">Annoncer (utm_content)</h2><div id="contents"></div></div>
+  </div>
+
+  <div class="row c3">
+    <div class="card"><h2>Enheder</h2><div id="devices"></div></div>
+    <div class="card"><h2>Browsere</h2><div id="browsers"></div></div>
+    <div class="card"><h2>Styresystem</h2><div id="oses"></div></div>
+  </div>
+
+  <div class="row">
+    <div class="card">
+      <h2>Heatmap: hvor klikkes der, og hvor langt scroller folk</h2>
+      <div class="ctl">
+        <div class="seg" id="hdev"><button data-d="desktop" class="on">Desktop</button><button data-d="mobile">Mobil</button><button data-d="all">Alle</button></div>
+        <select id="hpath"><option value="/">Forside</option><option value="/tak">Tak-siden</option></select>
+        <span class="muted" id="hinfo"></span>
+      </div>
+      <div class="heatwrap">
+        <div class="frameScroll" id="frameScroll"><div class="frame" id="frame"><iframe id="hf" title="preview"></iframe><canvas id="hc"></canvas></div></div>
+        <div><div class="depthbar" id="depth"></div><div class="muted mono" style="margin-top:6px;font-size:.6rem;text-align:center">scroll-dybde<br>(andel der nåede hertil)</div></div>
+        <div><h2>Mest klikkede elementer</h2><div class="scroll" id="hlabels"></div><h2 style="margin-top:16px">Klik pr. sektion (alle klik)</h2><div id="clicksec"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="card"><h2>Seneste besøg</h2><div class="scroll" id="visitors"></div></div>
+  </div>
+</main>
+<script>
+const SEC = {top:'Hero (øverst)',vslBox:'Video (VSL)',marq:'Kunde-citater',trow:'Trust-række',historie:'Oscars historie',kevin:'Kevin-case',overblik:'Overblik: 6 problemer',p1:'Problem 1: talent',p2:'Problem 2: telefonen',p3:'Problem 3: tilfældig kalender',fiks:'Konsekvensen',p4:'Problem 4: pris',p5:'Problem 5: hvorfor dig',p6:'Problem 6: fast vej',system:'Systemet (90 dage)',counter:'De rigtige jobs',ansoeg:'Ansøg (nederst)',nav:'Topbar'};
+const secName = s => s ? (SEC[s] || s) : '(uden sektion)';
+const fmt = n => (n==null?0:Math.round(n)).toLocaleString('da-DK');
+const pct = (a,b) => b ? (100*a/b).toLocaleString('da-DK',{maximumFractionDigits:1})+' %' : '–';
+const dur = ms => { if(!ms) return '–'; const s=Math.round(ms/1000); return s<60? s+' s' : Math.floor(s/60)+' min '+(s%60)+' s'; };
+const esc = s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let range='7d', charts={}, map, mapLayer;
+document.getElementById('range').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;range=b.dataset.r;[...e.currentTarget.children].forEach(x=>x.classList.toggle('on',x===b));load();loadHeat();});
+
+function table(el, rows, cols, opts={}){
+  if(!rows||!rows.length){el.innerHTML='<div class="empty">Ingen data endnu</div>';return;}
+  const max=Math.max(...rows.map(r=>+r[cols[1].k]||0));
+  el.innerHTML='<table><thead><tr>'+cols.map(c=>`<th class="${c.n?'n':''}">${c.t}</th>`).join('')+'</tr></thead><tbody>'+
+    rows.map(r=>'<tr>'+cols.map((c,i)=>{let v=c.f?c.f(r):r[c.k];if(i===0&&opts.bar!==false){return `<td>${esc(v)}<div class="bar"><i style="width:${max?100*(+r[cols[1].k]||0)/max:0}%"></i></div></td>`}return `<td class="${c.n?'n':''}">${c.raw?v:esc(v)}</td>`}).join('')+'</tr>').join('')+'</tbody></table>';
+}
+const topCols=(name)=>[{t:name,k:'k',f:r=>r.k||'(ukendt)'},{t:'Sessioner',k:'sessions',n:1},{t:'Booket',k:'booked',n:1},{t:'Konv.',n:1,f:r=>pct(r.booked,r.sessions)}];
+
+async function load(){
+  const d=await (await fetch('/admin/api/stats?range='+range)).json();
+  if(d.error){alert(d.error+(d.detail?': '+d.detail:''));return;}
+  const t=d.totals;
+  document.getElementById('upd').textContent='Opdateret '+new Date().toLocaleTimeString('da-DK',{hour:'2-digit',minute:'2-digit'});
+  const k=[['Besøgende',fmt(t.visitors),'unikke browsere'],['Sessioner',fmt(t.sessions),fmt(t.returning_visitors)+' tilbagevendende'],['Sidevisninger',fmt(t.pageviews),''],['Booking åbnet',fmt(t.opened),pct(t.opened,t.sessions)+' af sessioner'],['Bookinger',fmt(t.booked),pct(t.booked,t.sessions)+' konvertering'],['Tid på forsiden',dur(t.avg_dur),'gennemsnit'],['Scroll-dybde',t.avg_depth?Math.round(t.avg_depth)+' %':'–','gennemsnit, forside']];
+  document.getElementById('kpis').innerHTML=k.map(x=>`<div class="card kpi"><div class="l">${x[0]}</div><div class="v">${x[1]}</div><div class="s">${x[2]}</div></div>`).join('');
+  const steps=[['Forside set',t.front_sessions],['Booking åbnet',t.opened],['Formular rørt',t.interacted],['Booket',t.booked]];
+  document.getElementById('funnel').innerHTML=steps.map((s,i)=>`<div class="fstep"><div class="l">${s[0]}</div><div class="v">${fmt(s[1])}</div><div class="p">${i? pct(s[1],steps[i-1][1])+' af forrige':'100 %'} · ${pct(s[1],steps[0][1])} af alle</div><div class="bar"><i style="width:${steps[0][1]?100*s[1]/steps[0][1]:0}%"></i></div></div>`).join('');
+
+  chart('series',{type:'line',data:{labels:d.series.map(s=>s.d.slice(range==='today'?11:5)),datasets:[
+    {label:'Besøgende',data:d.series.map(s=>s.visitors),borderColor:'#d9d9d9',backgroundColor:'rgba(217,217,217,.08)',fill:true,tension:.3},
+    {label:'Booking åbnet',data:d.series.map(s=>s.opened),borderColor:'#f0c674',tension:.3},
+    {label:'Bookinger',data:d.series.map(s=>s.booked),borderColor:'#7fd1a5',tension:.3}]},
+    options:{plugins:{legend:{labels:{color:'#aaa'}}},scales:{x:{ticks:{color:'#777'},grid:{color:'#222'}},y:{beginAtZero:true,ticks:{color:'#777',precision:0},grid:{color:'#222'}}}}});
+  const hrs=Array.from({length:24},(_,h)=>(d.hours.find(x=>x.h===h)||{}).sessions||0);
+  chart('hours',{type:'bar',data:{labels:hrs.map((_,h)=>h),datasets:[{data:hrs,backgroundColor:'#bdbdbd',borderRadius:3}]},options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#777'},grid:{display:false}},y:{beginAtZero:true,ticks:{color:'#777',precision:0},grid:{color:'#222'}}}}});
+
+  table(document.getElementById('cta'),d.cta_sections,[{t:'Sektion',k:'k',f:r=>secName(r.k)},{t:'Sessioner m. klik',k:'sessions',n:1},{t:'Klik',k:'clicks',n:1},{t:'Booket',k:'booked',n:1},{t:'Konv.',n:1,f:r=>pct(r.booked,r.sessions)}]);
+  table(document.getElementById('ctabtn'),d.cta_buttons,[{t:'Sektion · knap',k:'k',f:r=>{const [s,...l]=r.k.split(' | ');return secName(s)+' · “'+l.join(' | ')+'”'}},{t:'Sessioner',k:'sessions',n:1},{t:'Klik',k:'clicks',n:1},{t:'Booket',k:'booked',n:1},{t:'Konv.',n:1,f:r=>pct(r.booked,r.sessions)}]);
+  table(document.getElementById('cities'),d.cities,topCols('By'));
+  table(document.getElementById('countries'),d.countries,topCols('Land'));
+  table(document.getElementById('refs'),d.refs,topCols('Henvisning'));
+  table(document.getElementById('utm'),d.utm_sources,topCols('Kilde'));
+  table(document.getElementById('campaigns'),d.campaigns,topCols('Kampagne'));
+  table(document.getElementById('contents'),d.contents,topCols('Annonce'));
+  table(document.getElementById('devices'),d.devices,topCols('Enhed'));
+  table(document.getElementById('browsers'),d.browsers,topCols('Browser'));
+  table(document.getElementById('oses'),d.oses,topCols('OS'));
+  table(document.getElementById('clicksec'),d.clicks_sections,[{t:'Sektion',k:'k',f:r=>secName(r.k)},{t:'Klik',k:'clicks',n:1},{t:'Sessioner',k:'sessions',n:1}]);
+  drawMap(d.points);
+  loadVisitors();
+}
+function chart(id,cfg){if(charts[id])charts[id].destroy();cfg.options=cfg.options||{};cfg.options.responsive=true;cfg.options.animation=false;charts[id]=new Chart(document.getElementById(id),cfg);}
+function drawMap(points){
+  if(!map){map=L.map('map',{scrollWheelZoom:false}).setView([56.1,10.5],6);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:18}).addTo(map);}
+  if(mapLayer)mapLayer.remove();mapLayer=L.layerGroup().addTo(map);
+  const max=Math.max(1,...points.map(p=>p.sessions));
+  points.forEach(p=>L.circleMarker([p.lat,p.lon],{radius:4+14*Math.sqrt(p.sessions/max),color:'#e8e8e8',weight:1,fillColor:'#f0c674',fillOpacity:.55}).bindTooltip(`${esc(p.city||'?')}: ${fmt(p.sessions)} sessioner`).addTo(mapLayer));
+  if(points.length){const b=L.latLngBounds(points.map(p=>[p.lat,p.lon]));if(b.isValid())map.fitBounds(b.pad(.3),{maxZoom:8});}
+}
+async function loadVisitors(){
+  const d=await (await fetch('/admin/api/visitors?range='+range+'&limit=200')).json();
+  const el=document.getElementById('visitors');
+  if(!d.rows||!d.rows.length){el.innerHTML='<div class="empty">Ingen besøg endnu</div>';return;}
+  el.innerHTML='<table><thead><tr><th>Tid</th><th>Sted</th><th>IP</th><th>Enhed</th><th>Kilde</th><th class="n">Sider</th><th class="n">Tid</th><th class="n">Scroll</th><th>Status</th></tr></thead><tbody>'+d.rows.map(r=>`<tr>
+    <td class="mono">${new Date(r.ts).toLocaleString('da-DK',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</td>
+    <td>${esc([r.city,r.region].filter(Boolean).join(', ')||'?')} <span class="muted">${esc(r.country)}</span></td>
+    <td class="mono">${esc(r.ip)}</td><td>${esc(r.device)} · ${esc(r.browser)} · ${esc(r.os)}${r.vw?' <span class="muted">'+r.vw+'px</span>':''}</td>
+    <td>${esc(r.utm_source||r.ref_host||'direkte')}${r.utm_campaign?' <span class="muted">'+esc(r.utm_campaign)+'</span>':''}</td>
+    <td class="n">${r.pages}</td><td class="n">${dur(r.dur)}</td><td class="n">${r.depth!=null?r.depth+' %':'–'}</td>
+    <td>${r.booked?'<span class="pill g">Booket</span>':r.interacted?'<span class="pill y">Formular rørt</span>':r.opened?'<span class="pill y">Booking åbnet</span>':'<span class="pill">Kigget</span>'}</td></tr>`).join('')+'</tbody></table>';
+}
+
+// ─── heatmap ───
+let hdev='desktop';
+document.getElementById('hdev').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;hdev=b.dataset.d;[...e.currentTarget.children].forEach(x=>x.classList.toggle('on',x===b));loadHeat();});
+document.getElementById('hpath').addEventListener('change',loadHeat);
+let heatTimer;
+async function loadHeat(){
+  const path=document.getElementById('hpath').value;
+  const [d]=await Promise.all([(await fetch(`/admin/api/heat?range=${range}&path=${encodeURIComponent(path)}&device=${hdev}`)).json()]);
+  const w=hdev==='mobile'?390:1280, fr=document.getElementById('hf'), frame=document.getElementById('frame');
+  const scale=Math.min(1,(document.getElementById('frameScroll').clientWidth||600)/w);
+  frame.style.width=(w*scale)+'px';
+  document.getElementById('hinfo').textContent=`${fmt(d.points.length)} klik · ${fmt(d.leaves)} besøg m. scroll-data`;
+  const src=path+'?nt=1';
+  const render=()=>{
+    let doc; try{doc=fr.contentDocument;}catch(e){return;}
+    if(!doc||!doc.body)return;
+    fr.style.width=w+'px';fr.style.height='800px';fr.style.transform=`scale(${scale})`;fr.style.transformOrigin='0 0';
+    void doc.body.offsetHeight; // reflow ved ny bredde før måling
+    const dh=Math.max(doc.documentElement.scrollHeight,doc.body.scrollHeight);
+    fr.style.height=dh+'px';
+    frame.style.height=(dh*scale)+'px';
+    const c=document.getElementById('hc');c.width=Math.round(w*scale);c.height=Math.round(dh*scale);c.style.width=c.width+'px';c.style.height=c.height+'px';
+    drawHeat(c,d.points.map(p=>{
+      let y=null; if(p.sec){const el=doc.getElementById(p.sec); if(el){const r=el.getBoundingClientRect(); const top=r.top+doc.documentElement.scrollTop; y=top+p.secy*r.height;}}
+      if(y==null) y=p.y*dh;
+      return {x:p.x*w*scale,y:y*scale};
+    }));
+    drawDepth(d.depth,d.leaves);
+  };
+  if(fr.dataset.src!==src){fr.dataset.src=src;fr.src=src;fr.onload=()=>{setTimeout(render,600);setTimeout(render,2500);};}
+  else render();
+  table(document.getElementById('hlabels'),d.labels,[{t:'Element',k:'k',f:r=>`“${r.k}” · ${secName(r.sec)}`},{t:'Klik',k:'clicks',n:1},{t:'Sessioner',k:'sessions',n:1}]);
+}
+function drawHeat(c,pts){
+  const ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);
+  if(!pts.length)return;
+  const g=document.createElement('canvas');g.width=c.width;g.height=c.height;const gx=g.getContext('2d');
+  const r=hdev==='mobile'?16:22;
+  pts.forEach(p=>{const grd=gx.createRadialGradient(p.x,p.y,0,p.x,p.y,r);grd.addColorStop(0,'rgba(0,0,0,.35)');grd.addColorStop(1,'rgba(0,0,0,0)');gx.fillStyle=grd;gx.fillRect(p.x-r,p.y-r,2*r,2*r);});
+  const img=gx.getImageData(0,0,g.width,g.height),d=img.data;
+  const ramp=[[0,0,255],[0,255,255],[0,255,0],[255,255,0],[255,0,0]];
+  for(let i=0;i<d.length;i+=4){const a=d[i+3];if(!a)continue;const t=Math.min(1,a/200)*(ramp.length-1),k=Math.floor(t),f=t-k,c0=ramp[k],c1=ramp[Math.min(k+1,ramp.length-1)];d[i]=c0[0]+(c1[0]-c0[0])*f;d[i+1]=c0[1]+(c1[1]-c0[1])*f;d[i+2]=c0[2]+(c1[2]-c0[2])*f;d[i+3]=Math.min(210,a*1.6);}
+  ctx.putImageData(img,0,0);
+}
+function drawDepth(buckets,total){
+  const el=document.getElementById('depth');const frameH=document.getElementById('frameScroll').clientHeight||400;el.style.height=frameH+'px';
+  if(!total){el.innerHTML='<div class="empty" style="padding:8px;font-size:.65rem">–</div>';return;}
+  // andel der nåede mindst b %
+  const reached=[];for(let b=0;b<=100;b+=10){reached.push(buckets.filter(x=>x.b>=b).reduce((s,x)=>s+x.n,0)/total);}
+  el.innerHTML=reached.slice(0,10).map((r,i)=>`<i style="background:rgba(240,198,116,${.15+.85*r});height:10%" title="${i*10}-${i*10+10} %: ${Math.round(r*100)} % nåede hertil">${Math.round(r*100)}%</i>`).join('');
+}
+load();loadHeat();
+setInterval(load,60000);
+</script>
+</body>
+</html>

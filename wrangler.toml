@@ -13,3 +13,13 @@ directory = "./_site"
 binding = "ASSETS"
 [vars]
 META_PIXEL_ID = "1708597793574696"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "fbm-analytics"
+database_id = "3a75c854-14a7-4193-ac09-a13e17a6ff22"
+
+[[rules]]
+type = "Text"
+globs = ["**/*.html"]
+fallthrough = true

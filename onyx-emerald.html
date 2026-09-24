@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <script>if(location.protocol==="http:"&&!/^(localhost|127\.)/.test(location.hostname))location.replace("https://"+location.host+location.pathname+location.search+location.hash)</script>
 <!-- Google Tag Manager -->
-<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+<script>if(!/[?&]nt=1\b/.test(location.search))(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
 j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
@@ -12,6 +12,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <!-- End Google Tag Manager -->
 <!-- Meta Pixel Code -->
 <script>
+if(!/[?&]nt=1\b/.test(location.search)){
 !function(f,b,e,v,n,t,s)
 {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
 n.callMethod.apply(n,arguments):n.queue.push(arguments)};
@@ -22,11 +23,13 @@ s.parentNode.insertBefore(t,s)}(window, document,'script',
 'https://connect.facebook.net/en_US/fbevents.js');
 fbq('init', '1708597793574696');
 fbq('track', 'PageView');
+}
 </script>
 <noscript><img height="1" width="1" style="display:none"
 src="https://www.facebook.com/tr?id=1708597793574696&ev=PageView&noscript=1"
 /></noscript>
 <!-- End Meta Pixel Code -->
+<script src="/track.js" async></script>
 
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
@@ -1688,7 +1691,7 @@ Booker gerne Oscar igen :-)</p><div class="who"><div class="av">M</div><div clas
 (function(){
   const m=document.getElementById('bkModal'),body=document.getElementById('bkBody'),fr=body.querySelector('iframe');
   let last=null,loaded=false;
-  function open(e){ if(e)e.preventDefault(); last=document.activeElement; m.hidden=false; requestAnimationFrame(()=>m.classList.add('open')); document.body.classList.add('bk-lock');
+  function open(e){ if(e)e.preventDefault(); last=document.activeElement; try{window.dispatchEvent(new CustomEvent('bk:open',{detail:{el:e&&e.currentTarget||null}}));}catch(_){} m.hidden=false; requestAnimationFrame(()=>m.classList.add('open')); document.body.classList.add('bk-lock');
     if(!loaded){loaded=true; fr.src=fr.dataset.src; fr.addEventListener('load',()=>setTimeout(()=>body.classList.add('ready'),300),{once:true}); setTimeout(()=>body.classList.add('ready'),4000);}
     m.querySelector('.bk-x').focus(); try{history.replaceState(null,'','#book');}catch(_){} }
   function close(){ m.classList.remove('open'); document.body.classList.remove('bk-lock'); setTimeout(()=>{m.hidden=true;},350); if(last&&last.focus)last.focus(); try{history.replaceState(null,'',location.pathname+location.search);}catch(_){} }
