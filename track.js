@@ -3,6 +3,7 @@
    Events: pageview, booking_open (m. sektion+knap), booking_interact, click (heatmap), leave (scrolldybde+tid). */
 (function () {
   if (/[?&]nt=1\b/.test(location.search)) return;                 // admin-preview
+  try { if (localStorage.getItem('bk_ignore') === '1') return; } catch (e) { } // egne besøg (slås til på /admin)
   if (navigator.webdriver || /bot|crawl|spider|headless|lighthouse|pagespeed/i.test(navigator.userAgent)) return;
   var gen = function () { return Date.now().toString(36) + Math.random().toString(36).slice(2, 10); };
   var st = function (k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } };
@@ -59,11 +60,14 @@
   }, true);
 
   // Scrolldybde + tid på siden, sendes én gang ved forlad
-  var maxDepth = 0, t0 = Date.now(), left = false;
+  var maxDepth = 0, t0 = Date.now();
   var depth = function () { var h = document.documentElement.scrollHeight - innerHeight; return h <= 0 ? 100 : Math.min(100, Math.round((scrollY / h) * 100)); };
   addEventListener('scroll', function () { var d = depth(); if (d > maxDepth) maxDepth = d; }, { passive: true });
   setTimeout(function () { maxDepth = Math.max(maxDepth, depth()); }, 1000);
-  var leave = function () { if (left) return; left = true; send('leave', { depth: maxDepth, dur: Date.now() - t0 }); };
-  addEventListener('pagehide', leave);
-  addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') leave(); });
+  // Øjebliksbilleder (24/9): kald ved sidelukning når ofte ikke frem (især iPhone), så tid+scroll
+  // sendes løbende (10/30/60/120 s + når siden skjules). Dashboardet bruger seneste pr. sidevisning (pv).
+  var snapshot = function () { maxDepth = Math.max(maxDepth, depth()); send('leave', { depth: maxDepth, dur: Date.now() - t0 }); };
+  [10, 30, 60, 120].forEach(function (sec) { setTimeout(function () { if (document.visibilityState === 'visible') snapshot(); }, sec * 1000); });
+  addEventListener('pagehide', snapshot);
+  addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') snapshot(); });
 })();

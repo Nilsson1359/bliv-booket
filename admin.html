@@ -46,7 +46,9 @@ table{width:100%;border-collapse:collapse;font-size:.85rem}th{font-family:var(--
   <div class="seg" id="range">
     <button data-r="today">I dag</button><button data-r="7d" class="on">7 dage</button><button data-r="30d">30 dage</button><button data-r="90d">90 dage</button><button data-r="365d">1 år</button>
   </div>
+  <span class="pill g" id="live" title="Sessioner med aktivitet de sidste 5 minutter">● 0 lige nu</span>
   <span class="muted" id="upd"></span>
+  <label class="muted" style="font-size:.8rem;display:inline-flex;gap:6px;align-items:center;cursor:pointer" title="Dine besøg fra denne browser tælles ikke med"><input type="checkbox" id="ignoreMe" checked> Tæl ikke mine besøg</label>
   <span class="sp"></span>
   <a href="/" target="_blank">Se siden ↗</a>
   <a href="/admin/logout">Log ud</a>
@@ -155,6 +157,7 @@ async function load(){
   table(document.getElementById('clicksec'),d.clicks_sections,[{t:'Sektion',k:'k',f:r=>secName(r.k)},{t:'Klik',k:'clicks',n:1},{t:'Sessioner',k:'sessions',n:1}]);
   drawMap(d.points);
   loadVisitors();
+  document.getElementById('live').textContent='● '+fmt(d.live)+' lige nu';
 }
 function chart(id,cfg){if(charts[id])charts[id].destroy();cfg.options=cfg.options||{};cfg.options.responsive=true;cfg.options.animation=false;charts[id]=new Chart(document.getElementById(id),cfg);}
 function drawMap(points){
@@ -164,6 +167,8 @@ function drawMap(points){
   points.forEach(p=>L.circleMarker([p.lat,p.lon],{radius:4+14*Math.sqrt(p.sessions/max),color:'#e8e8e8',weight:1,fillColor:'#f0c674',fillOpacity:.55}).bindTooltip(`${esc(p.city||'?')}: ${fmt(p.sessions)} sessioner`).addTo(mapLayer));
   if(points.length){const b=L.latLngBounds(points.map(p=>[p.lat,p.lon]));if(b.isValid())map.fitBounds(b.pad(.3),{maxZoom:8});}
 }
+(function(){const cb=document.getElementById('ignoreMe');let v=null;try{v=localStorage.getItem('bk_ignore');if(v===null){localStorage.setItem('bk_ignore','1');v='1';}}catch(_){}
+cb.checked=v!=='0';cb.addEventListener('change',()=>{try{localStorage.setItem('bk_ignore',cb.checked?'1':'0');}catch(_){}});})();
 async function loadVisitors(){
   const d=await (await fetch('/admin/api/visitors?range='+range+'&limit=200')).json();
   const el=document.getElementById('visitors');

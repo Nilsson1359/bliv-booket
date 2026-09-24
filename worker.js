@@ -76,8 +76,11 @@ function parseUA(ua) {
   const os = /iPhone|iPad/.test(ua) ? 'iOS' : /Android/.test(ua) ? 'Android' : /Windows/.test(ua) ? 'Windows' : /Macintosh/.test(ua) ? 'Mac' : /Linux/.test(ua) ? 'Linux' : 'Andet';
   return { device, browser, os };
 }
+const BOT_UA = /bot|crawl|spider|slurp|headless|lighthouse|pagespeed|preview|facebookexternalhit|curl|wget|python|axios|node-fetch|go-http/i;
 async function handleTrack(request, env) {
   if (!env.DB) return json({ error: 'no db' }, 503);
+  if (BOT_UA.test(request.headers.get('User-Agent') || '')) return new Response(null, { status: 204 });
+  if (Number(request.headers.get('Content-Length') || 0) > 8192) return json({ error: 'too large' }, 413);
   let b; try { b = await request.json(); } catch { return json({ error: 'bad json' }, 400); }
   if (!TRACK_TYPES.has(b.type)) return json({ error: 'bad type' }, 400);
   const cf = request.cf || {};
@@ -151,10 +154,10 @@ async function statsJSON(env, url) {
       COUNT(DISTINCT CASE WHEN type='booking_open' THEN sid END) AS opened,
       COUNT(DISTINCT CASE WHEN type='booking_interact' THEN sid END) AS interacted,
       COUNT(DISTINCT CASE WHEN type='pageview' AND path='/tak' THEN sid END) AS booked,
-      AVG(CASE WHEN type='leave' AND path='/' THEN dur END) AS avg_dur,
-      AVG(CASE WHEN type='leave' AND path='/' THEN depth END) AS avg_depth,
+      (SELECT AVG(dur) FROM (SELECT pv, MAX(path) AS path, MAX(sid) AS sid, MAX(device) AS device, MAX(dur) AS dur, MAX(depth) AS depth, MIN(ts) AS ts FROM events WHERE type='leave' GROUP BY pv) WHERE path='/' AND ts BETWEEN ? AND ?) AS avg_dur,
+      (SELECT AVG(depth) FROM (SELECT pv, MAX(path) AS path, MAX(sid) AS sid, MAX(device) AS device, MAX(dur) AS dur, MAX(depth) AS depth, MIN(ts) AS ts FROM events WHERE type='leave' GROUP BY pv) WHERE path='/' AND ts BETWEEN ? AND ?) AS avg_depth,
       COUNT(DISTINCT CASE WHEN type='pageview' AND vid IN (SELECT vid FROM events WHERE type='pageview' AND ts < ?) THEN vid END) AS returning_visitors
-    FROM events WHERE ${R}`, from, from, to);
+    FROM events WHERE ${R}`, from, to, from, to, from, from, to);
   const dayExpr = `strftime('%Y-%m-%d', (ts/1000 + ${tzMin * 60}), 'unixepoch')`;
   const hourExpr = `strftime('%Y-%m-%d %H:00', (ts/1000 + ${tzMin * 60}), 'unixepoch')`;
   const bucket = key === 'today' ? hourExpr : dayExpr;
@@ -180,10 +183,11 @@ async function statsJSON(env, url) {
   const [cta_sections, cta_buttons] = await Promise.all([ctaSql('sec'), ctaSql(`sec || ' | ' || label`)]);
   // klik pr. sektion (alle klik, ikke kun book-knapper)
   const clicks_sections = await all(db, `SELECT sec AS k, COUNT(*) AS clicks, COUNT(DISTINCT sid) AS sessions FROM events WHERE type='click' AND path='/' AND ${R} GROUP BY k ORDER BY clicks DESC`, from, to);
-  const depth = await all(db, `SELECT (depth/10)*10 AS b, COUNT(*) AS n FROM events WHERE type='leave' AND path='/' AND depth IS NOT NULL AND ${R} GROUP BY b ORDER BY b`, from, to);
+  const depth = await all(db, `SELECT (depth/10)*10 AS b, COUNT(*) AS n FROM (SELECT pv, MAX(path) AS path, MAX(sid) AS sid, MAX(device) AS device, MAX(dur) AS dur, MAX(depth) AS depth, MIN(ts) AS ts FROM events WHERE type='leave' GROUP BY pv) WHERE path='/' AND depth IS NOT NULL AND ts BETWEEN ? AND ? GROUP BY b ORDER BY b`, from, to);
   const points = await all(db, `SELECT lat, lon, city, COUNT(DISTINCT sid) AS sessions FROM events WHERE type='pageview' AND lat IS NOT NULL AND ${R} GROUP BY lat, lon, city ORDER BY sessions DESC LIMIT 500`, from, to);
   const hours = await all(db, `SELECT CAST(strftime('%H', (ts/1000 + ${tzMin * 60}), 'unixepoch') AS INTEGER) AS h, COUNT(DISTINCT sid) AS sessions FROM events WHERE type='pageview' AND ${R} GROUP BY h ORDER BY h`, from, to);
-  return { range: key, from, to, totals, series, countries, cities, refs, utm_sources, campaigns, contents, devices, browsers, oses, pages, cta_sections, cta_buttons, clicks_sections, depth, points, hours };
+  const live = await one(db, `SELECT COUNT(DISTINCT sid) AS n FROM events WHERE ts > ?`, Date.now() - 5 * 60000);
+  return { live: live.n || 0, range: key, from, to, totals, series, countries, cities, refs, utm_sources, campaigns, contents, devices, browsers, oses, pages, cta_sections, cta_buttons, clicks_sections, depth, points, hours };
 }
 
 async function heatJSON(env, url) {
@@ -193,8 +197,8 @@ async function heatJSON(env, url) {
   const devSql = device === 'all' ? '' : device === 'desktop' ? `AND device='desktop'` : `AND device<>'desktop'`;
   const points = await all(db, `SELECT x, y, sec, secy, label, device, vw FROM events WHERE type='click' AND path=? AND ts BETWEEN ? AND ? ${devSql} ORDER BY ts DESC LIMIT 6000`, path, from, to);
   const labels = await all(db, `SELECT label AS k, sec, COUNT(*) AS clicks, COUNT(DISTINCT sid) AS sessions FROM events WHERE type='click' AND path=? AND ts BETWEEN ? AND ? ${devSql} AND label<>'' GROUP BY label, sec ORDER BY clicks DESC LIMIT 40`, path, from, to);
-  const depth = await all(db, `SELECT (depth/10)*10 AS b, COUNT(*) AS n FROM events WHERE type='leave' AND path=? AND depth IS NOT NULL AND ts BETWEEN ? AND ? ${devSql} GROUP BY b ORDER BY b`, path, from, to);
-  const total = await one(db, `SELECT COUNT(*) AS n FROM events WHERE type='leave' AND path=? AND depth IS NOT NULL AND ts BETWEEN ? AND ? ${devSql}`, path, from, to);
+  const depth = await all(db, `SELECT (depth/10)*10 AS b, COUNT(*) AS n FROM (SELECT pv, MAX(path) AS path, MAX(sid) AS sid, MAX(device) AS device, MAX(dur) AS dur, MAX(depth) AS depth, MIN(ts) AS ts FROM events WHERE type='leave' GROUP BY pv) WHERE path=? AND depth IS NOT NULL AND ts BETWEEN ? AND ? ${devSql} GROUP BY b ORDER BY b`, path, from, to);
+  const total = await one(db, `SELECT COUNT(*) AS n FROM (SELECT pv, MAX(path) AS path, MAX(sid) AS sid, MAX(device) AS device, MAX(dur) AS dur, MAX(depth) AS depth, MIN(ts) AS ts FROM events WHERE type='leave' GROUP BY pv) WHERE path=? AND depth IS NOT NULL AND ts BETWEEN ? AND ? ${devSql}`, path, from, to);
   return { path, device, points, labels, depth, leaves: total.n || 0 };
 }
 
@@ -206,7 +210,7 @@ async function visitorsJSON(env, url) {
       SUM(type='pageview') AS pages, MAX(CASE WHEN type='booking_open' THEN 1 ELSE 0 END) AS opened,
       MAX(CASE WHEN type='booking_interact' THEN 1 ELSE 0 END) AS interacted,
       MAX(CASE WHEN type='pageview' AND path='/tak' THEN 1 ELSE 0 END) AS booked,
-      MAX(CASE WHEN type='leave' THEN depth END) AS depth, SUM(CASE WHEN type='leave' THEN dur ELSE 0 END) AS dur,
+      MAX(CASE WHEN type='leave' THEN depth END) AS depth, (SELECT SUM(dur) FROM (SELECT pv, MAX(path) AS path, MAX(sid) AS sid, MAX(device) AS device, MAX(dur) AS dur, MAX(depth) AS depth, MIN(ts) AS ts FROM events WHERE type='leave' GROUP BY pv) x WHERE x.sid = events.sid) AS dur,
       MAX(vid) AS vid, MAX(vw) AS vw
     FROM events WHERE ts BETWEEN ? AND ? GROUP BY sid ORDER BY ts DESC LIMIT ?`, from, to, limit);
   return { rows };
