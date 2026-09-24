@@ -915,6 +915,16 @@ Booker gerne Oscar igen :-)</p><div class="who"><div class="av">M</div><div clas
   if(window.fbq) fbq('track','Lead',{content_name:'Samtale booket',content_category:'booking'},{eventID:id});
   window.dataLayer=window.dataLayer||[];
   window.dataLayer.push({event:'booking_complete',event_id:id});
+  // Server-side kopi via Conversions API (Worker-relay, samme event_id = dedup hos Meta).
+  // Sendes lidt forsinket så pixelen når at sætte _fbp-cookien.
+  var q=new URLSearchParams(location.search), ck=function(n){var m=document.cookie.match('(?:^|; )'+n+'=([^;]*)');return m?decodeURIComponent(m[1]):''};
+  var fullName=(q.get('name')||q.get('first_name')||'').trim().split(/\s+/);
+  setTimeout(function(){
+    try{ fetch('/api/conv',{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,body:JSON.stringify({
+      event_name:'Lead',event_id:id,url:location.href.split('?')[0],fbp:ck('_fbp'),fbc:ck('_fbc'),
+      fn:fullName[0]||'',ln:fullName.slice(1).join(' '),em:q.get('email')||'',ph:q.get('phone')||''
+    })}).catch(function(){}); }catch(e){}
+  },800);
 })();
 </script>
 </body>

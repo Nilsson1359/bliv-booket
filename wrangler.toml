@@ -1,8 +1,7 @@
-# fuldtbooketmusiker.dk: Cloudflare Worker med statiske filer (ingen git-kobling).
-# Byg først: charcoal-silver.html -> _site/index.html (title "Bliv Booket"),
-# tak-charcoal-silver.html -> _site/tak.html, media/ -> _site/media/.
-# Deploy: npx wrangler deploy
+# fuldtbooketmusiker.dk: Cloudflare Worker = statiske filer (_site/) + Meta CAPI-relay (worker.js).
+# Byg: ./build.sh   Deploy: npx wrangler deploy   Secret: npx wrangler secret put META_CAPI_TOKEN
 name = "fuldtbooketmusiker"
+main = "worker.js"
 compatibility_date = "2026-09-01"
 workers_dev = false
 routes = [
@@ -11,3 +10,6 @@ routes = [
 ]
 [assets]
 directory = "./_site"
+binding = "ASSETS"
+[vars]
+META_PIXEL_ID = "1708597793574696"
