@@ -956,7 +956,9 @@ Booker gerne Oscar igen :-)</p><div class="who"><div class="av">M</div><div clas
 (function(){
   document.documentElement.classList.add('js');
   const q=new URLSearchParams(location.search);
-  const name=(q.get('name')||q.get('first_name')||'').trim();
+  // GHL sender nogle gange flettefelter uudfyldt ({{contact.first_name}}): behandl dem som tomme
+  const qv=k=>{const v=(q.get(k)||'').trim();return /\{\{|\}\}|%7B%7B/i.test(v)?'':v;};
+  const name=(qv('name')||qv('first_name')).split(/\s+/)[0]||'';
   if(name){document.getElementById('tyName').textContent=name+'.';}
   // Robust parsing of whatever GHL sends: ISO, "Sep 29, 2026 2:00 PM", "29/09/2026 14:00", or date + time params
   const MON={jan:0,feb:1,mar:2,apr:3,may:4,maj:4,jun:5,jul:6,aug:7,sep:8,oct:9,okt:9,nov:10,dec:11};
@@ -972,8 +974,8 @@ Booker gerne Oscar igen :-)</p><div class="who"><div class="av">M</div><div clas
     if(m&&MON[m[2].toLowerCase()]!=null)return new Date(+m[3],MON[m[2].toLowerCase()],+m[1],+(m[4]||0),+(m[5]||0));
     return null;
   }
-  let start=parseWhen(q.get('start')||q.get('appointment_start')||q.get('start_time')||'');
-  if(!start&&q.get('date')){start=parseWhen(q.get('date')+' '+(q.get('time')||'00:00'));}
+  let start=parseWhen(qv('start')||qv('appointment_start')||qv('start_time')||'');
+  if(!start&&qv('date')){start=parseWhen(qv('date')+' '+(qv('time')||'00:00'));}
   if(start&&isNaN(start))start=null;
   const pad=n=>String(n).padStart(2,'0');
   if(start&&!isNaN(start)){
@@ -1009,11 +1011,12 @@ Booker gerne Oscar igen :-)</p><div class="who"><div class="av">M</div><div clas
   // Server-side kopi via Conversions API (Worker-relay, samme event_id = dedup hos Meta).
   // Sendes lidt forsinket så pixelen når at sætte _fbp-cookien.
   var q=new URLSearchParams(location.search), ck=function(n){var m=document.cookie.match('(?:^|; )'+n+'=([^;]*)');return m?decodeURIComponent(m[1]):''};
-  var fullName=(q.get('name')||q.get('first_name')||'').trim().split(/\s+/);
+  var qv=function(k){var v=(q.get(k)||'').trim();return /\{\{|\}\}|%7B%7B/i.test(v)?'':v;};
+  var fullName=(qv('name')||qv('first_name')).split(/\s+/);
   setTimeout(function(){
     try{ fetch('/api/conv',{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,body:JSON.stringify({
       event_name:'Lead',event_id:id,url:location.href.split('?')[0],fbp:ck('_fbp'),fbc:ck('_fbc'),
-      fn:fullName[0]||'',ln:fullName.slice(1).join(' '),em:q.get('email')||'',ph:q.get('phone')||''
+      fn:fullName[0]||'',ln:fullName.slice(1).join(' '),em:qv('email'),ph:qv('phone')
     })}).catch(function(){}); }catch(e){}
   },800);
 })();
