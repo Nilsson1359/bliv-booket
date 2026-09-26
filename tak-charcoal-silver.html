@@ -830,7 +830,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <div class="ty-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12.5l4.5 4.5L19 7"/></svg></div>
       <h1>Din samtale er booket, <em id="tyName">og du har taget første skridt.</em></h1>
       <p class="lead">Du får en bekræftelse og en kalender-invitation på mail inden for et minut. <b>Det vigtigste nu:</b> accepter invitationen, så samtalen ligger fast i din kalender.</p>
-      <div class="cta-row"><span class="tagpill">Gratis · 30 min · online</span></div>
+      <div class="cta-row"><span class="tagpill">Gratis · 1 time · online</span></div>
     </div>
     <div class="when" id="when">
       <span class="k">Din samtale</span>
@@ -849,7 +849,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="sh rv"><div class="stack"><span class="eyebrow">Næste skridt</span><h2>Tre ting, der sikrer, at du får mest ud af samtalen</h2></div></div>
     <div class="steps3 lines">
       <div class="step imp"><span class="n">01 · Vigtigst</span><b>Accepter kalender-invitationen</b><p>Åbn mailen fra Bliv Booket og tryk "Ja" på invitationen. Tjek spam eller Kampagner-fanen, hvis den ikke er i indbakken.</p></div>
-      <div class="step"><span class="n">02</span><b>Sæt 30 minutter af, uforstyrret</b><p>Vær ved en computer med kamera og rolig baggrund. Link til mødet står i mailen. Samtalen holdes online.</p></div>
+      <div class="step"><span class="n">02</span><b>Sæt en time af, uforstyrret</b><p>Vær ved en computer med kamera og rolig baggrund. Link til mødet står i mailen. Samtalen holdes online.</p></div>
       <div class="step"><span class="n">03</span><b>Kan du ikke nå det, så ombook</b><p>Brug ombook-linket i mailen i stedet for at udeblive. Så holder vi pladsen til en anden musiker, og du får en ny tid.</p></div>
     </div>
   </div>
@@ -977,7 +977,7 @@ Booker gerne Oscar igen :-)</p><div class="who"><div class="av">M</div><div clas
   if(start&&isNaN(start))start=null;
   const pad=n=>String(n).padStart(2,'0');
   if(start&&!isNaN(start)){
-    const end=new Date(start.getTime()+30*60000);
+    const end=new Date(start.getTime()+60*60000);
     document.getElementById('whenText').textContent=start.toLocaleDateString('da-DK',{weekday:'long',day:'numeric',month:'long'})+' kl. '+start.toLocaleTimeString('da-DK',{hour:'2-digit',minute:'2-digit'});
     const fmt=d=>d.getUTCFullYear()+pad(d.getUTCMonth()+1)+pad(d.getUTCDate())+'T'+pad(d.getUTCHours())+pad(d.getUTCMinutes())+'00Z';
     const g=document.getElementById('gcal');g.href=g.href+'&dates='+fmt(start)+'/'+fmt(end);
