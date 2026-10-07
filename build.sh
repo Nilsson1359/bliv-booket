@@ -5,6 +5,7 @@ cd "$(dirname "$0")"
 rm -rf _site && mkdir _site && cp -r media _site/
 sed 's#<title>Bliv Booket · Kul & sølv · Cormorant + Manrope</title>#<title>Bliv Booket</title>#' charcoal-silver.html > _site/index.html
 cp tak-charcoal-silver.html _site/tak.html
+python3 gen_onboarding.py >/dev/null && mv onboarding.html _site/onboarding.html
 cp track.js _site/track.js
 cp _headers _site/_headers
 # Kevin-HLS (18 min) er for stor til git; ligger lokalt i ~/bliv-booket-cf/public/media/kevin
