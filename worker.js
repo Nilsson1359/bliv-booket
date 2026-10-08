@@ -440,17 +440,13 @@ async function handleLead(request, env, ctx) {
   }
   const src = b.src && typeof b.src === 'object' ? Object.fromEntries(['ref_host', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'landing'].map(k => [k, str(b.src[k], k === 'landing' ? 300 : 150)]).filter(([, v]) => v)) : {};
   const cf = request.cf || {}, now = Date.now();
-  // misbrugs-værn: nye leads pr. IP pr. time (eksisterende lid opdateres frit op til MAX_LEAD_WRITES)
   const ip = request.headers.get('CF-Connecting-IP') || '';
-  if (ip) {
-    const known = await env.DB.prepare('SELECT 1 AS x FROM leads WHERE id = ?').bind(lid).first();
-    if (!known) {
-      const c = await env.DB.prepare('SELECT COUNT(*) AS n FROM leads INDEXED BY idx_leads_ip WHERE ip = ? AND created_ts > ?').bind(ip, now - 3600e3).first();
-      if (c && c.n >= MAX_NEW_LEADS_PER_IP_HOUR) return json({ error: 'too many leads' }, 429);
-    }
-  }
   const row = await env.DB.prepare(`INSERT INTO leads (id, page, created_ts, updated_ts, name, email, phone, answers_json, step, done, src_json, vid, sid, ip, city, country, writes, notified_flags)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,'')
+      SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,''
+      -- misbrugs-værn i samme sætning (atomisk i D1): kendt lid opdateres frit, nyt lid kun hvis IP'en
+      -- har oprettet færre end MAX_NEW_LEADS_PER_IP_HOUR leads den seneste time
+      WHERE ?1 IN (SELECT id FROM leads WHERE id = ?1) OR ?14 = ''
+         OR (SELECT COUNT(*) FROM leads INDEXED BY idx_leads_ip WHERE ip = ?14 AND created_ts > ?3 - 3600000) < ${MAX_NEW_LEADS_PER_IP_HOUR}
       ON CONFLICT(id) DO UPDATE SET
         updated_ts = excluded.updated_ts,
         name = CASE WHEN excluded.name <> '' THEN excluded.name ELSE leads.name END,
@@ -465,9 +461,9 @@ async function handleLead(request, env, ctx) {
       RETURNING *`)
     .bind(lid, b.page, now, now, str(b.name, 120).trim(), str(b.email, 160).trim(), str(b.phone, 40).trim(), JSON.stringify(answers),
       num(b.step, 0, 50) ?? 0, b.done === true ? 1 : 0, JSON.stringify(src), str(b.vid, 40), str(b.sid, 40),
-      request.headers.get('CF-Connecting-IP') || '', str(cf.city, 80), str(cf.country, 8))
+      ip, str(cf.city, 80), str(cf.country, 8))
     .first();
-  if (!row) return json({ error: 'too many writes' }, 429);
+  if (!row) return json({ error: 'too many writes' }, 429); // for mange skrivninger på lid ELLER for mange nye leads fra IP'en
   ctx.waitUntil((async () => {
     if (hasContact(row) && await claimFlag(env, lid, 'contact')) await tgSend(env, leadText('📝 Delvist lead', row));
     if (row.done && await claimFlag(env, lid, 'done')) await tgSend(env, leadText('✅ Formular udfyldt', row));
@@ -613,17 +609,21 @@ async function handleBook(request, env, ctx) {
   // misbrugs-værn: én IP kan ikke blokere kalenderen ved at booke alle tider
   const ip = request.headers.get('CF-Connecting-IP') || '';
   if (ip) {
-    const c = await env.DB.prepare('SELECT COUNT(*) AS n FROM leads INDEXED BY idx_leads_ip WHERE ip = ? AND booked_start > ?').bind(ip, Date.now()).first();
+    const c = await env.DB.prepare('SELECT COUNT(*) AS n FROM leads INDEXED BY idx_leads_booked_ip WHERE booked_ip = ? AND booked_start > ?').bind(ip, Date.now()).first();
     if (c && c.n >= MAX_BOOKINGS_PER_IP) return json({ error: 'too many bookings' }, 429);
   }
   const day = ymdCph(startMs);
   const s = await computeSlots(env, lead.page, day, 1);
   if (!(s.slots[day] || []).includes(startMs)) return json({ error: 'slot taken' }, 409);
   const endMs = startMs + s.durationMin * 60000;
-  const claim = await env.DB.prepare(`UPDATE leads SET booked_start = ?, booked_end = ?, updated_ts = ?, done = 1
-      WHERE id = ? AND booked_start IS NULL AND NOT EXISTS (SELECT 1 FROM leads o WHERE o.booked_start = ?)`)
-    .bind(startMs, endMs, Date.now(), lid, startMs).run().catch(() => null); // unik index fanger samtidige bookinger
-  if (!claim || (claim.meta && claim.meta.changes) !== 1) return json({ error: 'slot taken' }, 409);
+  const claim = await env.DB.prepare(`UPDATE leads SET booked_start = ?1, booked_end = ?2, updated_ts = ?3, done = 1, booked_ip = ?5
+      WHERE id = ?4 AND booked_start IS NULL AND NOT EXISTS (SELECT 1 FROM leads o WHERE o.booked_start = ?1)
+        AND (?5 = '' OR (SELECT COUNT(*) FROM leads o INDEXED BY idx_leads_booked_ip WHERE o.booked_ip = ?5 AND o.booked_start > ?3) < ${MAX_BOOKINGS_PER_IP})`)
+    .bind(startMs, endMs, Date.now(), lid, ip).run().catch(() => null); // unik index fanger samtidige bookinger
+  if (!claim || (claim.meta && claim.meta.changes) !== 1) {
+    const c = ip ? await env.DB.prepare('SELECT COUNT(*) AS n FROM leads INDEXED BY idx_leads_booked_ip WHERE booked_ip = ? AND booked_start > ?').bind(ip, Date.now()).first() : null;
+    return c && c.n >= MAX_BOOKINGS_PER_IP ? json({ error: 'too many bookings' }, 429) : json({ error: 'slot taken' }, 409);
+  }
   let source = 'fallback', ghlErr = '';
   if (ghlOn(env, lead.page)) {
     try {
