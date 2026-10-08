@@ -8,8 +8,9 @@ cp tak-charcoal-silver.html _site/tak.html
 python3 gen_onboarding.py >/dev/null && mv onboarding.html _site/onboarding.html
 cp track.js _site/track.js
 # Oscars gig-sider (gen_events.py): valgt retning -> /firmafest + /bryllup, alle retninger som preview i /ev/
-EVDIR=${EVDIR:-a}
-python3 gen_events.py "$EVDIR" >/dev/null && cp -r ev _site/ev && cp ev/firmafest-$EVDIR.html _site/firmafest.html && cp ev/bryllup-$EVDIR.html _site/bryllup.html && cp ev.js _site/ev.js
+# Valgt 8/10 2026: firmafest = A (Aftenlys), bryllup = B (Champagne)
+FIRMA_DIR=${FIRMA_DIR:-a}; BRYLLUP_DIR=${BRYLLUP_DIR:-b}
+python3 gen_events.py >/dev/null && cp -r ev _site/ev && cp ev/firmafest-$FIRMA_DIR.html _site/firmafest.html && cp ev/bryllup-$BRYLLUP_DIR.html _site/bryllup.html && cp ev.js _site/ev.js
 cp _headers _site/_headers
 # Kevin-HLS (18 min) er for stor til git; ligger lokalt i ~/bliv-booket-cf/public/media/kevin
 K=~/bliv-booket-cf/public/media/kevin; if [ -d "$K" ]; then cp -r "$K" _site/media/kevin; else echo "ADVARSEL: $K mangler, Kevin-video bliver 404"; fi
