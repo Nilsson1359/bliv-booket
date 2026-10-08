@@ -545,7 +545,7 @@ def page(key, d):
 
     music = f'''<section class="sec" id="musik"><div class="wrap"><div class="music">
       <div class="stack rv music-h"><span class="eyebrow">Hør selv</span><h2>Lyt til musikken fra <em class="sig">Oscar Jønsson</em></h2>
-      <p class="lead">Tryk på en video. Guitar, sang og DJ, som I får det til {"jeres fest" if key=="firmafest" else "jeres bryllup"}.</p><div class="cta-row full">{cta(c["cta"], sec="musik")}</div></div>
+<div class="cta-row full">{cta(c["cta"], sec="musik")}</div></div>
       <div class="ytgrid rv">{"".join(f'<figure>{yt(i)}<figcaption>{H.escape(YT[i][2])}</figcaption></figure>' for i in range(1, 7))}</div></div></div></section>'''
 
     t, a, q, b = c['s6']
