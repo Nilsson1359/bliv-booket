@@ -60,17 +60,19 @@ def vposter(k): p = CLIPS[k][1]; return p if p.startswith('/') else f'/media/ev/
 YT = [('-EH6aN7DRlI', 'hvem', 'Hvem er Oscar Jønsson'),
       ('DMEh5RBKn1s', 'dj', 'DJ Medley'), ('vXLYCO1kmrM', 'allofme', 'All Of Me · John Legend'), ('0GeIAyd3rX4', 'wicked', 'Wicked Game · Chris Isaak'),
       ('jcWckbldTTo', 'acoustic', 'Acoustic Medley'), ('Dm8C8OdAfEY', 'perfect', 'Perfect · Ed Sheeran'), ('NZLpLNtWeMo', 'stupid', 'Stupid Man · Thomas Helmig')]
-# Stemningsbilleder (Unsplash-licens, fri brug) — KUN i high-end-demoerne D/E, aldrig i de live annoncesider
+# Stemningsbilleder (Unsplash-licens, fri brug) — KUN i high-end-demoerne D/E, aldrig i de live annoncesider.
+# REGEL: ingen andre musikere på stock (alt med en musiker skal være Oscar selv). 'own:<navn>' = Oscars eget billede.
 STOCK_CRED = json.load(open(ROOT / 'media/ev/stock/credits.json'))
 STOCK = {
- 'bryllup': dict(hero_name='b-guitar-vielse', hero_wide='b-slor', intro='b-gang', s8='b-hander', offer='b-guitar', final='b-soe',
-   flow=['b-champagne', 'b-hoejbord', 'b-dans-sh'],
-   mood=[('b-par-sh', 'Vielsen'), ('b-lysekrone', 'Ceremonien'), ('b-lys', 'Middagen'), ('b-dans-vindue', 'Første dans'), ('b-glas', 'Velkomst'), ('b-par-ryg', 'Aftenen'), ('b-guitar-taet', 'Guitar og sang'), ('b-telt', 'Festsalen')]),
- 'firmafest': dict(hero_name='f-band-guitar', hero_wide='f-langbord', intro='f-gaester', s8='f-glaede', offer='f-champagne-taarn', final='f-scene-sh',
-   flow=['f-skaenk', 'f-lys-bord', 'f-dansegulv'],
-   mood=[('f-guldbord', 'Middagen'), ('f-coupe', 'Velkomst'), ('f-telt-dans', 'Dansegulvet'), ('f-band', 'Live-sæt'), ('f-lyskaede', 'Aftenen'), ('f-glaede-sh', 'Festen'), ('f-guitar-taet', 'Guitar og sang'), ('f-tomlys', 'Midnat')]),
+ 'bryllup': dict(hero_name=None, hero_wide='b-slor', intro='b-gang', s8='b-hander', offer=None, final='b-soe',
+   flow=['b-lysekrone', 'b-champagne', 'b-hoejbord', 'b-dans-sh'],
+   mood=[('b-par-sh', 'Vielsen'), ('b-lysekrone', 'Ceremonien'), ('b-lys', 'Middagen'), ('b-dans-vindue', 'Første dans'), ('b-glas', 'Velkomst'), ('b-par-ryg', 'Aftenen'), ('own:acoustic', 'Guitar og sang'), ('b-telt', 'Festsalen')]),
+ 'firmafest': dict(hero_name=None, hero_wide='f-langbord', intro='f-gaester', s8='f-glaede', offer='f-champagne-taarn', final='f-scene-sh',
+   flow=['f-skaenk', 'f-lys-bord', None, 'f-dansegulv'],
+   mood=[('f-guldbord', 'Middagen'), ('f-coupe', 'Velkomst'), ('f-telt-dans', 'Dansegulvet'), ('own:gig-blue', 'Live-sæt'), ('f-lyskaede', 'Aftenen'), ('f-glaede-sh', 'Festen'), ('own:warm', 'Guitar og sang'), ('f-tomlys', 'Midnat')]),
 }
 def simg(k, sizes='(max-width:820px) 92vw, 560px', eager=False, cls=''):
+    if k.startswith('own:'): return img(k[4:], 'Oscar spiller live', sizes=sizes, cls=cls, eager=eager, w=720, h=960)
     c = STOCK_CRED[k]; w, h = c['w'], c['h']
     srcset = ', '.join(f'/media/ev/stock/{k}-{x}.webp {x}w' for x in (480, 960, 1600))
     load = ' fetchpriority="high"' if eager else ' loading="lazy" decoding="async"'
@@ -115,7 +117,11 @@ P['firmafest'] = dict(
      ['Oscar følger stemningen og tilpasser musikken undervejs.', 'Så I kan være kolleger til festen og være med, når jeres yndlingssang kommer.']),
  s6=('Vælg musikken efter den aften, I vil skabe', ['En sangliste fortæller, hvilke numre der kan blive spillet.', 'Den fortæller ikke, hvordan det føles, når kollegerne rejser sig fra bordene og synger med sammen.', 'Derfor begynder vi med jeres team og den fest, I ønsker.'],
      'Vil I have en afslappet middag, en stor dansefest eller en aften, der bevæger sig fra det ene til det andet?', 'Musikken skal passe til jer og give mennesker på tværs af afdelinger noget at mødes om.'),
- s7=('Velkomst, middag og dansegulv skal hænge sammen', [('Velkomst', 'Under velkomsten skal det være nemt at falde i snak.', 'v:champagne'), ('Middag', 'Under middagen skal musikken give varme til rummet og plads til samtaler.', 'v:middag'), ('Dansegulv', 'Senere skal energien løftes, så folk får lyst til at rejse sig.', 'v:fest')],
+ s7=('Velkomst, middag og dansegulv skal hænge sammen', [
+     ('Velkomst', 'Rolig livemusik, mens kollegerne ankommer, så det er nemt at falde i snak.', 'v:champagne', 1, 'Roligt'),
+     ('Middag', 'Lavmælt guitar og sang, der giver varme i rummet uden at overdøve samtalerne.', 'v:middag', 2, 'Lavt'),
+     ('Live-sæt', 'Velkendte sange, der får kollegerne op fra bordene og synger med.', 'v:duo', 4, 'Løfter'),
+     ('Dansegulv', 'DJ, der følger energien på gulvet helt til sidste dans.', 'v:fest', 5, 'Festligt')],
      'Vi planlægger overgangen mellem aftenens dele, så musikken følger festen fra begyndelse til afslutning.'),
  s8=('I har lagt for meget i aftenen til, at den bare skal overstås', ['Der ligger tid, penge og arbejde bag en firmafest.', 'Hvis kollegerne bliver siddende i deres sædvanlige grupper og går efter middagen, mister I muligheden for at samle teamet på en anden måde end i hverdagen.', 'Når folk danser, griner og synger sammen, får de noget fælles at tage med tilbage på kontoret.'], 'Det er den aften, vi planlægger musikken til.'),
  s9=('Sådan skaber vi jeres firmafest', 'Oscars Firmafestoplevelse består af fem dele:', [
@@ -168,7 +174,11 @@ P['bryllup'] = dict(
      ['Vi aftaler retningen på forhånd.', 'På aftenen følger Oscar stemningen, så I kan blive i øjeblikket.']),
  s6=('Musikken bliver en del af det, I husker', ['Når I tænker tilbage på brylluppet, er det måske en bestemt sang, der kommer først.', 'Den, I sang med på sammen med jeres venner.', 'Den, der fik jeres forældre ud på dansegulvet.', 'Den sidste sang, hvor ingen helt havde lyst til at sige farvel.', 'Derfor handler valget af musik også om:'],
      '“Hvem skal skabe de øjeblikke, vi gerne vil huske?”', 'Vi planlægger musikken omkring den oplevelse, I ønsker at dele med jeres gæster.'),
- s7=('Musikken skal følge dagen, som den udvikler sig', [('Velkomst', 'Ved velkomsten skal gæsterne kunne mødes og falde til.', 'v:champagne'), ('Middag', 'Under middagen skal der være varme i rummet og plads til ord, grin og taler.', 'v:middag'), ('Fest', 'Senere skal musikken samle generationerne og give festen energi.', 'v:fest')],
+ s7=('Musikken skal følge dagen, som den udvikler sig', [
+     ('Vielsen', 'Rolig akustisk guitar og sang, mens gæsterne finder deres pladser, og jeres sang, når I går op ad gulvet.', 'v:kirke', 1, 'Stille'),
+     ('Velkomst', 'Afslappet livemusik til receptionen, så gæsterne kan skåle, snakke og falde til.', 'v:champagne', 2, 'Roligt'),
+     ('Middag', 'Lavmælt guitar og sang, så der er plads til samtaler, grin og taler ved bordene.', 'v:middag', 2, 'Lavt'),
+     ('Fest', 'Efter brudevalsen et live-sæt med sange, alle kender, og derefter DJ til sidste dans.', 'v:fest', 5, 'Festligt')],
      'Vi aftaler forløbet med jer og tilpasser det på aftenen, når programmet og stemningen udvikler sig.'),
  s8=('Jeres gæster er samlet for én særlig aften', ['Mennesker fra forskellige dele af jeres liv mødes.', 'Nogle kender hinanden godt. Andre mødes for første gang.', 'Musikken kan give dem en fælles indgang til festen: en sang, de kender, et omkvæd, de synger sammen, eller en anledning til at danse.'], 'Så gæsterne tager hjem med minder om det, de delte med jer og hinanden.'),
  s9=('Sådan skaber vi jeres bryllupsfest', 'Oscars Bryllupsoplevelse består af fem dele:', [
@@ -339,7 +349,13 @@ p{margin:0;text-wrap:pretty}
 .bubbles{display:flex;flex-direction:column;gap:10px;margin:6px 0}
 .bubble{align-self:flex-start;background:var(--card);border:1px solid var(--line);border-radius:20px 20px 20px 6px;padding:12px 18px;font-family:var(--display);font-style:italic;font-size:1.25rem}
 .bubble:nth-child(2){align-self:center}.bubble:nth-child(3){align-self:flex-end;border-radius:20px 20px 6px 20px}
-.flow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:22px 0}
+.flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:22px 0}
+.vol{display:flex;align-items:flex-end;gap:3px;height:18px;margin:2px 0 10px}
+.vol i{width:5px;background:var(--line);border-radius:1px}
+.vol i:nth-child(1){height:5px}.vol i:nth-child(2){height:8px}.vol i:nth-child(3){height:11px}.vol i:nth-child(4){height:14px}.vol i:nth-child(5){height:18px}
+.vol i.on{background:var(--accent)}
+.vol em{font-style:normal;font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2);margin-left:8px;line-height:1}
+@media (max-width:1100px){.flow{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .fl{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
 .fl .photo{border-radius:0;aspect-ratio:4/3}
 .fl>div:last-child{padding:18px 20px}
@@ -632,7 +648,7 @@ def page(key, d, pal):
     elif dd['hero'] == 'name':
         nk = 'gigblue' if key == 'firmafest' else 'beach'
         nv = f'<video autoplay muted loop playsinline preload="metadata" poster="{vposter(nk)}" aria-label="{H.escape(CLIPS[nk][2])}" width="720" height="960"><source src="{vsrc(nk)}" type="video/mp4"></video>'
-        if dd.get('ed'): nv = simg(STOCK[key]['hero_name'], sizes='(max-width:820px) 92vw, 400px', eager=True)
+        if dd.get('ed') and STOCK[key]['hero_name']: nv = simg(STOCK[key]['hero_name'], sizes='(max-width:820px) 92vw, 400px', eager=True)
         hero = f'''<section class="hero hero-name" id="top"><div class="wrap">
       <div class="nm"><span class="n1" aria-hidden="true">Oscar</span><figure class="nm-pic">{nv}<figcaption>{"Firmafest · Livemusik & DJ" if key=="firmafest" else "Vielse · Middag · Dansefest"}</figcaption></figure><span class="n2" aria-hidden="true">Jønsson</span></div>
       {copy}</div></section>'''
@@ -691,13 +707,14 @@ def page(key, d, pal):
     s6 = f'''<section class="sec" id="vaelg"><div class="wrap narrow center rv"><h2>{t}</h2><div class="stack">{ps(a, "lead")}<p class="quote">{q}</p><p class="big">{b}</p></div></div></section>'''
 
     t, stages, b = c['s7']
-    if dd.get('ed'): stages = [(n, tx, 's:' + STOCK[key]['flow'][i]) for i, (n, tx, ph) in enumerate(stages)]
+    if dd.get('ed'): stages = [(n, tx, ('s:' + STOCK[key]['flow'][i]) if STOCK[key]['flow'][i] else ph, lv, ll) for i, (n, tx, ph, lv, ll) in enumerate(stages)]
     def flm(ph, n):
         if ph.startswith('s:'): return simg(ph[2:], sizes='(max-width:820px) 92vw, 360px')
         if ph.startswith('v:'):
             k = ph[2:]; return f'<video muted loop playsinline preload="none" poster="{vposter(k)}" data-src="{vsrc(k)}" aria-label="{H.escape(CLIPS[k][2])}" width="960" height="540"></video>'
         return img(ph, n, widths=(480,), sizes="(max-width:820px) 40vw, 360px", w=480, h=640)
-    fl = ''.join(f'<div class="fl"><div class="photo">{flm(ph, n)}</div><div><b><span>0{i+1}</span>{n}</b><p>{tx}</p></div></div>' for i, (n, tx, ph) in enumerate(stages))
+    vol = lambda lv, ll: f'<span class="vol" role="img" aria-label="Lydniveau: {ll.lower()}">' + ''.join(f'<i class="{"on" if k < lv else ""}"></i>' for k in range(5)) + f'<em>{ll}</em></span>'
+    fl = ''.join(f'<div class="fl"><div class="photo">{flm(ph, n)}</div><div><b><span>0{i+1}</span>{n}</b>{vol(lv, ll)}<p>{tx}</p></div></div>' for i, (n, tx, ph, lv, ll) in enumerate(stages))
     s7 = f'''<section class="sec alt" id="forloeb"><div class="wrap"><div class="narrow rv"><h2>{t}</h2></div><div class="flow rv">{fl}</div><p class="big rv narrow">{b}</p></div></section>'''
 
     revs = ''.join(f'<article class="rev clamp"><b>{R[k][0]}</b><p>{R[k][1]}</p><button type="button" data-more>Læs hele anmeldelsen</button><div class="who"><strong>{R[k][2]}</strong><span>{R[k][3]}</span></div></article>' for k in c['reviews'])
@@ -717,7 +734,7 @@ def page(key, d, pal):
     t, a, items, b = c['s10']
     s10 = f'''<section class="sec alt" id="tilbud"><div class="wrap"><div class="offer rv"><div class="stack"><h2>{t}</h2><p class="lead">{a}</p>
       <ul class="check">{"".join(f"<li>{x}</li>" for x in items)}</ul><p class="big">{b}</p><div class="cta-row full">{cta(c["cta"], sec="tilbud")}</div></div>
-      <div class="photo">{simg(STOCK[key]["offer"]) if dd.get("ed") else img("studio-warm-sq", "Oscar med akustisk guitar", widths=(480, 960), w=1200, h=1200)}</div></div></div></section>'''
+      <div class="photo">{simg(STOCK[key]["offer"]) if (dd.get("ed") and STOCK[key]["offer"]) else img("studio-warm-sq", "Oscar med akustisk guitar", widths=(480, 960), w=1200, h=1200)}</div></div></div></section>'''
 
     t, lines, b, ctal, small = c['s11']
     s11 = f'''<section class="sec final" id="slut"><div class="bg">{simg(STOCK[key]["final"], sizes="100vw") if dd.get("ed") else img(c["hero_img"][0], "", sizes="100vw", w=1600, h=900)}</div><div class="wrap narrow rv"><h2>{t}</h2>

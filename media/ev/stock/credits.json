@@ -1,11 +1,4 @@
 {
- "b-guitar-vielse": {
-  "by": "",
-  "page": "https://unsplash.com/photos/a-musician-performs-at-an-outdoor-wedding-ceremony-fahhJzwN1SI",
-  "alt": "A musician performs at an outdoor wedding ceremony",
-  "w": 1800,
-  "h": 2700
- },
  "b-slor": {
   "by": "",
   "page": "https://unsplash.com/photos/a-bride-and-groom-holding-hands-in-front-of-a-fence-EvX_tuqpD1o",
@@ -24,13 +17,6 @@
   "by": "",
   "page": "https://unsplash.com/photos/man-and-woman-dancing-wearing-casual-dresses-NSVJAAXOYHs",
   "alt": "man and woman dancing wearing casual dresses",
-  "w": 1800,
-  "h": 1200
- },
- "b-guitar": {
-  "by": "",
-  "page": "https://unsplash.com/photos/person-playing-an-acoustic-guitar-indoors-fPiy383YBEM",
-  "alt": "Person playing an acoustic guitar indoors",
   "w": 1800,
   "h": 1200
  },
@@ -104,26 +90,12 @@
   "w": 1800,
   "h": 2700
  },
- "b-guitar-taet": {
-  "by": "",
-  "page": "https://unsplash.com/photos/person-playing-brown-acoustic-guitar-pOraJAwCFRo",
-  "alt": "person playing brown acoustic guitar",
-  "w": 1800,
-  "h": 1165
- },
  "b-telt": {
   "by": "",
   "page": "https://unsplash.com/photos/clear-long-stem-wine-glasses-on-table-hw_sKmjb0ns",
   "alt": "clear long-stem wine glasses on table",
   "w": 1800,
   "h": 2700
- },
- "f-band-guitar": {
-  "by": "",
-  "page": "https://unsplash.com/photos/man-in-a-tuxedo-playing-guitar-on-stage-k4OeyYvJ6jo",
-  "alt": "Man in a tuxedo playing guitar on stage",
-  "w": 1800,
-  "h": 2400
  },
  "f-langbord": {
   "by": "",
@@ -202,13 +174,6 @@
   "w": 1800,
   "h": 1200
  },
- "f-band": {
-  "by": "",
-  "page": "https://unsplash.com/photos/man-in-black-suit-standing-near-drum-set-Cknyec2RnrE",
-  "alt": "man in black suit standing near drum set",
-  "w": 1800,
-  "h": 1200
- },
  "f-lyskaede": {
   "by": "",
   "page": "https://unsplash.com/photos/a-wooden-table-topped-with-plates-and-glasses-lB6g-y-DIHs",
@@ -222,13 +187,6 @@
   "alt": "woman raising her hands",
   "w": 1800,
   "h": 2697
- },
- "f-guitar-taet": {
-  "by": "",
-  "page": "https://unsplash.com/photos/man-playing-guitar-2kLjHRPahOM",
-  "alt": "man playing guitar \\",
-  "w": 1800,
-  "h": 1198
  },
  "f-tomlys": {
   "by": "",
