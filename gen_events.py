@@ -64,14 +64,19 @@ YT = [('-EH6aN7DRlI', 'hvem', 'Hvem er Oscar Jønsson'),
 # REGEL: ingen andre musikere på stock (alt med en musiker skal være Oscar selv). 'own:<navn>' = Oscars eget billede.
 STOCK_CRED = json.load(open(ROOT / 'media/ev/stock/credits.json'))
 STOCK = {
- 'bryllup': dict(hero_name=None, hero_wide='b-slor', intro='b-gang', s8='b-hander', offer=None, final='b-soe',
-   flow=['b-lysekrone', 'b-champagne', 'b-hoejbord', 'b-dans-sh'],
-   mood=[('b-par-sh', 'Vielsen'), ('b-lysekrone', 'Ceremonien'), ('b-lys', 'Middagen'), ('b-dans-vindue', 'Første dans'), ('b-glas', 'Velkomst'), ('b-par-ryg', 'Aftenen'), ('own:acoustic', 'Guitar og sang'), ('b-telt', 'Festsalen')]),
+ 'bryllup': dict(hero_name='real:h37', hero_wide='real:h92', intro='real:h22', s8='real:h128', offer='real:h39', final='b-soe',
+   flow=['b-lysekrone', 'real:h24', 'real:h5', 'real:h93'],
+   mood=[('real:h0', 'Festsalen'), ('real:h3', 'Borddækningen'), ('real:h26', 'Guitar og sang'), ('real:h48', 'Middagen'), ('real:h54', 'Live-sæt'), ('real:h97', 'Dansegulvet'), ('real:h110', 'Polonæsen'), ('real:h134', 'DJ til sidste dans')]),
  'firmafest': dict(hero_name=None, hero_wide='f-langbord', intro='f-gaester', s8='f-glaede', offer='f-champagne-taarn', final='f-scene-sh',
    flow=['f-skaenk', 'f-lys-bord', None, 'f-dansegulv'],
-   mood=[('f-guldbord', 'Middagen'), ('f-coupe', 'Velkomst'), ('f-telt-dans', 'Dansegulvet'), ('own:gig-blue', 'Live-sæt'), ('f-lyskaede', 'Aftenen'), ('f-glaede-sh', 'Festen'), ('own:warm', 'Guitar og sang'), ('f-tomlys', 'Midnat')]),
+   mood=[('f-guldbord', 'Middagen'), ('f-coupe', 'Velkomst'), ('f-telt-dans', 'Dansegulvet'), ('real:h54', 'Live-sæt'), ('f-lyskaede', 'Aftenen'), ('f-glaede-sh', 'Festen'), ('real:h134', 'DJ'), ('f-tomlys', 'Midnat')]),
 }
+REAL = json.load(open(ROOT / 'media/ev/real/meta.json'))   # Oscars egne fotos fra bryllup på Himmelbjerget 3/10 2026 (Frame.io)
 def simg(k, sizes='(max-width:820px) 92vw, 560px', eager=False, cls=''):
+    if k.startswith('real:'):
+        n = k[5:]; m = REAL[n]; load = ' fetchpriority="high"' if eager else ' loading="lazy" decoding="async"'
+        srcset = ', '.join(f'/media/ev/real/{n}-{x}.webp {x}w' for x in (480, 960, 1600))
+        return f'<img class="{cls}" src="/media/ev/real/{n}-960.webp" srcset="{srcset}" sizes="{sizes}" alt="Oscar Jønsson spiller til bryllup" width="{m["w"]}" height="{m["h"]}"{load}>'
     if k.startswith('own:'): return img(k[4:], 'Oscar spiller live', sizes=sizes, cls=cls, eager=eager, w=720, h=960)
     c = STOCK_CRED[k]; w, h = c['w'], c['h']
     srcset = ', '.join(f'/media/ev/stock/{k}-{x}.webp {x}w' for x in (480, 960, 1600))
@@ -573,6 +578,13 @@ main img,main video{filter:var(--imgfilter,none)}
 .mosaic .m7{grid-column:1/4;margin-top:20px}.mosaic .m8{grid-column:5/11;margin-top:80px}
 .mosaic .m img{aspect-ratio:4/5;object-fit:cover}.mosaic .m8 img,.mosaic .m4 img{aspect-ratio:3/2}
 @media (max-width:820px){.mosaic{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.mosaic .m{grid-column:auto !important;margin-top:0 !important}.mosaic .m:nth-child(even){margin-top:40px !important}.mosaic .m8{grid-column:1/-1 !important}}
+.rbgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-flow:dense;gap:14px;margin-top:26px}
+.rbgrid .rb4,.rbgrid .rb8{grid-column:span 2}.rbgrid .rb4 img,.rbgrid .rb8 img{aspect-ratio:auto;height:100%}
+.rbgrid figure{margin:0;position:relative;border-radius:var(--r);overflow:hidden;background:var(--card)}
+.rbgrid img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}
+.rbgrid .rb1,.rbgrid .rb5{grid-column:span 2;grid-row:span 2}.rbgrid .rb1 img,.rbgrid .rb5 img{aspect-ratio:auto;height:100%}
+.rbgrid figcaption{position:absolute;left:10px;bottom:10px;background:rgba(0,0,0,.55);color:#fff;font-size:.82rem;font-weight:600;padding:5px 10px;border-radius:999px}
+@media (max-width:820px){.rbgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.rbgrid .rb1,.rbgrid .rb5{grid-row:auto}.rbgrid .rb1 img,.rbgrid .rb5 img,.rbgrid .rb4 img,.rbgrid .rb8 img{aspect-ratio:16/10;height:auto}}
 .pal-mono .stars{background:linear-gradient(90deg,#0E0E0E 90%,rgba(14,14,14,.25) 90%);-webkit-background-clip:text;background-clip:text}
 .hero-split.land .media{aspect-ratio:4/3}
 @media (max-width:820px){.hero-split.land .media{aspect-ratio:16/10}}
@@ -637,9 +649,11 @@ def page(key, d, pal):
         hero = f'<section class="hero hero-split{" land" if land else ""}" id="top"><div class="wrap">{copy}<div class="media rv">{hvideo}</div></div></section>'
     elif dd['hero'] == 'fan':
         f3 = [('acoustic', 'Velkomst'), ('fest', 'Dansegulvet'), ('warm', 'Middag')]
-        if key == 'bryllup': f3 = [('acoustic', 'Vielsen'), ('beach', 'Velkomst'), ('gigblue', 'Dansefest')]
+        if key == 'bryllup': f3 = [('real:h37', 'Velkomst'), ('beach', 'Guitar og sang'), ('real:h128', 'Dansefest')]
         figs = ''
         for i, (k2, cap) in enumerate(f3):
+            if k2.startswith('real:'):
+                figs += f'<figure>{simg(k2, sizes="280px", eager=i == 0)}<figcaption>{cap}</figcaption></figure>'; continue
             f, poster, alt = CLIPS[k2]
             media = (f'<video autoplay muted loop playsinline preload="metadata" poster="{vposter(k2)}" aria-label="{H.escape(alt)}" width="720" height="960"><source src="{vsrc(k2)}" type="video/mp4"></video>' if i == 1
                      else f'<img src="/media/ev/{poster}-480.webp" alt="{H.escape(alt)}" width="480" height="640"{" fetchpriority=high" if i==0 else ""}>')
@@ -717,6 +731,13 @@ def page(key, d, pal):
     fl = ''.join(f'<div class="fl"><div class="photo">{flm(ph, n)}</div><div><b><span>0{i+1}</span>{n}</b>{vol(lv, ll)}<p>{tx}</p></div></div>' for i, (n, tx, ph, lv, ll) in enumerate(stages))
     s7 = f'''<section class="sec alt" id="forloeb"><div class="wrap"><div class="narrow rv"><h2>{t}</h2></div><div class="flow rv">{fl}</div><p class="big rv narrow">{b}</p></div></section>'''
 
+    real = ''
+    if key == 'bryllup' and not dd.get('ed'):
+        RB = [('h22', 'Velkomst'), ('h24', 'Guitar og sang'), ('h3', 'Borddækningen'), ('h54', 'Live-sæt'), ('h92', 'Dansegulvet'), ('h128', 'Hænderne i vejret'), ('h110', 'Polonæsen'), ('h134', 'DJ til sidste dans')]
+        rf = ''.join(f'<figure class="rb rb{i+1}">{simg("real:" + k, sizes="(max-width:820px) 46vw, 300px")}<figcaption>{cap}</figcaption></figure>' for i, (k, cap) in enumerate(RB))
+        real = f'''<section class="sec" id="rigtigt"><div class="wrap"><div class="narrow rv"><span class="eyebrow">Fra et rigtigt bryllup</span><h2>Himmelbjerget, oktober 2026</h2></div>
+      <div class="rbgrid rv">{rf}</div><div class="cta-row" style="margin-top:26px">{cta(c["cta"], sec="rigtigt")}</div></div></section>'''
+
     revs = ''.join(f'<article class="rev clamp"><b>{R[k][0]}</b><p>{R[k][1]}</p><button type="button" data-more>Læs hele anmeldelsen</button><div class="who"><strong>{R[k][2]}</strong><span>{R[k][3]}</span></div></article>' for k in c['reviews'])
     reviews = f'''<section class="sec" id="anmeldelser"><div class="wrap"><div class="tp rv"><span class="score">4,5</span><div><div>{stars()}</div><span style="color:var(--ink2)">14 anmeldelser af Oscar Jønsson Musik på <a href="{TRUSTPILOT}" target="_blank" rel="noopener">Trustpilot</a></span></div></div>
       <h2 class="rv" style="margin-top:18px">Det siger dem, der har haft Oscar til deres fest</h2><div class="revs">{revs}</div>
@@ -780,6 +801,7 @@ def page(key, d, pal):
 {music}
 {s6}
 {s7}
+{real}
 {reviews}
 {s8}
 {s9}
