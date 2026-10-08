@@ -101,11 +101,10 @@
   // ── trin ──
   var render = function () {
     if (S.booked || S.callback) return renderDone();
-    if (S.done) return renderCal();
-    var i = Math.min(S.step, steps.length - 1), st = steps[i];
+    var i = S.done ? steps.length - 1 : Math.min(S.step, steps.length - 1), st = steps[i];
     setProg(i);
     var head = '<div class="fq"><span class="k">' + (i + 1) + ' / ' + steps.length + '</span><h3>' + esc(st.q) + '</h3>' + (st.help ? '<p class="h">' + esc(st.help) + '</p>' : '');
-    var v = S.answers[st.id] || '', body = '';
+    var v = S.answers[st.id] || '', body = '', calHtml = '';
     if (st.type === 'date') {
       var today = new Date(); var min = today.toISOString().slice(0, 10);
       var alt = v === 'Ikke fast endnu';
@@ -124,13 +123,22 @@
         (st.company ? '<div><label class="flab" for="cCo">Virksomhed</label><input class="fin" id="cCo" autocomplete="organization" value="' + esc(S.company) + '" placeholder="Firmanavn"></div>' : '') +
         '<div><label class="flab" for="cMail">E-mail</label><input class="fin" id="cMail" type="email" inputmode="email" autocomplete="email" value="' + esc(S.email) + '" placeholder="navn@mail.dk"></div>' +
         '<div><label class="flab" for="cTel">Telefon</label><input class="fin" id="cTel" type="tel" inputmode="tel" autocomplete="tel" value="' + esc(S.phone) + '" placeholder="12 34 56 78"></div></div>';
+      calHtml = '<div class="calbox" id="calBox"><div class="calwait" id="calWait"><b>Vælg et tidspunkt til en kort snak</b><span>Udfyld navn, e-mail og telefon, så kommer de ledige tider frem her.</span></div>' +
+        '<div class="calin" id="calIn" hidden><span class="k">Vælg et tidspunkt</span><p class="calh">Vi ringer jer op og hører om ' + (EV.page === 'bryllup' ? 'jeres bryllup' : 'jeres fest') + ', så I får et tilbud, der passer. Samtalen tager cirka et kvarter.</p>' +
+        '<div class="days" id="cDays"><div class="skel" style="width:100%"></div></div><div class="times" id="cTimes"></div>' +
+        '<p class="ferr" id="cErr" role="alert"></p><div class="calfoot"><button type="button" class="btn" id="cBook" disabled>Vælg et tidspunkt</button>' +
+        '<button type="button" class="falt" id="cCall">Ingen af tiderne passer. Ring mig hellere op</button></div></div></div>';
     }
-    var isLast = i === steps.length - 1, auto = st.type === 'choice';
+    var isLast = i === steps.length - 1, auto = st.type === 'choice' || st.type === 'contact';
     var navh = '<p class="ferr" id="fErr" role="alert"></p><div class="fnav">' +
       (auto ? '' : '<button type="button" class="btn" id="fNext">' + (isLast ? 'Vælg tid til en kort snak' : 'Næste') + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>') +
       (i > 0 ? '<button type="button" class="fback" id="fBack">Tilbage</button>' : '') +
       (auto ? '' : '<span class="hint">eller tryk Enter ↵</span>') + '</div></div>';
-    B.innerHTML = head + body + navh; B.scrollTop = 0;
+    var card = $('.fm-card', M); card.classList.toggle('wide', st.type === 'contact');
+    B.innerHTML = st.type === 'contact'
+      ? '<div class="withcal"><div class="wc-l">' + head + body + navh + '</div>' + calHtml + '</div>'
+      : head + body + navh;
+    B.scrollTop = 0;
     wire(st, i);
     focusFirst();
   };
@@ -180,10 +188,16 @@
     if (st.type === 'contact') {
       [['cName', 'name'], ['cCo', 'company'], ['cMail', 'email'], ['cTel', 'phone']].forEach(function (p) {
         var el = $('#' + p[0]); if (!el) return;
-        el.addEventListener('input', function () { S[p[1]] = el.value; err(''); saveSoon(); });
+        el.addEventListener('input', function () { S[p[1]] = el.value; err(''); saveSoon(); maybeCal(); });
         el.addEventListener('blur', function () { S[p[1]] = el.value; saveNow(); });
-        el.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); var all = $$('.fin', B), j = all.indexOf(el); if (j < all.length - 1) all[j + 1].focus(); else go(); } });
+        el.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); var all = $$('.fin', B), j = all.indexOf(el); if (j < all.length - 1) all[j + 1].focus(); else { var m = validate(); err(m); if (!m) { maybeCal(); var d = $('.day', B); if (d) d.focus(); } } } });
       });
+      var maybeCal = function () {
+        if (validate()) return;
+        if (!S.done) { S.done = true; S.step = steps.length; saveNow(); }
+        showCal();
+      };
+      if (S.done && !validate()) showCal(true);
     }
   };
 
@@ -195,27 +209,25 @@
   var fmtLong = function (iso) { var d = new Date(iso); return d.toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'long', timeZone: tz }) + ' kl. ' + fmtTime(iso); };
   var first = function () { return (S.name || '').trim().split(/\s+/)[0] || ''; };
   var slotsCache = null;
-  var renderCal = function () {
-    setProg(steps.length);
-    B.onkeydown = null;
-    B.innerHTML = '<div class="fq"><span class="k">Sidste trin</span><h3>' + (first() ? 'Tak, ' + esc(first()) + '. ' : '') + 'Hvornår passer det med en kort snak?</h3>' +
-      '<p class="h">Vi ringer jer op og hører om ' + (EV.page === 'bryllup' ? 'jeres bryllup' : 'jeres fest') + ', så I får et tilbud, der passer. Vælg bare et tidspunkt, vi har allerede jeres oplysninger.</p>' +
-      '<div class="days" id="cDays"><div class="skel" style="width:100%"></div></div><div class="times" id="cTimes"></div>' +
-      '<p class="ferr" id="fErr" role="alert"></p><div class="calfoot"><button type="button" class="btn" id="cBook" disabled>Vælg et tidspunkt</button>' +
-      '<button type="button" class="falt" id="cCall">Ingen af tiderne passer. Ring mig hellere op</button>' +
-      '<button type="button" class="fback" id="fBack" style="align-self:flex-start">Tilbage</button></div></div>';
-    $('#fBack').addEventListener('click', function () { S.done = false; S.step = steps.length - 1; persist(); render(); });
+  var showCal = function (instant) {
+    var box = $('#calBox'), inn = $('#calIn'); if (!box || !inn || !inn.hidden) return;
+    $('#calWait').hidden = true; inn.hidden = false; box.classList.add('on'); setProg(steps.length);
     $('#cCall').addEventListener('click', function () { S.callback = true; persist(); saveNow(); renderDone(); });
+    if (!instant && matchMedia('(max-width:899px)').matches) setTimeout(function () { box.scrollIntoView({ block: 'start', behavior: 'smooth' }); }, 150);
+    loadSlots();
+  };
+  var cErr = function (m) { var e = $('#cErr'); if (e) e.textContent = m || ''; };
+  var loadSlots = function () {
     var from = new Date().toLocaleDateString('sv-SE', { timeZone: tz });
     var p = slotsCache ? Promise.resolve(slotsCache) : fetch('/api/slots?page=' + EV.page + '&from=' + from + '&days=14').then(function (r) { if (!r.ok) throw 0; return r.json(); });
     p.then(function (j) { slotsCache = j; drawDays(j); }).catch(function () {
-      $('#cDays').innerHTML = ''; err('Kalenderen kunne ikke hentes lige nu. Tryk nedenfor, så ringer vi jer op.');
+      $('#cDays').innerHTML = ''; cErr('Kalenderen kunne ikke hentes lige nu. Tryk nedenfor, så ringer vi jer op.');
     });
   };
   var picked = null;
   var drawDays = function (j) {
     var dEl = $('#cDays'), tEl = $('#cTimes'), keys = Object.keys(j.slots || {}).sort().filter(function (k) { return (j.slots[k] || []).length; });
-    if (!keys.length) { dEl.innerHTML = ''; err('Der er ingen ledige tider de næste dage. Tryk nedenfor, så ringer vi jer op.'); return; }
+    if (!keys.length) { dEl.innerHTML = ''; cErr('Der er ingen ledige tider de næste dage. Tryk nedenfor, så ringer vi jer op.'); return; }
     dEl.innerHTML = keys.map(function (k) {
       var d = new Date(k + 'T12:00:00');
       return '<button type="button" class="day" data-d="' + k + '" aria-pressed="false"><small>' + DAYS[d.getDay()] + '</small><b>' + d.getDate() + '</b><span>' + MONTHS[d.getMonth()] + '</span></button>';
@@ -227,7 +239,7 @@
       $$('.time', tEl).forEach(function (b) {
         b.addEventListener('click', function () {
           $$('.time', tEl).forEach(function (x) { x.setAttribute('aria-pressed', 'false'); }); b.setAttribute('aria-pressed', 'true');
-          picked = b.dataset.t; bb.disabled = false; bb.textContent = 'Book ' + fmtLong(picked); err('');
+          picked = b.dataset.t; bb.disabled = false; bb.textContent = 'Book ' + fmtLong(picked); cErr('');
           bb.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         });
       });
@@ -235,25 +247,31 @@
     $$('.day', dEl).forEach(function (b) { b.addEventListener('click', function () { pickDay(b.dataset.d); }); });
     pickDay(keys[0]);
     $('#cBook').onclick = function () {
-      if (!picked) return; var bb = $('#cBook'); bb.disabled = true; bb.textContent = 'Booker...';
+      if (!picked) return; var bb = $('#cBook');
+      if (S.name.trim().length < 2 || !okMail(S.email) || digits(S.phone).length < 8) { cErr('Tjek navn, e-mail og telefon ovenfor.'); return; }
+      bb.disabled = true; bb.textContent = 'Booker...';
       saveNow().then(function () {
         return fetch('/api/book', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lid: S.lid, start: picked }) });
       }).then(function (r) { return r.json().then(function (x) { return { ok: r.ok, x: x }; }); }).then(function (res) {
         var e = res.x && res.x.error;
         if (e === 'already booked' && res.x.start) { S.booked = { start: res.x.start, end: null }; persist(); renderDone(); return; }
         if (!res.ok || !res.x.ok) {
-          slotsCache = null;
-          if (e === 'slot taken') { renderCal(); setTimeout(function () { err('Den tid blev lige taget. Vælg en anden.'); }, 0); return; }
-          err('Det lykkedes ikke at booke. Prøv igen, eller tryk nedenfor, så ringer vi.'); bb.disabled = false; bb.textContent = 'Prøv igen';
+          if (e === 'slot taken') {
+            var taken = picked; Object.keys(j.slots).forEach(function (k) { j.slots[k] = j.slots[k].filter(function (t) { return t !== taken; }); });
+            slotsCache = j; drawDays(j); cErr('Den tid blev lige taget. Vælg en anden.'); return;
+          }
+          if (e === 'too many bookings') { cErr('Der er allerede booket samtaler fra denne forbindelse. Tryk nedenfor, så ringer vi jer op.'); bb.textContent = 'Vælg et tidspunkt'; return; }
+          cErr('Det lykkedes ikke at booke. Prøv igen, eller tryk nedenfor, så ringer vi.'); bb.disabled = false; bb.textContent = 'Prøv igen';
           return;
         }
         S.booked = { start: res.x.start || picked, end: res.x.end || null }; persist(); renderDone(true);
-      }).catch(function () { bb.disabled = false; bb.textContent = 'Prøv igen'; err('Ingen forbindelse. Prøv igen om lidt.'); });
+      }).catch(function () { bb.disabled = false; bb.textContent = 'Prøv igen'; cErr('Ingen forbindelse. Prøv igen om lidt.'); });
     };
   };
 
   // ── tak ──
   var renderDone = function (fresh) {
+    $('.fm-card', M).classList.remove('wide');
     prog.style.width = '100%'; B.onkeydown = null;
     var b = S.booked, f = first();
     var gcal = '', ics = '';
