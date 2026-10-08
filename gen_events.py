@@ -47,11 +47,28 @@ CLIPS = {
  'gigblue': ('clip-gig-blue', 'gig-blue', 'Oscar spiller el-guitar på scenen i blåt lys'),
  'warm': ('clip-studio-warm', 'warm', 'Oscar synger med gul akustisk guitar'),
  'studio': ('clip-studio', 'studio-v', 'Oscar spiller guitar i studiet'),
+ # fra oscartjoensson.dk (8/10 2026), 16:9, uden lyd
+ 'fest': ('/media/ev/v/fest.mp4', '/media/ev/v/fest.webp', 'Fyldt dansegulv til en fest, Oscar spiller på scenen'),
+ 'champagne': ('/media/ev/v/champagne.mp4', '/media/ev/v/champagne.webp', 'Champagne klar til velkomsten'),
+ 'kirke': ('/media/ev/v/kirke.mp4', '/media/ev/v/kirke.webp', 'Gæster i kirken til vielsen'),
+ 'middag': ('/media/ev/v/middag.mp4', '/media/ev/v/middag.webp', 'Oscar spiller akustisk guitar og synger under middagen'),
+ 'duo': ('/media/ev/v/duo.mp4', '/media/ev/v/duo.webp', 'Oscar og en pianist på scenen i rødt og grønt lys'),
 }
+LAND = {'fest', 'champagne', 'kirke', 'middag', 'duo'}
+def vsrc(k): f = CLIPS[k][0]; return f if f.startswith('/') else f'/media/clips/{f}.mp4'
+def vposter(k): p = CLIPS[k][1]; return p if p.startswith('/') else f'/media/ev/{p}-full.webp'
+YT = [('-EH6aN7DRlI', 'hvem', 'Hvem er Oscar Jønsson'),
+      ('DMEh5RBKn1s', 'dj', 'DJ Medley'), ('vXLYCO1kmrM', 'allofme', 'All Of Me · John Legend'), ('0GeIAyd3rX4', 'wicked', 'Wicked Game · Chris Isaak'),
+      ('jcWckbldTTo', 'acoustic', 'Acoustic Medley'), ('Dm8C8OdAfEY', 'perfect', 'Perfect · Ed Sheeran'), ('NZLpLNtWeMo', 'stupid', 'Stupid Man · Thomas Helmig')]
+PLAY = '<svg viewBox="0 0 68 48" aria-hidden="true"><rect width="68" height="48" rx="14" fill="rgba(0,0,0,.6)"/><path d="M27 15l18 9-18 9z" fill="#fff"/></svg>'
+def yt(i, cls=''):
+    vid, img_, title = YT[i]
+    return (f'<button type="button" class="yt {cls}" data-yt="{vid}" aria-label="Afspil {H.escape(title)}">'
+            f'<img src="/media/ev/yt/{img_}.webp" alt="" loading="lazy" decoding="async" width="960" height="540">{PLAY}</button>')
 def clip(key, cap=''):
-    f, poster, alt = CLIPS[key]
-    return (f'<figure class="clip"><video muted loop playsinline preload="none" poster="/media/ev/{poster}-full.webp" '
-            f'data-src="/media/clips/{f}.mp4" aria-label="{H.escape(alt)}" width="720" height="960"></video>'
+    alt = CLIPS[key][2]
+    return (f'<figure class="clip"><video muted loop playsinline preload="none" poster="{vposter(key)}" '
+            f'data-src="{vsrc(key)}" aria-label="{H.escape(alt)}" width="720" height="960"></video>'
             + (f'<figcaption>{cap}</figcaption>' if cap else '') + '</figure>')
 
 # ───────────────────────── sider ─────────────────────────
@@ -64,7 +81,7 @@ P['firmafest'] = dict(
  h1='Firmafesten, <em>ingen vil gå glip af</em>',
  sub='Fra akavet smalltalk og tomt dansegulv til “bare én sang mere”, og en aften, der samler teamet og bliver snakket om på kontoret resten af året.',
  cta='Få et tilbud på jeres firmafest',
- hero_img=('gig-wide', 'Oscar spiller på scenen til en fest i pink og blåt lys'), hero_clip='gigblue',
+ hero_img=('gig-wide', 'Oscar spiller på scenen til en fest i pink og blåt lys'), hero_clip='fest',
  intro=['Fra velkomstmusikken til aftenens sidste dans planlægger vi musikken omkring jeres team.',
         'Livemusik skaber en afslappet stemning under middagen. Live-sættet og DJ løfter festen, så kollegerne slipper arbejdsdagen, danser og synger med sammen.',
         'Med mere end 10 års erfaring som guitarist, sanger og DJ læser Oscar stemningen i rummet og tilpasser musikken gennem hele aftenen.',
@@ -82,7 +99,7 @@ P['firmafest'] = dict(
      ['Oscar følger stemningen og tilpasser musikken undervejs.', 'Så I kan være kolleger til festen og være med, når jeres yndlingssang kommer.']),
  s6=('Vælg musikken efter den aften, I vil skabe', ['En sangliste fortæller, hvilke numre der kan blive spillet.', 'Den fortæller ikke, hvordan det føles, når kollegerne rejser sig fra bordene og synger med sammen.', 'Derfor begynder vi med jeres team og den fest, I ønsker.'],
      'Vil I have en afslappet middag, en stor dansefest eller en aften, der bevæger sig fra det ene til det andet?', 'Musikken skal passe til jer og give mennesker på tværs af afdelinger noget at mødes om.'),
- s7=('Velkomst, middag og dansegulv skal hænge sammen', [('Velkomst', 'Under velkomsten skal det være nemt at falde i snak.', 'acoustic'), ('Middag', 'Under middagen skal musikken give varme til rummet og plads til samtaler.', 'warm'), ('Dansegulv', 'Senere skal energien løftes, så folk får lyst til at rejse sig.', 'gig-blue')],
+ s7=('Velkomst, middag og dansegulv skal hænge sammen', [('Velkomst', 'Under velkomsten skal det være nemt at falde i snak.', 'v:champagne'), ('Middag', 'Under middagen skal musikken give varme til rummet og plads til samtaler.', 'v:middag'), ('Dansegulv', 'Senere skal energien løftes, så folk får lyst til at rejse sig.', 'v:fest')],
      'Vi planlægger overgangen mellem aftenens dele, så musikken følger festen fra begyndelse til afslutning.'),
  s8=('I har lagt for meget i aftenen til, at den bare skal overstås', ['Der ligger tid, penge og arbejde bag en firmafest.', 'Hvis kollegerne bliver siddende i deres sædvanlige grupper og går efter middagen, mister I muligheden for at samle teamet på en anden måde end i hverdagen.', 'Når folk danser, griner og synger sammen, får de noget fælles at tage med tilbage på kontoret.'], 'Det er den aften, vi planlægger musikken til.'),
  s9=('Sådan skaber vi jeres firmafest', 'Oscars Firmafestoplevelse består af fem dele:', [
@@ -98,7 +115,7 @@ P['firmafest'] = dict(
      'I har samlet menneskene. Nu skaber vi musikken, der bringer dem tættere sammen.', 'Fortæl om jeres firmafest og få et tilbud', 'Send dato, sted og cirka antal gæster. Så tager vi en snak om musikken til jeres aften.'),
  reviews=['jakob', 'benjamin', 'sonderup', 'md', 'heidi', 'porskrog', 'solv', 'vigso'],
  strip=['benjamin', 'jakob', 'sonderup', 'md', 'heidi', 'porskrog'],
- gallery=[('gigblue', 'Live-sæt'), ('acoustic', 'Velkomst'), ('warm', 'Middag'), ('studio', 'Guitar og sang'), ('beach', 'Duo med sangerinde')],
+ gallery=[('duo', 'Live-sæt'), ('gigblue', 'På scenen'), ('acoustic', 'Velkomst'), ('warm', 'Middag'), ('studio', 'Guitar og sang')],
  form=dict(
    title='Fortæl om jeres firmafest',
    steps=[
@@ -135,7 +152,7 @@ P['bryllup'] = dict(
      ['Vi aftaler retningen på forhånd.', 'På aftenen følger Oscar stemningen, så I kan blive i øjeblikket.']),
  s6=('Musikken bliver en del af det, I husker', ['Når I tænker tilbage på brylluppet, er det måske en bestemt sang, der kommer først.', 'Den, I sang med på sammen med jeres venner.', 'Den, der fik jeres forældre ud på dansegulvet.', 'Den sidste sang, hvor ingen helt havde lyst til at sige farvel.', 'Derfor handler valget af musik også om:'],
      '“Hvem skal skabe de øjeblikke, vi gerne vil huske?”', 'Vi planlægger musikken omkring den oplevelse, I ønsker at dele med jeres gæster.'),
- s7=('Musikken skal følge dagen, som den udvikler sig', [('Velkomst', 'Ved velkomsten skal gæsterne kunne mødes og falde til.', 'beach-v'), ('Middag', 'Under middagen skal der være varme i rummet og plads til ord, grin og taler.', 'warm'), ('Fest', 'Senere skal musikken samle generationerne og give festen energi.', 'gig-blue')],
+ s7=('Musikken skal følge dagen, som den udvikler sig', [('Velkomst', 'Ved velkomsten skal gæsterne kunne mødes og falde til.', 'v:champagne'), ('Middag', 'Under middagen skal der være varme i rummet og plads til ord, grin og taler.', 'v:middag'), ('Fest', 'Senere skal musikken samle generationerne og give festen energi.', 'v:fest')],
      'Vi aftaler forløbet med jer og tilpasser det på aftenen, når programmet og stemningen udvikler sig.'),
  s8=('Jeres gæster er samlet for én særlig aften', ['Mennesker fra forskellige dele af jeres liv mødes.', 'Nogle kender hinanden godt. Andre mødes for første gang.', 'Musikken kan give dem en fælles indgang til festen: en sang, de kender, et omkvæd, de synger sammen, eller en anledning til at danse.'], 'Så gæsterne tager hjem med minder om det, de delte med jer og hinanden.'),
  s9=('Sådan skaber vi jeres bryllupsfest', 'Oscars Bryllupsoplevelse består af fem dele:', [
@@ -151,7 +168,7 @@ P['bryllup'] = dict(
      'I samler dem, I elsker. Vi skaber musikken til den aften, I vil huske sammen.', 'Fortæl om jeres bryllup og få et tilbud', 'Send dato, sted og cirka antal gæster. Så tager vi en snak om jeres ønsker til musikken.'),
  reviews=['vigso', 'kasper', 'porskrog', 'norup', 'heidi', 'emma', 'laura', 'andreas', 'solv'],
  strip=['vigso', 'norup', 'porskrog', 'kasper', 'emma', 'laura', 'heidi'],
- gallery=[('beach', 'Vielse og velkomst'), ('acoustic', 'Guitar og sang'), ('warm', 'Middag'), ('studio', 'Akustisk'), ('gigblue', 'Dansefest')],
+ gallery=[('kirke', 'Vielsen'), ('beach', 'Guitar og sang'), ('acoustic', 'Reception'), ('warm', 'Middag'), ('gigblue', 'Dansefest')],
  form=dict(
    title='Fortæl om jeres bryllup',
    steps=[
@@ -263,7 +280,7 @@ p{margin:0;text-wrap:pretty}
 .ic{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:22px;font-size:1rem;color:var(--ink2)}
 .ic b{display:block;font-family:var(--display);font-size:1.5rem;color:var(--accentT);font-weight:var(--hw);margin-bottom:6px;line-height:1}
 .photo{border-radius:var(--r);overflow:hidden;aspect-ratio:4/3;background:var(--card)}
-.photo img{width:100%;height:100%;object-fit:cover}
+.photo img,.photo video{width:100%;height:100%;object-fit:cover}
 .pcards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:10px 0 6px}
 .pc{display:flex;gap:14px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;font-size:1rem}
 .pc i{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,#d65f5f 18%,transparent);color:#E58A8A;font-style:normal;font-weight:700;font-size:.9rem}
@@ -272,8 +289,8 @@ p{margin:0;text-wrap:pretty}
 .bubble:nth-child(2){align-self:center}.bubble:nth-child(3){align-self:flex-end;border-radius:20px 20px 6px 20px}
 .flow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:22px 0}
 .fl{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
-.fl .photo{border-radius:0;aspect-ratio:4/5}
-.fl div{padding:18px 20px}
+.fl .photo{border-radius:0;aspect-ratio:4/3}
+.fl>div:last-child{padding:18px 20px}
 .fl b{display:flex;align-items:center;gap:10px;font-family:var(--display);font-size:1.5rem;font-weight:var(--hw);margin-bottom:6px}
 .fl b span{font-family:var(--body);font-size:.8rem;color:var(--accentT);letter-spacing:.14em}
 .fl p{font-size:1rem;color:var(--ink2)}
@@ -417,6 +434,24 @@ input[type=date].fin{color-scheme:var(--scheme)}
 .next3 div{display:flex;gap:14px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-size:1rem}
 .next3 div::before{counter-increment:n;content:counter(n);flex:none;width:26px;height:26px;border-radius:50%;background:var(--accent);color:var(--onaccent);display:grid;place-items:center;font-weight:700;font-size:.85rem}
 body.lock{overflow:hidden}
+.hero-split.land .media{aspect-ratio:4/3}
+@media (max-width:820px){.hero-split.land .media{aspect-ratio:16/10}}
+.yt{position:relative;display:block;width:100%;padding:0;border:0;border-radius:var(--r);overflow:hidden;background:#000;cursor:pointer;aspect-ratio:16/9}
+.yt img,.yt iframe{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border:0}
+.yt svg{position:absolute;left:50%;top:50%;width:64px;height:46px;transform:translate(-50%,-50%);transition:transform .2s}
+.yt:hover svg{transform:translate(-50%,-50%) scale(1.08)}
+.yt.on svg{display:none}
+.story-media{position:relative;padding-bottom:56px}
+.story-media .then{position:absolute;right:-10px;bottom:0;width:min(170px,38%);margin:0;background:#fff;padding:7px 7px 28px;transform:rotate(4deg);box-shadow:0 24px 50px -20px rgba(0,0,0,.7);border-radius:3px}
+.story-media .then img{aspect-ratio:4/5;object-fit:cover;width:100%}
+.story-media .then figcaption{position:absolute;bottom:5px;left:0;right:0;text-align:center;font-family:var(--display);font-style:italic;color:#3b3026;font-size:.95rem}
+.music{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:clamp(28px,5vw,64px);align-items:center}
+.sig{font-size:1.25em;display:inline-block}
+.ytgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.ytgrid figure{margin:0;display:flex;flex-direction:column;gap:8px}
+.ytgrid figcaption{font-size:.92rem;color:var(--ink2)}
+@media (max-width:820px){.music{grid-template-columns:minmax(0,1fr)}.story-media{max-width:560px}}
+@media (max-width:420px){.ytgrid{gap:10px}.ytgrid figcaption{font-size:.86rem}}
 .fm-card{transition:width .35s cubic-bezier(.2,.7,.2,1)}
 .fm-card.wide{width:min(1080px,100% - 32px);height:min(780px,100dvh - 48px)}
 .withcal{display:grid;grid-template-columns:minmax(0,1fr);gap:28px}
@@ -454,24 +489,25 @@ def page(key, d):
     c = P[key]; dd = D[d]
     rating = f'<a class="rating" href="{TRUSTPILOT}" target="_blank" rel="noopener">{stars()}<span><b>4,5 ud af 5</b> · 14 anmeldelser på Trustpilot</span></a>'
     heroimg = img(c['hero_img'][0], c['hero_img'][1], sizes='100vw' if dd['hero'] == 'full' else '(max-width:820px) 92vw, 520px', eager=True, w=1600, h=900)
-    hclip = CLIPS[c['hero_clip']]
-    hvideo = f'<video autoplay muted loop playsinline preload="metadata" poster="/media/ev/{hclip[1]}-full.webp" aria-label="{H.escape(hclip[2])}" data-hero width="720" height="960"><source src="/media/clips/{hclip[0]}.mp4" type="video/mp4"></video>'
+    hk = c['hero_clip']; hclip = CLIPS[hk]; land = hk in LAND
+    hvideo = f'<video autoplay muted loop playsinline preload="metadata" poster="{vposter(hk)}" aria-label="{H.escape(hclip[2])}" data-hero width="{1280 if land else 720}" height="{720 if land else 960}"><source src="{vsrc(hk)}" type="video/mp4"></video>'
     copy = f'''<div class="copy rv"><span class="eyebrow">{c["eyebrow"]}</span><h1>{c["h1"]}</h1><p class="sub">{c["sub"]}</p>
       <div class="cta-row">{cta(c["cta"], sec="hero")}</div>{rating}</div>'''
     if dd['hero'] == 'split':
-        hero = f'<section class="hero hero-split" id="top"><div class="wrap">{copy}<div class="media rv">{hvideo}</div></div></section>'
+        hero = f'<section class="hero hero-split{" land" if land else ""}" id="top"><div class="wrap">{copy}<div class="media rv">{hvideo}</div></div></section>'
     elif dd['hero'] == 'fan':
-        f3 = [('acoustic', 'Guitar og sang'), (c['hero_clip'], 'Velkomst' if key == 'bryllup' else 'Live-sæt'), ('warm', 'Middag')]
+        f3 = [('acoustic', 'Velkomst'), ('fest', 'Dansegulvet'), ('warm', 'Middag')]
         if key == 'bryllup': f3 = [('acoustic', 'Vielsen'), ('beach', 'Velkomst'), ('gigblue', 'Dansefest')]
         figs = ''
         for i, (k2, cap) in enumerate(f3):
             f, poster, alt = CLIPS[k2]
-            media = (f'<video autoplay muted loop playsinline preload="metadata" poster="/media/ev/{poster}-full.webp" aria-label="{H.escape(alt)}" width="720" height="960"><source src="/media/clips/{f}.mp4" type="video/mp4"></video>' if i == 1
+            media = (f'<video autoplay muted loop playsinline preload="metadata" poster="{vposter(k2)}" aria-label="{H.escape(alt)}" width="720" height="960"><source src="{vsrc(k2)}" type="video/mp4"></video>' if i == 1
                      else f'<img src="/media/ev/{poster}-480.webp" alt="{H.escape(alt)}" width="480" height="640"{" fetchpriority=high" if i==0 else ""}>')
             figs += f'<figure>{media}<figcaption>{cap}</figcaption></figure>'
         hero = f'<section class="hero hero-fan" id="top"><div class="wrap">{copy}<div class="fan rv" aria-hidden="false">{figs}</div></div></section>'
     else:
-        hero = f'<section class="hero hero-full" id="top"><div class="bgv">{heroimg}</div><div class="wrap">{copy}</div></section>'
+        bg = hvideo if land else heroimg
+        hero = f'<section class="hero hero-full" id="top"><div class="bgv">{bg}</div><div class="wrap">{copy}</div></section>'
 
     strip_items = ''.join(f'<div class="strip-item"><q>{R[k][4]}</q><span>{R[k][2]}</span></div>' for k in c['strip'])
     strip = f'<div class="strip" aria-label="Uddrag af anmeldelser"><div class="strip-track">{strip_items}<span aria-hidden="true" style="display:contents">{strip_items}</span></div></div>'
@@ -502,16 +538,25 @@ def page(key, d):
       <div class="stack rv"><div class="bubbles">{"".join(f'<div class="bubble">{x}</div>' for x in qs)}</div>{ps(b[:1], "big")}{ps(b[1:], "lead")}</div></div></div></section>'''
 
     story = f'''<section class="sec alt" id="oscar"><div class="wrap"><div class="story">
-      <div class="photo rv">{img("dengang", "Oscar som ung musiker med el-guitar på en scene", widths=(480, 960), w=1123, h=1400)}</div>
+      <div class="story-media rv">{yt(0, "big")}<figure class="then">{img("dengang", "Oscar som ung musiker med el-guitar på en scene", widths=(480,), sizes="200px", w=1123, h=1400)}<figcaption>Dengang</figcaption></figure></div>
       <div class="stack rv"><span class="eyebrow">{STORY["eyebrow"]}</span><h2>{STORY["h"]}</h2>{ps(STORY["p"], "lead")}<p class="sign">{STORY["sign"]}</p>
-      <div class="facts"><div><b>10+ år</b>som guitarist, sanger og DJ</div><div><b>4,5 / 5</b>på Trustpilot, 14 anmeldelser</div><div><b>Én løsning</b>guitar, sang og DJ fra velkomst til sidste dans</div></div>
+      <div class="facts"><div><b>10+ år</b>som guitarist, sanger og DJ</div><div><b>1.000+</b>shows til fester, bryllupper og firmaevents</div><div><b>4,5 / 5</b>på Trustpilot, 14 anmeldelser</div></div>
       <div class="cta-row full">{cta(c["cta"], sec="oscar")}</div></div></div></div></section>'''
+
+    music = f'''<section class="sec" id="musik"><div class="wrap"><div class="music">
+      <div class="stack rv music-h"><span class="eyebrow">Hør selv</span><h2>Lyt til musikken fra <em class="sig">Oscar Jønsson</em></h2>
+      <p class="lead">Tryk på en video. Guitar, sang og DJ, som I får det til {"jeres fest" if key=="firmafest" else "jeres bryllup"}.</p><div class="cta-row full">{cta(c["cta"], sec="musik")}</div></div>
+      <div class="ytgrid rv">{"".join(f'<figure>{yt(i)}<figcaption>{H.escape(YT[i][2])}</figcaption></figure>' for i in range(1, 7))}</div></div></div></section>'''
 
     t, a, q, b = c['s6']
     s6 = f'''<section class="sec" id="vaelg"><div class="wrap narrow center rv"><h2>{t}</h2><div class="stack">{ps(a, "lead")}<p class="quote">{q}</p><p class="big">{b}</p></div></div></section>'''
 
     t, stages, b = c['s7']
-    fl = ''.join(f'<div class="fl"><div class="photo">{img(ph, n, widths=(480,), sizes="(max-width:820px) 40vw, 360px", w=480, h=640)}</div><div><b><span>0{i+1}</span>{n}</b><p>{tx}</p></div></div>' for i, (n, tx, ph) in enumerate(stages))
+    def flm(ph, n):
+        if ph.startswith('v:'):
+            k = ph[2:]; return f'<video muted loop playsinline preload="none" poster="{vposter(k)}" data-src="{vsrc(k)}" aria-label="{H.escape(CLIPS[k][2])}" width="960" height="540"></video>'
+        return img(ph, n, widths=(480,), sizes="(max-width:820px) 40vw, 360px", w=480, h=640)
+    fl = ''.join(f'<div class="fl"><div class="photo">{flm(ph, n)}</div><div><b><span>0{i+1}</span>{n}</b><p>{tx}</p></div></div>' for i, (n, tx, ph) in enumerate(stages))
     s7 = f'''<section class="sec alt" id="forloeb"><div class="wrap"><div class="narrow rv"><h2>{t}</h2></div><div class="flow rv">{fl}</div><p class="big rv narrow">{b}</p></div></section>'''
 
     revs = ''.join(f'<article class="rev clamp"><b>{R[k][0]}</b><p>{R[k][1]}</p><button type="button" data-more>Læs hele anmeldelsen</button><div class="who"><strong>{R[k][2]}</strong><span>{R[k][3]}</span></div></article>' for k in c['reviews'])
@@ -557,7 +602,7 @@ def page(key, d):
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23C9A46A'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' font-family='Georgia' fill='%2314110E'%3EO%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?{dd["fonts"]}&display=swap">
-<link rel="preload" as="image" href="/media/ev/{hclip[1] if dd["hero"]!="full" else c["hero_img"][0]+"-960"}{"-full" if dd["hero"]!="full" else ""}.webp">
+<link rel="preload" as="image" href="{vposter(hk) if (dd["hero"]!="full" or land) else "/media/ev/"+c["hero_img"][0]+"-960.webp"}">
 {pixel}
 <script src="/track.js" async></script>
 <style>:root{{{dd["vars"]}}}{CSS}</style>
@@ -573,6 +618,7 @@ def page(key, d):
 {s4}
 {s5}
 {story}
+{music}
 {s6}
 {s7}
 {reviews}

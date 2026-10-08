@@ -30,6 +30,18 @@
     $$('video[data-src]').forEach(function (v) { vo.observe(v); });
   } else { $$('.rv').forEach(function (el) { el.classList.add('in'); }); }
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) $$('video[autoplay]').forEach(function (v) { v.pause(); });
+  // YouTube: thumbnail -> iframe ved klik (ingen YouTube-kode før man trykker)
+  $$('.yt[data-yt]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      if (b.classList.contains('on')) return;
+      $$('.yt.on iframe').forEach(function (f) { f.src = 'about:blank'; f.remove(); }); $$('.yt.on').forEach(function (x) { x.classList.remove('on'); });
+      var f = document.createElement('iframe');
+      f.src = 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(b.dataset.yt) + '?autoplay=1&rel=0&playsinline=1&modestbranding=1';
+      f.title = b.getAttribute('aria-label') || 'Video'; f.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen'; f.allowFullscreen = true;
+      b.appendChild(f); b.classList.add('on');
+      try { dispatchEvent(new CustomEvent('ev:yt', { detail: b.dataset.yt })); } catch (e) { }
+    });
+  });
   $$('[data-more]').forEach(function (b) { b.addEventListener('click', function () { var r = b.closest('.rev'); r.classList.toggle('clamp'); b.textContent = r.classList.contains('clamp') ? 'Læs hele anmeldelsen' : 'Vis mindre'; }); });
   $$('.rev').forEach(function (r) { var p = $('p', r), b = $('[data-more]', r); if (p && b && p.scrollHeight <= p.clientHeight + 2) { r.classList.remove('clamp'); b.remove(); } });
 
