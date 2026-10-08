@@ -60,6 +60,22 @@ def vposter(k): p = CLIPS[k][1]; return p if p.startswith('/') else f'/media/ev/
 YT = [('-EH6aN7DRlI', 'hvem', 'Hvem er Oscar Jønsson'),
       ('DMEh5RBKn1s', 'dj', 'DJ Medley'), ('vXLYCO1kmrM', 'allofme', 'All Of Me · John Legend'), ('0GeIAyd3rX4', 'wicked', 'Wicked Game · Chris Isaak'),
       ('jcWckbldTTo', 'acoustic', 'Acoustic Medley'), ('Dm8C8OdAfEY', 'perfect', 'Perfect · Ed Sheeran'), ('NZLpLNtWeMo', 'stupid', 'Stupid Man · Thomas Helmig')]
+# Stemningsbilleder (Unsplash-licens, fri brug) — KUN i high-end-demoerne D/E, aldrig i de live annoncesider
+STOCK_CRED = json.load(open(ROOT / 'media/ev/stock/credits.json'))
+STOCK = {
+ 'bryllup': dict(hero_name='b-guitar-vielse', hero_wide='b-slor', intro='b-gang', s8='b-hander', offer='b-guitar', final='b-soe',
+   flow=['b-champagne', 'b-hoejbord', 'b-dans-sh'],
+   mood=[('b-par-sh', 'Vielsen'), ('b-lysekrone', 'Ceremonien'), ('b-lys', 'Middagen'), ('b-dans-vindue', 'Første dans'), ('b-glas', 'Velkomst'), ('b-par-ryg', 'Aftenen'), ('b-guitar-taet', 'Guitar og sang'), ('b-telt', 'Festsalen')]),
+ 'firmafest': dict(hero_name='f-band-guitar', hero_wide='f-langbord', intro='f-gaester', s8='f-glaede', offer='f-champagne-taarn', final='f-scene-sh',
+   flow=['f-skaenk', 'f-lys-bord', 'f-dansegulv'],
+   mood=[('f-guldbord', 'Middagen'), ('f-coupe', 'Velkomst'), ('f-telt-dans', 'Dansegulvet'), ('f-band', 'Live-sæt'), ('f-lyskaede', 'Aftenen'), ('f-glaede-sh', 'Festen'), ('f-guitar-taet', 'Guitar og sang'), ('f-tomlys', 'Midnat')]),
+}
+def simg(k, sizes='(max-width:820px) 92vw, 560px', eager=False, cls=''):
+    c = STOCK_CRED[k]; w, h = c['w'], c['h']
+    srcset = ', '.join(f'/media/ev/stock/{k}-{x}.webp {x}w' for x in (480, 960, 1600))
+    load = ' fetchpriority="high"' if eager else ' loading="lazy" decoding="async"'
+    return f'<img class="{cls}" src="/media/ev/stock/{k}-960.webp" srcset="{srcset}" sizes="{sizes}" alt="{H.escape(c["alt"] or "Stemningsbillede")}" width="{w}" height="{h}"{load}>'
+
 PLAY = '<svg viewBox="0 0 68 48" aria-hidden="true"><rect width="68" height="48" rx="14" fill="rgba(0,0,0,.6)"/><path d="M27 15l18 9-18 9z" fill="#fff"/></svg>'
 def yt(i, cls=''):
     vid, img_, title = YT[i]
@@ -217,11 +233,11 @@ D = {
    fonts='family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Inter:wght@400;500;600',
    vars='--display:"Bricolage Grotesque",system-ui,sans-serif;--body:Inter,system-ui,sans-serif;--hw:700;--hls:-.035em;--r:22px',
    hero='full', pals=['natrose', 'kul', 'bordeaux', 'skov']),
- 'd': dict(name='Redaktion', kind='High-end', note='Som Greg Finck: navnet i kæmpe serif delt om ét billede, hvidt, skarpe kanter, tynde linjer. Bodoni Moda + Jost.',
+ 'd': dict(name='Redaktion', kind='High-end', note='Som Greg Finck: navnet i kæmpe serif delt om ét billede, hvidt, skarpe kanter, tynde linjer. Bodoni Moda + Jost. Demo med stemningsbilleder fra Unsplash.',
    fonts='family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..600;1,6..96,400..600&family=Jost:wght@400;500',
    vars='--display:"Bodoni Moda",Didot,Georgia,serif;--body:Jost,system-ui,sans-serif;--hw:400;--hls:-.02em;--r:0px',
    hero='name', ed=True, pals=['hvid', 'mono', 'champagne', 'sten']),
- 'e': dict(name='Atelier', kind='High-end', note='Som Elizabeth Messina og Tec Petaja: centreret, luftigt, bredt billede med hvid kant og kursiv serif. Cormorant + Jost.',
+ 'e': dict(name='Atelier', kind='High-end', note='Som Elizabeth Messina og Tec Petaja: centreret, luftigt, bredt billede med hvid kant og kursiv serif. Cormorant + Jost. Demo med stemningsbilleder fra Unsplash.',
    fonts='family=Cormorant:ital,wght@0,400;0,500;1,400;1,500&family=Jost:wght@400;500',
    vars='--display:Cormorant,Georgia,serif;--body:Jost,system-ui,sans-serif;--hw:400;--hls:-.01em;--r:0px',
    hero='atelier', ed=True, pals=['salvie', 'hvid', 'champagne', 'sten']),
@@ -532,6 +548,15 @@ main img,main video{filter:var(--imgfilter,none)}
 .ed .fm-card,.ed .opt,.ed .day,.ed .time,.ed .fm-x,.ed .calwait{border-radius:0}
 .ed .sticky .btn{box-shadow:none}
 .ed .final .bg{opacity:.12}
+.mosaic{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:clamp(18px,2.4vw,34px);align-items:start}
+.mosaic .m{margin:0}
+.mosaic .m img{width:100%;height:auto;display:block}
+.mosaic figcaption{margin-top:10px;font-size:.74rem;letter-spacing:.2em;text-transform:uppercase;color:var(--ink2)}
+.mosaic .m1{grid-column:1/5}.mosaic .m2{grid-column:6/9;margin-top:120px}.mosaic .m3{grid-column:10/13;margin-top:40px}
+.mosaic .m4{grid-column:2/6;margin-top:-40px}.mosaic .m5{grid-column:7/10;margin-top:60px}.mosaic .m6{grid-column:10/13;margin-top:-80px}
+.mosaic .m7{grid-column:1/4;margin-top:20px}.mosaic .m8{grid-column:5/11;margin-top:80px}
+.mosaic .m img{aspect-ratio:4/5;object-fit:cover}.mosaic .m8 img,.mosaic .m4 img{aspect-ratio:3/2}
+@media (max-width:820px){.mosaic{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.mosaic .m{grid-column:auto !important;margin-top:0 !important}.mosaic .m:nth-child(even){margin-top:40px !important}.mosaic .m8{grid-column:1/-1 !important}}
 .pal-mono .stars{background:linear-gradient(90deg,#0E0E0E 90%,rgba(14,14,14,.25) 90%);-webkit-background-clip:text;background-clip:text}
 .hero-split.land .media{aspect-ratio:4/3}
 @media (max-width:820px){.hero-split.land .media{aspect-ratio:16/10}}
@@ -607,12 +632,13 @@ def page(key, d, pal):
     elif dd['hero'] == 'name':
         nk = 'gigblue' if key == 'firmafest' else 'beach'
         nv = f'<video autoplay muted loop playsinline preload="metadata" poster="{vposter(nk)}" aria-label="{H.escape(CLIPS[nk][2])}" width="720" height="960"><source src="{vsrc(nk)}" type="video/mp4"></video>'
+        if dd.get('ed'): nv = simg(STOCK[key]['hero_name'], sizes='(max-width:820px) 92vw, 400px', eager=True)
         hero = f'''<section class="hero hero-name" id="top"><div class="wrap">
       <div class="nm"><span class="n1" aria-hidden="true">Oscar</span><figure class="nm-pic">{nv}<figcaption>{"Firmafest · Livemusik & DJ" if key=="firmafest" else "Vielse · Middag · Dansefest"}</figcaption></figure><span class="n2" aria-hidden="true">Jønsson</span></div>
       {copy}</div></section>'''
     elif dd['hero'] == 'atelier':
         hero = f'''<section class="hero hero-atelier" id="top"><div class="wrap">{copy}
-      <figure class="at-pic rv"><span class="at-side" aria-hidden="true">Guitar · Sang · DJ</span>{hvideo if land else heroimg}</figure></div></section>'''
+      <figure class="at-pic rv"><span class="at-side" aria-hidden="true">Guitar · Sang · DJ</span>{simg(STOCK[key]['hero_wide'], sizes='(max-width:1100px) 92vw, 1060px', eager=True)}</figure></div></section>'''
     else:
         bg = hvideo if land else heroimg
         hero = f'<section class="hero hero-full" id="top"><div class="bgv">{bg}</div><div class="wrap">{copy}</div></section>'
@@ -624,12 +650,17 @@ def page(key, d, pal):
     introsec = f'''<section class="sec" id="intro"><div class="wrap"><div class="two">
       <div class="stack rv"><p class="big">{intro[0]}</p><p class="lead">{intro[1]}</p><p class="lead">{intro[2]}</p><p class="big" style="color:var(--accentT)">{intro[3]}</p>
       <div class="cta-row full">{cta(c["cta"], sec="intro")}</div></div>
-      <div class="photo rv">{img(c["hero_img"][0] if dd["hero"]!="split" else ("beach-duo2" if key=="bryllup" else "studio-a"), "Oscar spiller live", w=1600, h=900)}</div></div></div></section>'''
+      <div class="photo rv">{simg(STOCK[key]["intro"]) if dd.get("ed") else img(c["hero_img"][0] if dd["hero"]!="split" else ("beach-duo2" if key=="bryllup" else "studio-a"), "Oscar spiller live", w=1600, h=900)}</div></div></div></section>'''
 
     t, a, b = c['s2']
     gal = ''.join(clip(k, cap) for k, cap in c['gallery'])
     s2 = f'''<section class="sec alt" id="samlet"><div class="wrap"><div class="narrow rv"><h2>{t}</h2>
       <div class="stack">{ps(a, "big")}{ps(b, "lead")}</div></div><div class="gal rv" aria-label="Klip fra Oscars jobs">{gal}</div></div></section>'''
+
+    mood = ''
+    if dd.get('ed'):
+        figs = ''.join(f'<figure class="m m{i+1} rv">{simg(k, sizes="(max-width:820px) 46vw, 420px")}<figcaption>{cap}</figcaption></figure>' for i, (k, cap) in enumerate(STOCK[key]['mood']))
+        mood = f'<section class="sec mood" id="stemning" aria-label="Stemningsbilleder"><div class="wrap"><div class="mosaic">{figs}</div></div></section>'
 
     t, a, q, b, e = c['s3']
     s3 = f'''<section class="sec" id="stemning"><div class="wrap narrow center rv"><h2>{t}</h2><div class="stack">{ps(a, "lead")}
@@ -660,7 +691,9 @@ def page(key, d, pal):
     s6 = f'''<section class="sec" id="vaelg"><div class="wrap narrow center rv"><h2>{t}</h2><div class="stack">{ps(a, "lead")}<p class="quote">{q}</p><p class="big">{b}</p></div></div></section>'''
 
     t, stages, b = c['s7']
+    if dd.get('ed'): stages = [(n, tx, 's:' + STOCK[key]['flow'][i]) for i, (n, tx, ph) in enumerate(stages)]
     def flm(ph, n):
+        if ph.startswith('s:'): return simg(ph[2:], sizes='(max-width:820px) 92vw, 360px')
         if ph.startswith('v:'):
             k = ph[2:]; return f'<video muted loop playsinline preload="none" poster="{vposter(k)}" data-src="{vsrc(k)}" aria-label="{H.escape(CLIPS[k][2])}" width="960" height="540"></video>'
         return img(ph, n, widths=(480,), sizes="(max-width:820px) 40vw, 360px", w=480, h=640)
@@ -673,7 +706,7 @@ def page(key, d, pal):
       <div class="cta-row center" style="margin-top:28px">{cta(c["cta"], sec="anmeldelser")}</div></div></section>'''
 
     t, a, b = c['s8']
-    s8 = f'''<section class="sec alt" id="vaerdi"><div class="wrap"><div class="two"><div class="photo rv">{img("studio-b", "Oscar spiller guitar og synger", w=1600, h=1066)}</div>
+    s8 = f'''<section class="sec alt" id="vaerdi"><div class="wrap"><div class="two"><div class="photo rv">{simg(STOCK[key]["s8"]) if dd.get("ed") else img("studio-b", "Oscar spiller guitar og synger", w=1600, h=1066)}</div>
       <div class="stack rv"><h2>{t}</h2>{ps(a, "lead")}<p class="big" style="color:var(--accentT)">{b}</p></div></div></div></section>'''
 
     t, a, parts, b = c['s9']
@@ -684,10 +717,10 @@ def page(key, d, pal):
     t, a, items, b = c['s10']
     s10 = f'''<section class="sec alt" id="tilbud"><div class="wrap"><div class="offer rv"><div class="stack"><h2>{t}</h2><p class="lead">{a}</p>
       <ul class="check">{"".join(f"<li>{x}</li>" for x in items)}</ul><p class="big">{b}</p><div class="cta-row full">{cta(c["cta"], sec="tilbud")}</div></div>
-      <div class="photo">{img("studio-warm-sq", "Oscar med akustisk guitar", widths=(480, 960), w=1200, h=1200)}</div></div></div></section>'''
+      <div class="photo">{simg(STOCK[key]["offer"]) if dd.get("ed") else img("studio-warm-sq", "Oscar med akustisk guitar", widths=(480, 960), w=1200, h=1200)}</div></div></div></section>'''
 
     t, lines, b, ctal, small = c['s11']
-    s11 = f'''<section class="sec final" id="slut"><div class="bg">{img(c["hero_img"][0], "", sizes="100vw", w=1600, h=900)}</div><div class="wrap narrow rv"><h2>{t}</h2>
+    s11 = f'''<section class="sec final" id="slut"><div class="bg">{simg(STOCK[key]["final"], sizes="100vw") if dd.get("ed") else img(c["hero_img"][0], "", sizes="100vw", w=1600, h=900)}</div><div class="wrap narrow rv"><h2>{t}</h2>
       <div class="lines">{"".join(f"<span>{x}</span>" for x in lines)}</div><p class="big" style="color:var(--accentT)">{b}</p>
       <div class="cta-row" style="justify-content:center;margin-top:26px">{cta(ctal, sec="slut")}</div><p class="lead" style="margin-top:16px">{small}</p></div></section>'''
 
@@ -722,6 +755,7 @@ def page(key, d, pal):
 {strip}
 {introsec}
 {s2}
+{mood}
 {s3}
 {s4}
 {s5}
@@ -735,7 +769,7 @@ def page(key, d, pal):
 {s10}
 {s11}
 </main>
-<footer><div class="wrap"><span>© 2026 Oscar Jønsson Musik</span><span>Livemusik og DJ til {"firmafester" if key=="firmafest" else "bryllupper"} i hele Danmark</span></div></footer>
+<footer><div class="wrap"><span>© 2026 Oscar Jønsson Musik{' · Stemningsbilleder: <a href="https://unsplash.com/license" target="_blank" rel="noopener">Unsplash</a>' if dd.get('ed') else ''}</span><span>Livemusik og DJ til {"firmafester" if key=="firmafest" else "bryllupper"} i hele Danmark</span></div></footer>
 <div class="sticky" id="sticky">{cta(c["cta"] if len(c["cta"])<34 else "Få et tilbud", sec="sticky")}</div>
 <div class="fm" id="bkModal" hidden role="dialog" aria-modal="true" aria-labelledby="fmTitle">
   <div class="fm-card"><div class="fm-top"><b id="fmTitle">{c["form"]["title"]}</b><span class="saved" id="fmSaved" hidden>Gemt</span><button type="button" class="fm-x" id="fmX" aria-label="Luk">{X}</button></div>

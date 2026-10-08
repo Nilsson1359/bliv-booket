@@ -308,6 +308,15 @@ main img,main video{filter:var(--imgfilter,none)}
 .ed .fm-card,.ed .opt,.ed .day,.ed .time,.ed .fm-x,.ed .calwait{border-radius:0}
 .ed .sticky .btn{box-shadow:none}
 .ed .final .bg{opacity:.12}
+.mosaic{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:clamp(18px,2.4vw,34px);align-items:start}
+.mosaic .m{margin:0}
+.mosaic .m img{width:100%;height:auto;display:block}
+.mosaic figcaption{margin-top:10px;font-size:.74rem;letter-spacing:.2em;text-transform:uppercase;color:var(--ink2)}
+.mosaic .m1{grid-column:1/5}.mosaic .m2{grid-column:6/9;margin-top:120px}.mosaic .m3{grid-column:10/13;margin-top:40px}
+.mosaic .m4{grid-column:2/6;margin-top:-40px}.mosaic .m5{grid-column:7/10;margin-top:60px}.mosaic .m6{grid-column:10/13;margin-top:-80px}
+.mosaic .m7{grid-column:1/4;margin-top:20px}.mosaic .m8{grid-column:5/11;margin-top:80px}
+.mosaic .m img{aspect-ratio:4/5;object-fit:cover}.mosaic .m8 img,.mosaic .m4 img{aspect-ratio:3/2}
+@media (max-width:820px){.mosaic{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.mosaic .m{grid-column:auto !important;margin-top:0 !important}.mosaic .m:nth-child(even){margin-top:40px !important}.mosaic .m8{grid-column:1/-1 !important}}
 .pal-mono .stars{background:linear-gradient(90deg,#0E0E0E 90%,rgba(14,14,14,.25) 90%);-webkit-background-clip:text;background-clip:text}
 .hero-split.land .media{aspect-ratio:4/3}
 @media (max-width:820px){.hero-split.land .media{aspect-ratio:16/10}}
@@ -361,6 +370,7 @@ main img,main video{filter:var(--imgfilter,none)}
       <div class="photo rv"><img class="" src="/media/ev/beach-duo2-960.webp" srcset="/media/ev/beach-duo2-480.webp 480w, /media/ev/beach-duo2-960.webp 960w, /media/ev/beach-duo2-1600.webp 1600w" sizes="(max-width:700px) 92vw, 560px" alt="Oscar spiller live" width="1600" height="900" loading="lazy" decoding="async"></div></div></div></section>
 <section class="sec alt" id="samlet"><div class="wrap"><div class="narrow rv"><h2>Jeres musik. Jeres mennesker. <em>Én samlet oplevelse.</em></h2>
       <div class="stack"><p class="big">I har valgt stedet, maden og dem, I vil dele dagen med.</p><p class="big">Nu mangler musikken, der binder oplevelsen sammen.</p><p class="lead">Med Oscar får I livemusik og DJ samlet i én løsning, tilpasset jeres ønsker og aftenens forløb.</p><p class="lead">Så I kan være til stede i øjeblikkene uden selv at skulle styre musikken.</p></div></div><div class="gal rv" aria-label="Klip fra Oscars jobs"><figure class="clip"><video muted loop playsinline preload="none" poster="/media/ev/v/kirke.webp" data-src="/media/ev/v/kirke.mp4" aria-label="Gæster i kirken til vielsen" width="720" height="960"></video><figcaption>Vielsen</figcaption></figure><figure class="clip"><video muted loop playsinline preload="none" poster="/media/ev/beach-v-full.webp" data-src="/media/clips/clip-beach-duo.mp4" aria-label="Oscar spiller akustisk guitar med sangerinde på en strand" width="720" height="960"></video><figcaption>Guitar og sang</figcaption></figure><figure class="clip"><video muted loop playsinline preload="none" poster="/media/ev/acoustic-full.webp" data-src="/media/clips/clip-ad.mp4" aria-label="Oscar synger og spiller akustisk guitar" width="720" height="960"></video><figcaption>Reception</figcaption></figure><figure class="clip"><video muted loop playsinline preload="none" poster="/media/ev/warm-full.webp" data-src="/media/clips/clip-studio-warm.mp4" aria-label="Oscar synger med gul akustisk guitar" width="720" height="960"></video><figcaption>Middag</figcaption></figure><figure class="clip"><video muted loop playsinline preload="none" poster="/media/ev/gig-blue-full.webp" data-src="/media/clips/clip-gig-blue.mp4" aria-label="Oscar spiller el-guitar på scenen i blåt lys" width="720" height="960"></video><figcaption>Dansefest</figcaption></figure></div></div></section>
+
 <section class="sec" id="stemning"><div class="wrap narrow center rv"><h2>I har planlagt dagen. <em>Nu skal der være plads til at nyde den.</em></h2><div class="stack"><p class="lead">I kan vælge bordplanen, blomsterne og menuen.</p><p class="lead">Men stemningen opstår mellem mennesker.</p><p class="lead">Og måske tænker I:</p>
       <p class="quote">“Hvordan får vi både vores venner, forældre og bedsteforældre med til festen?”</p><p class="big">Musikken skal give plads til de rolige øjeblikke og samle gæsterne, når festen tager fart.</p><p class="lead">Det kræver et blik for både jer, gæsterne og det, der sker i rummet.</p></div></div></section>
 <section class="sec alt" id="playliste"><div class="wrap"><div class="two">
