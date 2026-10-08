@@ -349,6 +349,7 @@ async function adminApi(env, ctx, url, fn, cost, ttlOverride) {
 const LEAD_PAGES = { firmafest: 'Firmafest', bryllup: 'Bryllup' };
 const LID_RE = /^[A-Za-z0-9-]{8,40}$/;
 const MAX_LEAD_WRITES = 120;
+const MAX_NEW_LEADS_PER_IP_HOUR = 15, MAX_BOOKINGS_PER_IP = 2;
 const GHL_BASE = 'https://services.leadconnectorhq.com';
 const TZ = 'Europe/Copenhagen';
 const FALLBACK = { startMin: 9 * 60, endMin: 17 * 60, stepMin: 30, durationMin: 20, leadMs: 2 * 3600000 };
@@ -439,6 +440,15 @@ async function handleLead(request, env, ctx) {
   }
   const src = b.src && typeof b.src === 'object' ? Object.fromEntries(['ref_host', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'landing'].map(k => [k, str(b.src[k], k === 'landing' ? 300 : 150)]).filter(([, v]) => v)) : {};
   const cf = request.cf || {}, now = Date.now();
+  // misbrugs-værn: nye leads pr. IP pr. time (eksisterende lid opdateres frit op til MAX_LEAD_WRITES)
+  const ip = request.headers.get('CF-Connecting-IP') || '';
+  if (ip) {
+    const known = await env.DB.prepare('SELECT 1 AS x FROM leads WHERE id = ?').bind(lid).first();
+    if (!known) {
+      const c = await env.DB.prepare('SELECT COUNT(*) AS n FROM leads INDEXED BY idx_leads_ip WHERE ip = ? AND created_ts > ?').bind(ip, now - 3600e3).first();
+      if (c && c.n >= MAX_NEW_LEADS_PER_IP_HOUR) return json({ error: 'too many leads' }, 429);
+    }
+  }
   const row = await env.DB.prepare(`INSERT INTO leads (id, page, created_ts, updated_ts, name, email, phone, answers_json, step, done, src_json, vid, sid, ip, city, country, writes, notified_flags)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,'')
       ON CONFLICT(id) DO UPDATE SET
@@ -599,6 +609,12 @@ async function handleBook(request, env, ctx) {
   if (lead.booked_start) {
     if (lead.booked_start === startMs) return json({ ok: true, start: isoCph(lead.booked_start), end: isoCph(lead.booked_end), source: lead.ghl_appt_id ? 'ghl' : 'fallback', already: true });
     return json({ error: 'already booked', start: isoCph(lead.booked_start) }, 409);
+  }
+  // misbrugs-værn: én IP kan ikke blokere kalenderen ved at booke alle tider
+  const ip = request.headers.get('CF-Connecting-IP') || '';
+  if (ip) {
+    const c = await env.DB.prepare('SELECT COUNT(*) AS n FROM leads INDEXED BY idx_leads_ip WHERE ip = ? AND booked_start > ?').bind(ip, Date.now()).first();
+    if (c && c.n >= MAX_BOOKINGS_PER_IP) return json({ error: 'too many bookings' }, 429);
   }
   const day = ymdCph(startMs);
   const s = await computeSlots(env, lead.page, day, 1);

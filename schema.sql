@@ -36,3 +36,4 @@ CREATE TABLE IF NOT EXISTS leads (
 CREATE INDEX IF NOT EXISTS idx_leads_updated ON leads(updated_ts);
 CREATE INDEX IF NOT EXISTS idx_leads_created ON leads(created_ts);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_leads_booked ON leads(booked_start) WHERE booked_start IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_leads_ip ON leads(ip, created_ts);
