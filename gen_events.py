@@ -189,20 +189,55 @@ STORY = dict(
 )
 
 # ───────────────────────── designretninger ─────────────────────────
-D = {
- 'a': dict(name='Aftenlys', note='Mørk og varm som levende lys. Cormorant + Manrope, messing-accent, split-hero med video.',
-   fonts='family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Manrope:wght@400;500;600;700',
-   vars='--bg:#14110E;--bg2:#1B1713;--card:#221D18;--ink:#F4EEE5;--ink2:#C9BFB2;--mute:#9C9184;--line:rgba(244,238,229,.12);--accent:#C9A46A;--accentT:#D8B67E;--onaccent:#17120C;--display:"Cormorant Garamond",Georgia,serif;--body:Manrope,system-ui,sans-serif;--hw:600;--hls:-.01em;--r:18px;--scheme:dark',
-   hero='split'),
- 'b': dict(name='Champagne', note='Lys og redaktionel som et bryllupsmagasin. Instrument Serif + DM Sans, polaroid-vifte i hero.',
-   fonts='family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700',
-   vars='--bg:#F6F1E8;--bg2:#EFE7DA;--card:#FFFDF9;--ink:#1F1A15;--ink2:#4E463D;--mute:#6E655A;--line:rgba(31,26,21,.12);--accent:#8C6A3C;--accentT:#7A5A2F;--onaccent:#FFFBF4;--display:"Instrument Serif",Georgia,serif;--body:"DM Sans",system-ui,sans-serif;--hw:400;--hls:-.015em;--r:6px;--scheme:light',
-   hero='fan'),
- 'c': dict(name='Natscene', note='Mørk og filmisk med fuldskærms-video. Bricolage Grotesque + Inter, rosé-guld accent.',
-   fonts='family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Inter:wght@400;500;600',
-   vars='--bg:#0D0F13;--bg2:#13161C;--card:#191D24;--ink:#EEF0F3;--ink2:#BAC0CA;--mute:#8D94A0;--line:rgba(238,240,243,.12);--accent:#E2BFA6;--accentT:#E8C8B1;--onaccent:#1A120D;--display:"Bricolage Grotesque",system-ui,sans-serif;--body:Inter,system-ui,sans-serif;--hw:700;--hls:-.035em;--r:22px;--scheme:dark',
-   hero='full'),
+# ───────────────────────── farvetemaer (kun farver) ─────────────────────────
+PAL = {
+ 'messing':  ('Messing', 'dark', '--bg:#14110E;--bg2:#1B1713;--card:#221D18;--ink:#F4EEE5;--ink2:#C9BFB2;--mute:#9C9184;--line:rgba(244,238,229,.12);--accent:#C9A46A;--accentT:#D8B67E;--onaccent:#17120C'),
+ 'kul':      ('Kul & sølv', 'dark', '--bg:#121417;--bg2:#181B1F;--card:#1F2328;--ink:#EEF0F2;--ink2:#C3C8CF;--mute:#959CA6;--line:rgba(238,240,242,.12);--accent:#C9CED6;--accentT:#D5DAE1;--onaccent:#121417'),
+ 'bordeaux': ('Bordeaux', 'dark', '--bg:#170D10;--bg2:#1F1216;--card:#28171C;--ink:#F5ECE8;--ink2:#D2C1BC;--mute:#A8948F;--line:rgba(245,236,232,.12);--accent:#D9A88A;--accentT:#E2B69B;--onaccent:#1E1014'),
+ 'skov':     ('Skovgrøn & messing', 'dark', '--bg:#0F1512;--bg2:#141C18;--card:#1A241F;--ink:#EEF1EA;--ink2:#C3CBBF;--mute:#95A091;--line:rgba(238,241,234,.12);--accent:#C8A962;--accentT:#D5B877;--onaccent:#121810'),
+ 'natrose':  ('Natrosé', 'dark', '--bg:#0D0F13;--bg2:#13161C;--card:#191D24;--ink:#EEF0F3;--ink2:#BAC0CA;--mute:#8D94A0;--line:rgba(238,240,243,.12);--accent:#E2BFA6;--accentT:#E8C8B1;--onaccent:#1A120D'),
+ 'champagne':('Champagne', 'light', '--bg:#F6F1E8;--bg2:#EFE7DA;--card:#FFFDF9;--ink:#1F1A15;--ink2:#4E463D;--mute:#6E655A;--line:rgba(31,26,21,.12);--accent:#7E5F35;--accentT:#7A5A2F;--onaccent:#FFFBF4'),
+ 'hvid':     ('Hvid', 'light', '--bg:#FFFFFF;--bg2:#F6F5F2;--card:#FFFFFF;--ink:#111111;--ink2:#444444;--mute:#6B6B6B;--line:rgba(17,17,17,.13);--accent:#111111;--accentT:#111111;--onaccent:#FFFFFF'),
+ 'mono':     ('Monokrom', 'light', '--bg:#FAFAF8;--bg2:#F1F1EE;--card:#FFFFFF;--ink:#0E0E0E;--ink2:#3F3F3F;--mute:#696969;--line:rgba(14,14,14,.13);--accent:#0E0E0E;--accentT:#0E0E0E;--onaccent:#FFFFFF;--imgfilter:grayscale(1) contrast(1.04)'),
+ 'salvie':   ('Elfenben & salvie', 'light', '--bg:#FAF8F3;--bg2:#F0EEE6;--card:#FFFFFF;--ink:#1D211C;--ink2:#4A5047;--mute:#6A7066;--line:rgba(29,33,28,.12);--accent:#55644E;--accentT:#4A5844;--onaccent:#FFFFFF'),
+ 'sten':     ('Sten & blågrå', 'light', '--bg:#F3F4F6;--bg2:#E8EBEF;--card:#FFFFFF;--ink:#1A1D22;--ink2:#474D57;--mute:#646A74;--line:rgba(26,29,34,.12);--accent:#2B3542;--accentT:#2B3542;--onaccent:#FFFFFF'),
 }
+
+# ───────────────────────── designretninger (layout + typografi) ─────────────────────────
+D = {
+ 'a': dict(name='Aftenlys', kind='Performance', note='Mørk og varm. Split-hero med video, kort, tal og CTA overalt. Cormorant + Manrope.',
+   fonts='family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Manrope:wght@400;500;600;700',
+   vars='--display:"Cormorant Garamond",Georgia,serif;--body:Manrope,system-ui,sans-serif;--hw:600;--hls:-.01em;--r:18px',
+   hero='split', pals=['messing', 'kul', 'bordeaux', 'skov']),
+ 'b': dict(name='Champagne', kind='Performance', note='Lyst bryllupsmagasin med polaroid-vifte i hero. Instrument Serif + DM Sans.',
+   fonts='family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700',
+   vars='--display:"Instrument Serif",Georgia,serif;--body:"DM Sans",system-ui,sans-serif;--hw:400;--hls:-.015em;--r:6px',
+   hero='fan', pals=['champagne', 'salvie', 'sten', 'hvid']),
+ 'c': dict(name='Natscene', kind='Performance', note='Filmisk med fuldskærms-video bag overskriften. Bricolage Grotesque + Inter.',
+   fonts='family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Inter:wght@400;500;600',
+   vars='--display:"Bricolage Grotesque",system-ui,sans-serif;--body:Inter,system-ui,sans-serif;--hw:700;--hls:-.035em;--r:22px',
+   hero='full', pals=['natrose', 'kul', 'bordeaux', 'skov']),
+ 'd': dict(name='Redaktion', kind='High-end', note='Som Greg Finck: navnet i kæmpe serif delt om ét billede, hvidt, skarpe kanter, tynde linjer. Bodoni Moda + Jost.',
+   fonts='family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..600;1,6..96,400..600&family=Jost:wght@400;500',
+   vars='--display:"Bodoni Moda",Didot,Georgia,serif;--body:Jost,system-ui,sans-serif;--hw:400;--hls:-.02em;--r:0px',
+   hero='name', ed=True, pals=['hvid', 'mono', 'champagne', 'sten']),
+ 'e': dict(name='Atelier', kind='High-end', note='Som Elizabeth Messina og Tec Petaja: centreret, luftigt, bredt billede med hvid kant og kursiv serif. Cormorant + Jost.',
+   fonts='family=Cormorant:ital,wght@0,400;0,500;1,400;1,500&family=Jost:wght@400;500',
+   vars='--display:Cormorant,Georgia,serif;--body:Jost,system-ui,sans-serif;--hw:400;--hls:-.01em;--r:0px',
+   hero='atelier', ed=True, pals=['salvie', 'hvid', 'champagne', 'sten']),
+}
+
+# kontrast-tjek (WCAG): brødtekst/accent-tekst/knap-tekst skal klare 4,5:1 i alle temaer
+def _lum(h):
+    h = h.lstrip('#'); r, g, b = (int(h[i:i+2], 16) / 255 for i in (0, 2, 4))
+    f = lambda c: c / 12.92 if c <= .03928 else ((c + .055) / 1.055) ** 2.4
+    return .2126 * f(r) + .7152 * f(g) + .0722 * f(b)
+def _cr(a, b):
+    la, lb = sorted((_lum(a), _lum(b)), reverse=True); return (la + .05) / (lb + .05)
+for _k, (_n, _m, _v) in PAL.items():
+    _c = dict(x.split(':', 1) for x in _v.split(';'))
+    for fg, bg in (('--ink', '--bg'), ('--ink2', '--bg'), ('--mute', '--bg'), ('--accentT', '--bg'), ('--accentT', '--bg2'), ('--onaccent', '--accent'), ('--ink', '--card')):
+        r = _cr(_c[fg], _c[bg]); assert r >= 4.5, f'kontrast {_k}: {fg} på {bg} = {r:.2f}'
 
 CSS = r'''
 *,*::before,*::after{box-sizing:border-box}
@@ -226,7 +261,8 @@ p{margin:0;text-wrap:pretty}
 .cta-row{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
 .rating{display:inline-flex;align-items:center;gap:10px;font-size:.92rem;color:var(--ink2);text-decoration:none}
 .stars{letter-spacing:2px;font-size:1rem;background:linear-gradient(90deg,#E8B04A 90%,rgba(232,176,74,.3) 90%);-webkit-background-clip:text;background-clip:text;color:transparent}
-.hero-fan .rating{justify-content:center;text-align:left}
+.hero-fan .rating,.hero-name .rating,.hero-atelier .rating{justify-content:center;text-align:left;flex-wrap:wrap}
+@media (max-width:560px){.hero-fan .rating span,.hero-name .rating span,.hero-atelier .rating span{text-align:center}}
 /* nav */
 .nav{position:fixed;inset:0 0 auto;z-index:40;transition:background .3s,border-color .3s;border-bottom:1px solid transparent}
 .nav.scrolled{background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-color:var(--line)}
@@ -301,7 +337,7 @@ p{margin:0;text-wrap:pretty}
 .part p{font-size:.96rem;color:var(--ink2)}
 .check{list-style:none;padding:0;margin:8px 0;display:grid;gap:10px}
 .check li{display:flex;gap:12px;align-items:flex-start;font-size:1.06rem}
-.check li::before{content:"";flex:none;width:24px;height:24px;margin-top:2px;border-radius:50%;background:var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23140f0a' stroke-width='3'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7'/%3E%3C/svg%3E") center/14px no-repeat}
+.check li::before{content:"✓";flex:none;width:24px;height:24px;margin-top:2px;border-radius:50%;background:var(--accent);color:var(--onaccent);display:grid;place-items:center;font-size:13px;font-weight:700;line-height:1}
 .offer{background:var(--card);border:1px solid var(--line);border-radius:calc(var(--r) + 6px);padding:clamp(24px,4vw,44px);display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);gap:clamp(24px,4vw,48px);align-items:center}
 .offer .photo{aspect-ratio:1}
 /* gallery */
@@ -434,6 +470,69 @@ input[type=date].fin{color-scheme:var(--scheme)}
 .next3 div{display:flex;gap:14px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-size:1rem}
 .next3 div::before{counter-increment:n;content:counter(n);flex:none;width:26px;height:26px;border-radius:50%;background:var(--accent);color:var(--onaccent);display:grid;place-items:center;font-weight:700;font-size:.85rem}
 body.lock{overflow:hidden}
+main img,main video{filter:var(--imgfilter,none)}
+/* ───── D · Redaktion (navnet delt om ét billede) ───── */
+.hero-name{padding-top:calc(68px + clamp(16px,3vw,40px))}
+.hero-name .nm{display:grid;grid-template-columns:1fr minmax(0,auto) 1fr;grid-template-rows:auto auto;align-items:start;gap:0 clamp(16px,3vw,40px)}
+.hero-name .n1,.hero-name .n2{font-family:var(--display);font-weight:500;font-size:clamp(4rem,10.2vw,10.4rem);line-height:.82;letter-spacing:-.04em}
+.hero-name .n1,.hero-name .n2{position:relative;z-index:2;color:#fff;mix-blend-mode:difference}
+.hero-name .n1{grid-column:1;grid-row:1;justify-self:start}
+.hero-name .n2{grid-column:3;grid-row:2;justify-self:end;align-self:end;margin-bottom:34px}
+.hero-name .nm-pic{grid-column:2;grid-row:1/3;width:clamp(240px,27vw,400px);margin:clamp(30px,5vw,80px) 0 0}
+.hero-name .nm-pic video{width:100%;aspect-ratio:4/5;object-fit:cover}
+.hero-name .nm-pic figcaption{margin-top:10px;font-size:.78rem;letter-spacing:.18em;text-transform:uppercase;color:var(--ink2)}
+.hero-name .copy{margin:clamp(40px,6vw,80px) auto 0;align-items:center;text-align:center;max-width:720px}
+.hero-name .copy .cta-row{justify-content:center}
+.hero-name h1{font-size:clamp(2.2rem,4.6vw,3.6rem)}
+@media (max-width:820px){
+ /* mobil: navnet på to tætte linjer, så overskrift + knap er i folden, billedet bagefter */
+ .hero-name .wrap{display:grid;grid-template-columns:minmax(0,1fr)}
+ .hero-name .nm{display:contents}
+ .hero-name .n1,.hero-name .n2{font-size:clamp(2.9rem,15.5vw,5rem);grid-column:1;grid-row:auto;margin:0;line-height:.86}
+ .hero-name .n1{order:1}.hero-name .n2{order:2;justify-self:end}
+ .hero-name .copy{order:3;margin-top:22px}
+ .hero-name .nm-pic{order:4;grid-column:1;grid-row:auto;width:100%;margin:30px 0 0}
+ .hero-name .nm-pic video{aspect-ratio:4/5}
+}
+/* ───── E · Atelier (centreret, bredt billede m. hvid kant) ───── */
+.hero-atelier .copy{margin:0 auto;align-items:center;text-align:center;max-width:780px}
+.hero-atelier .copy .cta-row{justify-content:center}
+.hero-atelier h1{font-size:clamp(2.6rem,6.4vw,5.4rem);font-weight:400}
+.hero-atelier h1 em{font-weight:400}
+.hero-atelier .at-pic{position:relative;margin:clamp(36px,5vw,64px) auto 0;max-width:1060px;padding:0 clamp(28px,4vw,56px)}
+.hero-atelier .at-pic img,.hero-atelier .at-pic video{width:100%;aspect-ratio:16/9;object-fit:cover}
+.hero-atelier .at-side{position:absolute;left:0;top:50%;transform:translate(-30%,-50%) rotate(-90deg);font-size:.72rem;letter-spacing:.3em;text-transform:uppercase;color:var(--ink2);white-space:nowrap}
+@media (max-width:640px){.hero-atelier .at-pic{padding:0}.hero-atelier .at-side{display:none}}
+.dir-e .sec h2,.dir-e .center h2{text-align:inherit}
+.dir-e .sec h2{font-size:clamp(2.1rem,4.6vw,3.6rem)}
+/* ───── fælles high-end (D+E): ingen kort, skarpe kanter, tynde linjer, små spærrede versaler ───── */
+.ed .eyebrow{font-size:.74rem;letter-spacing:.26em;color:var(--ink2);font-weight:500}
+.ed .eyebrow::before{display:none}
+.ed h1 em,.ed h2 em{color:inherit}
+.ed .btn{border-radius:0;text-transform:uppercase;letter-spacing:.18em;font-size:.78rem;font-weight:500;padding:15px 28px}
+.ed .btn:hover{transform:none;box-shadow:none;opacity:.86}
+.ed .btn.sm{font-size:.72rem;padding:11px 18px}
+.ed .ic,.ed .pc,.ed .part,.ed .rev,.ed .fl,.ed .bubble{background:transparent;border:0;border-top:1px solid var(--line);border-radius:0}
+.ed .ic,.ed .pc,.ed .part,.ed .rev{padding-left:0;padding-right:0}
+.ed .fl>div:last-child{padding-left:0;padding-right:0}
+.ed .pc i{background:none;color:var(--mute);font-weight:400}
+.ed .bubble{align-self:flex-start !important;padding:12px 0;border-radius:0}
+.ed .offer{background:transparent;border:0;border-block:1px solid var(--line);border-radius:0;padding-inline:0}
+.ed .photo,.ed .clip,.ed .yt,.ed .hero-split .media{border-radius:0}
+.ed .clip figcaption{background:none;backdrop-filter:none;left:0;bottom:-30px;color:var(--ink2);font-weight:500;font-size:.74rem;letter-spacing:.18em;text-transform:uppercase;padding:0}
+.ed .clip{overflow:visible;margin-bottom:34px}
+.ed .gal{padding-bottom:4px}
+.ed .strip{background:transparent}
+.ed .rev .who{border-top:0;padding-top:0}
+.ed .rev b{font-family:var(--display);font-size:1.4rem;font-weight:400;line-height:1.2}
+.ed .part .n,.ed .fl b span{font-family:var(--display);font-style:italic}
+.ed .facts div{border-top:1px solid var(--ink)}
+.ed .quote{border-color:var(--ink)}
+.ed .story-media .then{box-shadow:none;border:1px solid var(--line)}
+.ed .fm-card,.ed .opt,.ed .day,.ed .time,.ed .fm-x,.ed .calwait{border-radius:0}
+.ed .sticky .btn{box-shadow:none}
+.ed .final .bg{opacity:.12}
+.pal-mono .stars{background:linear-gradient(90deg,#0E0E0E 90%,rgba(14,14,14,.25) 90%);-webkit-background-clip:text;background-clip:text}
 .hero-split.land .media{aspect-ratio:4/3}
 @media (max-width:820px){.hero-split.land .media{aspect-ratio:16/10}}
 .yt{position:relative;display:block;width:100%;padding:0;border:0;border-radius:var(--r);overflow:hidden;background:#000;cursor:pointer;aspect-ratio:16/9}
@@ -485,8 +584,8 @@ def ps(lines, cls=''):
 
 def stars(): return '<span class="stars" role="img" aria-label="4,5 ud af 5 stjerner">★★★★★</span>'
 
-def page(key, d):
-    c = P[key]; dd = D[d]
+def page(key, d, pal):
+    c = P[key]; dd = D[d]; pn, pmode, pv = PAL[pal]
     rating = f'<a class="rating" href="{TRUSTPILOT}" target="_blank" rel="noopener">{stars()}<span><b>4,5 ud af 5</b> · 14 anmeldelser på Trustpilot</span></a>'
     heroimg = img(c['hero_img'][0], c['hero_img'][1], sizes='100vw' if dd['hero'] == 'full' else '(max-width:820px) 92vw, 520px', eager=True, w=1600, h=900)
     hk = c['hero_clip']; hclip = CLIPS[hk]; land = hk in LAND
@@ -505,6 +604,15 @@ def page(key, d):
                      else f'<img src="/media/ev/{poster}-480.webp" alt="{H.escape(alt)}" width="480" height="640"{" fetchpriority=high" if i==0 else ""}>')
             figs += f'<figure>{media}<figcaption>{cap}</figcaption></figure>'
         hero = f'<section class="hero hero-fan" id="top"><div class="wrap">{copy}<div class="fan rv" aria-hidden="false">{figs}</div></div></section>'
+    elif dd['hero'] == 'name':
+        nk = 'gigblue' if key == 'firmafest' else 'beach'
+        nv = f'<video autoplay muted loop playsinline preload="metadata" poster="{vposter(nk)}" aria-label="{H.escape(CLIPS[nk][2])}" width="720" height="960"><source src="{vsrc(nk)}" type="video/mp4"></video>'
+        hero = f'''<section class="hero hero-name" id="top"><div class="wrap">
+      <div class="nm"><span class="n1" aria-hidden="true">Oscar</span><figure class="nm-pic">{nv}<figcaption>{"Firmafest · Livemusik & DJ" if key=="firmafest" else "Vielse · Middag · Dansefest"}</figcaption></figure><span class="n2" aria-hidden="true">Jønsson</span></div>
+      {copy}</div></section>'''
+    elif dd['hero'] == 'atelier':
+        hero = f'''<section class="hero hero-atelier" id="top"><div class="wrap">{copy}
+      <figure class="at-pic rv"><span class="at-side" aria-hidden="true">Guitar · Sang · DJ</span>{hvideo if land else heroimg}</figure></div></section>'''
     else:
         bg = hvideo if land else heroimg
         hero = f'<section class="hero hero-full" id="top"><div class="bgv">{bg}</div><div class="wrap">{copy}</div></section>'
@@ -598,16 +706,16 @@ def page(key, d):
 <meta name="description" content="{H.escape(c["desc"])}">
 <meta name="robots" content="noindex">
 <meta property="og:title" content="{H.escape(c["title"])}"><meta property="og:description" content="{H.escape(c["desc"])}"><meta property="og:image" content="{og}"><meta property="og:type" content="website"><meta name="twitter:card" content="summary_large_image">
-<meta name="theme-color" content="{dd["vars"].split("--bg:")[1].split(";")[0]}">
+<meta name="theme-color" content="{pv.split("--bg:")[1].split(";")[0]}">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23C9A46A'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' font-family='Georgia' fill='%2314110E'%3EO%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?{dd["fonts"]}&display=swap">
-<link rel="preload" as="image" href="{vposter(hk) if (dd["hero"]!="full" or land) else "/media/ev/"+c["hero_img"][0]+"-960.webp"}">
+<link rel="preload" as="image" href="{vposter(('beach' if key=='bryllup' else 'gigblue') if dd['hero']=='name' else hk) if (dd['hero'] in ('split','fan','name') or land) else '/media/ev/'+c['hero_img'][0]+'-960.webp'}">
 {pixel}
 <script src="/track.js" async></script>
-<style>:root{{{dd["vars"]}}}{CSS}</style>
+<style>:root{{{pv};{dd["vars"]};--scheme:{pmode}}}{CSS}</style>
 </head>
-<body class="dir-{d}">
+<body class="dir-{d}{" ed" if dd.get("ed") else ""} pal-{pal}">
 <header class="nav" id="nav"><div class="wrap"><a class="logo" href="#top">Oscar Jønsson<small>Musik</small></a>{cta("Få et tilbud", "sm", sec="nav")}</div></header>
 <main>
 {hero}
@@ -640,18 +748,96 @@ def page(key, d):
 '''
 
 for key in P:
-    for d in D:
-        (OUT / f'{key}-{d}.html').write_text(page(key, d))
+    for d, dd in D.items():
+        for pal in dd['pals']:
+            html_ = page(key, d, pal)
+            (OUT / f'{key}-{d}-{pal}.html').write_text(html_)
+            if pal == dd['pals'][0]: (OUT / f'{key}-{d}.html').write_text(html_)  # standard-farve (gamle links virker)
 
-# vælger
-cards = ''
+# ───────────────────────── live-valg + oversigtsside (/ev/) ─────────────────────────
+LIVE = {'firmafest': ('a', 'messing'), 'bryllup': ('b', 'champagne')}   # ÉN kilde: build.sh kopierer ev/_live-*.html
+for key, (d, pal) in LIVE.items():
+    (OUT / f'_live-{key}.html').write_text((OUT / f'{key}-{d}-{pal}.html').read_text())
+
+def chip(pal):
+    n, m, v = PAL[pal]; c = dict(x.split(':', 1) for x in v.split(';'))
+    return c['--bg'], c['--accent'], c['--ink'], n
+data = {'live': LIVE, 'dirs': {d: dict(name=dd['name'], kind=dd['kind'], note=dd['note'], pals=[[p] + list(chip(p)) for p in dd['pals']]) for d, dd in D.items()}}
+cards = {'Performance': '', 'High-end': ''}
 for d, dd in D.items():
-    sw = ''.join(f'<i style="background:{v.split(":")[1]}"></i>' for v in dd['vars'].split(';') if v.split(':')[0] in ('--bg', '--card', '--ink', '--accent'))
-    cards += f'''<div class="card"><div class="sw">{sw}</div><h2>{d.upper()} · {dd["name"]}</h2><p>{dd["note"]}</p>
-      <div class="bt"><a href="/ev/firmafest-{d}.html">Firmafest</a><a href="/ev/bryllup-{d}.html">Bryllup</a><a href="/ev/bryllup-{d}.html#form">Formular</a></div></div>'''
-(OUT / 'temaer.html').write_text(f'''<!doctype html><html lang="da"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Gig-sider · retninger</title>
-<style>:root{{--bg:#111;--ink:#eee}}body{{margin:0;background:#111;color:#eee;font:16px/1.5 system-ui;padding:32px 16px}}h1{{margin:0 0 6px}}.g{{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;max-width:1100px;margin:24px auto}}
-.card{{background:#1b1b1b;border:1px solid #333;border-radius:16px;padding:20px}}.sw{{display:flex;gap:6px}}.sw i{{width:36px;height:36px;border-radius:50%;border:1px solid #444}}.card h2{{font-size:1.2rem;margin:14px 0 6px}}.card p{{color:#bbb;margin:0 0 14px}}
-.bt{{display:flex;flex-wrap:wrap;gap:8px}}.bt a{{color:#111;background:#e8d5b0;padding:10px 14px;border-radius:999px;text-decoration:none;font-weight:600;min-height:44px;display:inline-flex;align-items:center}}.wrap{{max-width:1100px;margin:auto}}</style></head>
-<body><div class="wrap"><h1>Oscars gig-sider · Runde 1</h1><p style="color:#bbb">Samme tekst og formular, tre retninger. Vælg en (eller bland).</p></div><div class="g">{cards}</div></body></html>''')
+    p0 = dd['pals'][0]
+    chips = ''.join(f'<button type="button" class="ch" data-pal="{p}" aria-pressed="{str(i == 0).lower()}" title="{chip(p)[3]}"><i style="background:linear-gradient(135deg,{chip(p)[0]} 50%,{chip(p)[1]} 50%)"></i><span>{chip(p)[3]}</span></button>' for i, p in enumerate(dd['pals']))
+    cards[dd['kind']] += f'''<article class="card" data-dir="{d}">
+  <a class="shot" href="/ev/firmafest-{d}-{p0}"><img class="sd" src="/ev/thumbs/firmafest-{d}-{p0}-d.webp" alt="" loading="lazy" width="720" height="450"><img class="sm" src="/ev/thumbs/firmafest-{d}-{p0}-m.webp" alt="" loading="lazy" width="195" height="422"><span class="live" hidden>Live nu</span></a>
+  <div class="meta"><div class="top"><h3>{d.upper()} · {dd["name"]}</h3><span class="kind">{dd["kind"]}</span></div><p>{dd["note"]}</p>
+  <div class="chips" role="group" aria-label="Farver">{chips}</div>
+  <div class="act"><a class="b pri open" href="/ev/firmafest-{d}-{p0}">Åbn siden</a><a class="b form" href="/ev/firmafest-{d}-{p0}#form">Se formularen</a></div></div>
+</article>'''
+(OUT / 'index.html').write_text(f'''<!doctype html><html lang="da"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>Oscar Jønsson · Versioner</title><meta name="description" content="Alle versioner og farver af Oscars landingssider til firmafester og bryllupper.">
+<meta property="og:title" content="Oscar Jønsson · Versioner"><meta property="og:image" content="https://fuldtbooketmusiker.dk/ev/thumbs/bryllup-d-hvid-d.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,500&family=Jost:wght@400;500&display=swap">
+<style>
+:root{{--bg:#FAFAF8;--ink:#141414;--ink2:#4A4A4A;--mute:#6E6E6E;--line:rgba(20,20,20,.12);--card:#fff}}
+@media (prefers-color-scheme:dark){{:root:not([data-theme=light]){{--bg:#121212;--ink:#F2F2F0;--ink2:#C2C2C0;--mute:#9A9A98;--line:rgba(242,242,240,.14);--card:#1B1B1B}}}}
+*{{box-sizing:border-box}}body{{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Jost,system-ui,sans-serif;-webkit-font-smoothing:antialiased}}
+.wrap{{width:min(1240px,100% - 32px);margin:auto}}
+header{{padding:clamp(36px,6vw,72px) 0 18px;display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:20px;border-bottom:1px solid var(--line)}}
+h1{{font:400 clamp(2.4rem,6vw,4.6rem)/.95 "Bodoni Moda",Georgia,serif;letter-spacing:-.03em;margin:0}}
+h1 small{{display:block;font:500 .78rem Jost,sans-serif;letter-spacing:.26em;text-transform:uppercase;color:var(--ink2);margin-bottom:14px}}
+.seg{{display:inline-flex;border:1px solid var(--ink)}}
+.seg button{{font:500 .8rem Jost,sans-serif;letter-spacing:.18em;text-transform:uppercase;padding:13px 22px;min-height:46px;background:transparent;color:var(--ink);border:0;cursor:pointer}}
+.seg button[aria-pressed=true]{{background:var(--ink);color:var(--bg)}}
+.lives{{display:flex;flex-wrap:wrap;gap:8px 22px;padding:16px 0 0;font-size:.95rem;color:var(--ink2)}}
+.lives a{{color:var(--ink)}}
+h2{{font:500 .8rem Jost,sans-serif;letter-spacing:.26em;text-transform:uppercase;color:var(--ink2);margin:48px 0 16px;display:flex;align-items:center;gap:14px}}
+h2::after{{content:"";flex:1;height:1px;background:var(--line)}}
+.grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),1fr));gap:22px}}
+.card{{background:var(--card);border:1px solid var(--line);display:flex;flex-direction:column}}
+.shot{{position:relative;display:block;aspect-ratio:16/10;overflow:hidden;background:#000}}
+.shot .sd{{width:100%;height:100%;object-fit:cover;object-position:top;display:block;transition:transform .5s}}
+.shot:hover .sd{{transform:scale(1.02)}}
+.shot .sm{{position:absolute;right:12px;bottom:-34%;width:24%;height:auto;border:3px solid #fff;box-shadow:0 14px 30px -10px rgba(0,0,0,.55);background:#fff}}
+.live{{position:absolute;left:12px;top:12px;background:#1E7F4E;color:#fff;font:500 .72rem Jost,sans-serif;letter-spacing:.16em;text-transform:uppercase;padding:6px 10px}}
+.meta{{padding:20px 20px 22px;display:flex;flex-direction:column;gap:12px;flex:1}}
+.top{{display:flex;justify-content:space-between;align-items:baseline;gap:12px}}
+h3{{font:400 1.7rem/1.1 "Bodoni Moda",Georgia,serif;margin:0;letter-spacing:-.01em}}
+.kind{{font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:var(--mute);white-space:nowrap}}
+.meta p{{margin:0;color:var(--ink2);font-size:.95rem}}
+.chips{{display:flex;flex-wrap:wrap;gap:8px}}
+.ch{{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:6px 12px 6px 7px;border:1px solid var(--line);background:transparent;color:var(--ink);font:500 .85rem Jost,sans-serif;cursor:pointer}}
+.ch i{{width:28px;height:28px;border-radius:50%;border:1px solid var(--line);flex:none}}
+.ch[aria-pressed=true]{{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}}
+.act{{display:flex;flex-wrap:wrap;gap:10px;margin-top:auto;padding-top:6px}}
+.b{{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:12px 18px;border:1px solid var(--ink);color:var(--ink);text-decoration:none;font:500 .78rem Jost,sans-serif;letter-spacing:.16em;text-transform:uppercase}}
+.b.pri{{background:var(--ink);color:var(--bg)}}
+footer{{margin:56px 0 0;padding:22px 0 40px;border-top:1px solid var(--line);color:var(--mute);font-size:.9rem}}
+@media (max-width:520px){{.shot .sm{{width:28%}}.act .b{{flex:1;letter-spacing:.1em;font-size:.74rem;padding:12px 10px;white-space:nowrap}}}}
+</style></head><body><div class="wrap">
+<header><h1><small>Oscar Jønsson · Landingssider</small>Versioner &amp; farver</h1>
+<div class="seg" role="group" aria-label="Side"><button type="button" data-page="firmafest" aria-pressed="true">Firmafest</button><button type="button" data-page="bryllup" aria-pressed="false">Bryllup</button></div></header>
+<div class="lives">Live nu: <a href="/firmafest">fuldtbooketmusiker.dk/firmafest</a><a href="/bryllup">fuldtbooketmusiker.dk/bryllup</a></div>
+<h2>Performance</h2><div class="grid">{cards["Performance"]}</div>
+<h2>High-end</h2><div class="grid">{cards["High-end"]}</div>
+<footer>Del linket: fuldtbooketmusiker.dk/ev/ · Tryk på en farve for at se versionen i den farve.</footer></div>
+<script>
+const DATA={json.dumps(data, ensure_ascii=False)};
+let page=/bryllup/.test(location.hash)?'bryllup':'firmafest';
+const sel={{}};
+function draw(){{
+  document.querySelectorAll('.seg button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.page===page)));
+  document.querySelectorAll('.card').forEach(c=>{{
+    const d=c.dataset.dir, pal=sel[d]||DATA.dirs[d].pals[0][0], base=`/ev/${{page}}-${{d}}-${{pal}}`;
+    c.querySelector('.sd').src=`/ev/thumbs/${{page}}-${{d}}-${{pal}}-d.webp`; c.querySelector('.sm').src=`/ev/thumbs/${{page}}-${{d}}-${{pal}}-m.webp`;
+    c.querySelector('.shot').href=base; c.querySelector('.open').href=base; c.querySelector('.form').href=base+'#form';
+    c.querySelectorAll('.ch').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.pal===pal)));
+    const L=DATA.live[page]; c.querySelector('.live').hidden=!(L[0]===d&&L[1]===pal);
+  }});
+}}
+document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{{page=b.dataset.page;history.replaceState(null,'','#'+page);draw();}});
+document.querySelectorAll('.ch').forEach(b=>b.onclick=()=>{{sel[b.closest('.card').dataset.dir]=b.dataset.pal;draw();}});
+draw();
+</script></body></html>''')
+(OUT / 'temaer.html').write_text('<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=/ev/"><link rel="canonical" href="/ev/"><title>Versioner</title><a href="/ev/">Versioner</a>')
 print('ev/: ' + ' '.join(sorted(p.name for p in OUT.iterdir())))
