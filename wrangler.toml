@@ -13,6 +13,10 @@ directory = "./_site"
 binding = "ASSETS"
 [vars]
 META_PIXEL_ID = "1708597793574696"
+# GHL (zency) til /firmafest + /bryllup: tomme = fast skema (hverdage 9-17) + kun D1/Telegram. Token = secret GHL_TOKEN.
+GHL_LOCATION_ID = ""
+GHL_CALENDAR_FIRMAFEST = ""
+GHL_CALENDAR_BRYLLUP = ""
 
 [[d1_databases]]
 binding = "DB"

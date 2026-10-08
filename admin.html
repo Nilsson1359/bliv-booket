@@ -38,6 +38,10 @@ table{width:100%;border-collapse:collapse;font-size:.85rem}th{font-family:var(--
 .ctl{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}select{background:#0f0f0f;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font:inherit}
 .scroll{max-height:520px;overflow:auto}
 .empty{color:var(--ink3);padding:20px;text-align:center}
+.lfun{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:14px}@media(max-width:700px){.lfun{grid-template-columns:1fr}}
+.lfun .funnel{grid-template-columns:repeat(4,minmax(0,1fr))}.lfun h3{margin:0 0 8px;font-size:.85rem}
+.ltab td a{color:var(--ink);text-decoration:underline;text-decoration-color:#555}.ltab .ans{color:var(--ink2);font-size:.8rem;max-width:380px}.ltab .ans b{color:var(--ink3);font-weight:600}
+@media(max-width:760px){.ltab thead{display:none}.ltab tr{display:block;background:var(--card2);border-radius:12px;padding:10px 12px;margin-bottom:10px}.ltab td{display:flex;gap:10px;border:0;padding:4px 0}.ltab td::before{content:attr(data-l);flex:none;width:68px;font-family:var(--mono);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);padding-top:2px}.ltab td.ans{max-width:none;display:block}.ltab td.ans::before{display:block;margin-bottom:2px}.ltab td a{display:inline-block;min-height:24px}}
 </style>
 </head>
 <body>
@@ -104,6 +108,11 @@ table{width:100%;border-collapse:collapse;font-size:.85rem}th{font-family:var(--
   </div>
 
   <div class="row">
+    <div class="card"><h2>Leads: /firmafest og /bryllup</h2><div class="lfun" id="leadFunnel"></div><div class="scroll" id="leads"></div>
+      <p class="muted" style="margin:12px 0 0;font-size:.8rem">Formularen gemmer, mens der skrives. "Kontakt" = telefon eller mail er skrevet (også uden at trykke videre). "Udfyldt" = alle trin gennemført. "Booket" = tid valgt i kalenderen.</p></div>
+  </div>
+
+  <div class="row">
     <div class="card"><h2>Seneste besøg</h2><div class="scroll" id="visitors"></div></div>
   </div>
 </main>
@@ -115,7 +124,7 @@ const pct = (a,b) => b ? (100*a/b).toLocaleString('da-DK',{maximumFractionDigits
 const dur = ms => { if(!ms) return '–'; const s=Math.round(ms/1000); return s<60? s+' s' : Math.floor(s/60)+' min '+(s%60)+' s'; };
 const esc = s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let range='7d', charts={}, map, mapLayer;
-document.getElementById('range').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;range=b.dataset.r;[...e.currentTarget.children].forEach(x=>x.classList.toggle('on',x===b));load();loadHeat();});
+document.getElementById('range').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;range=b.dataset.r;[...e.currentTarget.children].forEach(x=>x.classList.toggle('on',x===b));load();loadHeat();loadLeads();});
 
 function table(el, rows, cols, opts={}){
   if(!rows||!rows.length){el.innerHTML='<div class="empty">Ingen data endnu</div>';return;}
@@ -169,6 +178,25 @@ function drawMap(points){
 }
 (function(){const cb=document.getElementById('ignoreMe');let v=null;try{v=localStorage.getItem('bk_ignore');if(v===null){localStorage.setItem('bk_ignore','1');v='1';}}catch(_){}
 cb.checked=v!=='0';cb.addEventListener('change',()=>{try{localStorage.setItem('bk_ignore',cb.checked?'1':'0');}catch(_){}});})();
+const PAGE_NAME={firmafest:'Firmafest',bryllup:'Bryllup'};
+async function loadLeads(){
+  const d=await (await fetch('/admin/api/leads?range='+range)).json();
+  const fEl=document.getElementById('leadFunnel'), el=document.getElementById('leads');
+  if(d.error){el.innerHTML='<div class="empty">'+esc(d.error)+'</div>';fEl.innerHTML='';return;}
+  fEl.innerHTML=['firmafest','bryllup'].map(p=>{const f=(d.funnel||[]).find(x=>x.page===p)||{started:0,contact:0,done:0,booked:0};
+    const st=[['Startet',f.started],['Kontakt',f.contact],['Udfyldt',f.done],['Booket',f.booked]];
+    return `<div><h3>${PAGE_NAME[p]}</h3><div class="funnel">${st.map(([l,v])=>`<div class="fstep"><div class="l">${l}</div><div class="v">${fmt(v)}</div><div class="p">${pct(v,f.started)}</div><div class="bar"><i style="width:${f.started?100*v/f.started:0}%"></i></div></div>`).join('')}</div></div>`;}).join('');
+  if(!d.rows||!d.rows.length){el.innerHTML='<div class="empty">Ingen leads i perioden</div>';return;}
+  const tf=ts=>new Date(ts).toLocaleString('da-DK',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+  el.innerHTML='<table class="ltab"><thead><tr><th>Tid</th><th>Side</th><th>Navn</th><th>Telefon</th><th>Mail</th><th>Svar</th><th>Status</th><th>Kilde</th></tr></thead><tbody>'+d.rows.map(r=>{
+    const ans=Object.entries(r.answers||{}).filter(([,v])=>v).map(([k,v])=>`<b>${esc(k)}:</b> ${esc(v)}`).join('<br>')||'<span class="muted">–</span>';
+    const st=r.booked_start?`<span class="pill g">Booket ${esc(tf(r.booked_start))}</span>${r.ghl_appt_id?'':' <span class="pill y" title="Ikke oprettet i GHL">kun D1</span>'}`:r.done?'<span class="pill y">Udfyldt</span>':r.contact?'<span class="pill y">Kontakt, trin '+r.step+'</span>':'<span class="pill">Trin '+r.step+'</span>';
+    const s=r.src||{}, src=[s.utm_source,s.utm_campaign,s.utm_content].filter(Boolean).join(' / ')||s.ref_host||'direkte';
+    return `<tr><td data-l="Tid" class="mono">${tf(r.updated_ts)}</td><td data-l="Side">${esc(PAGE_NAME[r.page]||r.page)}</td><td data-l="Navn">${esc(r.name)||'<span class="muted">–</span>'}</td>
+      <td data-l="Telefon">${r.phone?`<a href="tel:${esc(r.phone.replace(/[^\d+]/g,''))}">${esc(r.phone)}</a>`:'<span class="muted">–</span>'}</td>
+      <td data-l="Mail">${r.email?`<a href="mailto:${esc(r.email)}">${esc(r.email)}</a>`:'<span class="muted">–</span>'}</td>
+      <td data-l="Svar" class="ans">${ans}</td><td data-l="Status">${st}</td><td data-l="Kilde">${esc(src)}${r.city?' <span class="muted">'+esc(r.city)+'</span>':''}</td></tr>`;}).join('')+'</tbody></table>';
+}
 async function loadVisitors(){
   const d=await (await fetch('/admin/api/visitors?range='+range+'&limit=200')).json();
   const el=document.getElementById('visitors');
@@ -233,7 +261,7 @@ function drawDepth(buckets,total){
   const reached=[];for(let b=0;b<=100;b+=10){reached.push(buckets.filter(x=>x.b>=b).reduce((s,x)=>s+x.n,0)/total);}
   el.innerHTML=reached.slice(0,10).map((r,i)=>`<i style="background:rgba(240,198,116,${.15+.85*r});height:10%" title="${i*10}-${i*10+10} %: ${Math.round(r*100)} % nåede hertil">${Math.round(r*100)}%</i>`).join('');
 }
-load();loadHeat();
+load();loadHeat();loadLeads();
 </script>
 </body>
 </html>

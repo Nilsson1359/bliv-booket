@@ -2,11 +2,12 @@
 //  POST /api/conv   Meta Conversions API-relay (token = Worker-secret META_CAPI_TOKEN)
 //  POST /api/t      tracking fra track.js -> D1 (env.DB), geo fra request.cf, ip fra CF-Connecting-IP
 //  GET  /admin      dashboard (login m. ADMIN_PASSWORD-secret, signeret cookie 30 dage)
-//  GET  /admin/api/stats|heat|visitors  JSON til dashboardet
+//  GET  /admin/api/stats|heat|visitors|leads  JSON til dashboardet
+//  POST /api/lead, GET /api/slots, POST /api/book  formular + booking på /firmafest og /bryllup (se 'leads' nedenfor)
 import ADMIN_HTML from './admin.html';
 
 const ALLOWED_EVENTS = new Set(['Lead', 'PageView', 'Schedule', 'Contact']);
-const TRACK_TYPES = new Set(['pageview', 'booking_open', 'booking_interact', 'click', 'leave']);
+const TRACK_TYPES = new Set(['pageview', 'booking_open', 'booking_interact', 'click', 'leave', 'view', 'cta', 'form_start', 'form_field', 'form_error', 'form_abandon', 'form_submit']);
 const RANGES = { today: 1, '7d': 7, '30d': 30, '90d': 90, '365d': 365 };
 
 const json = (o, status = 200, extra = {}) => new Response(JSON.stringify(o), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...extra } });
@@ -320,8 +321,8 @@ async function eventsInRange(env, url) {
 }
 // cost = ca. læste rækker pr. hændelse i perioden for dette endpoint (målt)
 // Læste rækker pr. hændelse i perioden (målt 24/9 på 60.000 testhændelser: stats 1,9 / heat 1,7 / visitors 1,0 / form 1,3), rundet op
-const COST = { stats: 2.5, heat: 2, visitors: 1.2, form: 1.5, outcomes: 0.2, quality: 0.5, calls: 0.2 };
-async function adminApi(env, ctx, url, fn, cost) {
+const COST = { leads: 0, stats: 2.5, heat: 2, visitors: 1.2, form: 1.5, outcomes: 0.2, quality: 0.5, calls: 0.2 };
+async function adminApi(env, ctx, url, fn, cost, ttlOverride) {
   const cache = caches.default;
   const key = new Request(url.origin + '/__admin-cache' + url.pathname + url.search);
   const hit = await cache.match(key).catch(() => null);
@@ -335,9 +336,310 @@ async function adminApi(env, ctx, url, fn, cost) {
   const data = await fn(meteredEnv(env, meter), url);
   await addUsage(env, meter.rows + 5);
   const body = JSON.stringify(data);
-  const ttl = CACHE_TTL[url.searchParams.get('range') || '7d'] || 120;
+  const ttl = ttlOverride || CACHE_TTL[url.searchParams.get('range') || '7d'] || 120;
   if (!data.error) ctx.waitUntil(cache.put(key, new Response(body, { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=' + ttl } })).catch(() => {}));
   return new Response(body, { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'X-Cache': 'MISS', 'X-Rows-Read': String(meter.rows), 'X-Rows-Today': String(used + meter.rows + 5) } });
+}
+
+// ───────── leads (/firmafest + /bryllup) ─────────
+// POST /api/lead   formularen gemmer løbende (debounced, uden gem-knap) -> upsert pr. lid i D1 `leads`
+// GET  /api/slots  ledige tider: GHL free-slots hvis GHL_TOKEN + kalender-id, ellers fast skema (hverdage 9-17)
+// POST /api/book   booker valgt tid ud fra leadet i D1 (kunden skriver ikke info igen) -> GHL kontakt + aftale + note
+// Telegram (TG_BOT_TOKEN + TG_CHAT_ID) én gang pr. milepæl: contact / done / booked.
+const LEAD_PAGES = { firmafest: 'Firmafest', bryllup: 'Bryllup' };
+const LID_RE = /^[A-Za-z0-9-]{8,40}$/;
+const MAX_LEAD_WRITES = 120;
+const GHL_BASE = 'https://services.leadconnectorhq.com';
+const TZ = 'Europe/Copenhagen';
+const FALLBACK = { startMin: 9 * 60, endMin: 17 * 60, stepMin: 30, durationMin: 20, leadMs: 2 * 3600000 };
+
+const sameOrigin = request => {
+  const origin = request.headers.get('Origin') || '';
+  if (!origin) return true;
+  try { return new URL(origin).hostname === new URL(request.url).hostname; } catch { return false; }
+};
+async function readJSON(request, limit = 8192) {
+  if (Number(request.headers.get('Content-Length') || 0) > limit) return { err: json({ error: 'too large' }, 413) };
+  const text = await request.text();
+  if (text.length > limit) return { err: json({ error: 'too large' }, 413) };
+  try { const b = JSON.parse(text); return b && typeof b === 'object' ? { b } : { err: json({ error: 'bad json' }, 400) }; }
+  catch { return { err: json({ error: 'bad json' }, 400) }; }
+}
+const phoneDigits = p => (p || '').replace(/\D/g, '');
+const validEmail = e => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e || '');
+const hasContact = l => phoneDigits(l.phone).length >= 8 || validEmail(l.email);
+const e164 = p => { let v = (p || '').replace(/[^\d+]/g, ''); if (!v) return ''; if (v.startsWith('00')) v = '+' + v.slice(2); if (!v.startsWith('+')) v = (v.length === 8 ? '+45' : '+') + v; return v; };
+
+// ─── tid (Europe/Copenhagen, sommer/vintertid) ───
+const tzFmt = new Intl.DateTimeFormat('en-US', { timeZone: TZ, timeZoneName: 'shortOffset', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+function tzOffsetAt(ms) {
+  const s = tzFmt.formatToParts(new Date(ms)).find(p => p.type === 'timeZoneName')?.value || 'GMT+1';
+  const m = s.match(/([+-])(\d+)(?::(\d+))?/); if (!m) return 60;
+  return (m[1] === '-' ? -1 : 1) * (Number(m[2]) * 60 + Number(m[3] || 0));
+}
+// lokal vægur-tid i København -> epoch ms
+function cphToUtc(y, mo, d, minOfDay) {
+  const guess = Date.UTC(y, mo - 1, d, 0, minOfDay);
+  let utc = guess - tzOffsetAt(guess) * 60000;
+  const off2 = tzOffsetAt(utc);
+  utc = guess - off2 * 60000;
+  return utc;
+}
+const pad2 = n => String(n).padStart(2, '0');
+// epoch ms -> "2026-10-26T09:00:00+01:00"
+function isoCph(ms) {
+  const off = tzOffsetAt(ms), l = new Date(ms + off * 60000), a = Math.abs(off);
+  return `${l.getUTCFullYear()}-${pad2(l.getUTCMonth() + 1)}-${pad2(l.getUTCDate())}T${pad2(l.getUTCHours())}:${pad2(l.getUTCMinutes())}:00${off < 0 ? '-' : '+'}${pad2(Math.floor(a / 60))}:${pad2(a % 60)}`;
+}
+const ymdCph = ms => isoCph(ms).slice(0, 10);
+const addDays = (ymd, n) => { const [y, m, d] = ymd.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
+
+// ─── Telegram ───
+const tgEsc = s => String(s ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+async function tgSend(env, text) {
+  if (!env.TG_BOT_TOKEN || !env.TG_CHAT_ID) return;
+  await fetch(`https://api.telegram.org/bot${env.TG_BOT_TOKEN}/sendMessage`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: env.TG_CHAT_ID, text: text.slice(0, 4000), parse_mode: 'HTML', disable_web_page_preview: true }),
+  }).catch(() => {});
+}
+function leadText(title, l) {
+  let ans = {}; try { ans = JSON.parse(l.answers_json || '{}'); } catch { }
+  const lines = [`<b>${tgEsc(title)} · ${tgEsc(LEAD_PAGES[l.page] || l.page)}</b>`];
+  if (l.name) lines.push('👤 ' + tgEsc(l.name));
+  if (l.phone) lines.push('📞 ' + tgEsc(e164(l.phone) || l.phone));
+  if (l.email) lines.push('✉️ ' + tgEsc(l.email));
+  for (const [k, v] of Object.entries(ans)) if (v !== '' && v != null) lines.push(`• ${tgEsc(k)}: ${tgEsc(v)}`);
+  if (l.booked_start) lines.push('📅 ' + tgEsc(new Date(l.booked_start).toLocaleString('da-DK', { timeZone: TZ, weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })));
+  let src = {}; try { src = JSON.parse(l.src_json || '{}'); } catch { }
+  const s = [src.utm_source, src.utm_campaign, src.utm_content].filter(Boolean).join(' / ') || src.ref_host;
+  if (s) lines.push('🔗 ' + tgEsc(s));
+  if (l.city || l.country) lines.push('📍 ' + tgEsc([l.city, l.country].filter(Boolean).join(', ')));
+  lines.push('https://fuldtbooketmusiker.dk/admin');
+  return lines.join('\n');
+}
+// sætter milepæl-flaget atomisk; true = første gang (så sendes beskeden)
+async function claimFlag(env, id, flag) {
+  const r = await env.DB.prepare(`UPDATE leads SET notified_flags = notified_flags || ? WHERE id = ? AND instr(notified_flags, ?) = 0`).bind(flag + ',', id, flag + ',').run();
+  return (r.meta && r.meta.changes) === 1;
+}
+
+// ─── POST /api/lead ───
+async function handleLead(request, env, ctx) {
+  if (!env.DB) return json({ error: 'no db' }, 503);
+  if (!sameOrigin(request)) return json({ error: 'bad origin' }, 403);
+  const { b, err } = await readJSON(request); if (err) return err;
+  if (BOT_UA.test(request.headers.get('User-Agent') || '')) return json({ ok: true });
+  const lid = String(b.lid || '');
+  if (!LID_RE.test(lid)) return json({ error: 'bad lid' }, 400);
+  if (!LEAD_PAGES[b.page]) return json({ error: 'bad page' }, 400);
+  const answers = {};
+  if (b.answers && typeof b.answers === 'object' && !Array.isArray(b.answers)) {
+    for (const [k, v] of Object.entries(b.answers).slice(0, 12)) answers[str(k, 40)] = str(v, 500);
+  }
+  const src = b.src && typeof b.src === 'object' ? Object.fromEntries(['ref_host', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'landing'].map(k => [k, str(b.src[k], k === 'landing' ? 300 : 150)]).filter(([, v]) => v)) : {};
+  const cf = request.cf || {}, now = Date.now();
+  const row = await env.DB.prepare(`INSERT INTO leads (id, page, created_ts, updated_ts, name, email, phone, answers_json, step, done, src_json, vid, sid, ip, city, country, writes, notified_flags)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,'')
+      ON CONFLICT(id) DO UPDATE SET
+        updated_ts = excluded.updated_ts,
+        name = CASE WHEN excluded.name <> '' THEN excluded.name ELSE leads.name END,
+        email = CASE WHEN excluded.email <> '' THEN excluded.email ELSE leads.email END,
+        phone = CASE WHEN excluded.phone <> '' THEN excluded.phone ELSE leads.phone END,
+        answers_json = json_patch(leads.answers_json, excluded.answers_json),
+        step = MAX(leads.step, excluded.step),
+        done = MAX(leads.done, excluded.done),
+        src_json = CASE WHEN leads.src_json = '{}' THEN excluded.src_json ELSE leads.src_json END,
+        writes = leads.writes + 1
+      WHERE leads.writes < ${MAX_LEAD_WRITES}
+      RETURNING *`)
+    .bind(lid, b.page, now, now, str(b.name, 120).trim(), str(b.email, 160).trim(), str(b.phone, 40).trim(), JSON.stringify(answers),
+      num(b.step, 0, 50) ?? 0, b.done === true ? 1 : 0, JSON.stringify(src), str(b.vid, 40), str(b.sid, 40),
+      request.headers.get('CF-Connecting-IP') || '', str(cf.city, 80), str(cf.country, 8))
+    .first();
+  if (!row) return json({ error: 'too many writes' }, 429);
+  ctx.waitUntil((async () => {
+    if (hasContact(row) && await claimFlag(env, lid, 'contact')) await tgSend(env, leadText('📝 Delvist lead', row));
+    if (row.done && await claimFlag(env, lid, 'done')) await tgSend(env, leadText('✅ Formular udfyldt', row));
+  })().catch(() => {}));
+  return json({ ok: true });
+}
+
+// ─── ledige tider ───
+const ghlCalendarId = (env, page) => (page === 'firmafest' ? env.GHL_CALENDAR_FIRMAFEST : env.GHL_CALENDAR_BRYLLUP) || '';
+const ghlOn = (env, page) => !!(env.GHL_TOKEN && env.GHL_LOCATION_ID && ghlCalendarId(env, page));
+async function ghl(env, method, path, version, body) {
+  const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 8000);
+  try {
+    const r = await fetch(GHL_BASE + path, {
+      method, signal: ctl.signal,
+      headers: { Authorization: 'Bearer ' + env.GHL_TOKEN, Version: version, Accept: 'application/json', ...(body ? { 'Content-Type': 'application/json' } : {}) },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(`GHL ${method} ${path.split('?')[0]} ${r.status}: ${str(data.message || data.error || JSON.stringify(data), 200)}`);
+    return data;
+  } finally { clearTimeout(t); }
+}
+// varighed fra GHL-kalenderen (cache 1 time), ellers 30 min
+async function ghlDuration(env, calId) {
+  const cache = caches.default, key = new Request('https://cache.local/ghl-cal/' + calId);
+  const hit = await cache.match(key).catch(() => null);
+  if (hit) return Number(await hit.text()) || 30;
+  let min = 30;
+  try {
+    const c = (await ghl(env, 'GET', `/calendars/${calId}`, '2021-04-15')).calendar || {};
+    const d = Number(c.slotDuration) || 30;
+    min = /hour/i.test(c.slotDurationUnit || '') ? d * 60 : d;
+  } catch { }
+  await cache.put(key, new Response(String(min), { headers: { 'Cache-Control': 'max-age=3600' } })).catch(() => {});
+  return min;
+}
+async function bookedStarts(env, fromMs, toMs) {
+  const rows = await all(env.DB, `SELECT booked_start FROM leads WHERE booked_start >= ? AND booked_start < ?`, fromMs, toMs);
+  return new Set(rows.map(r => r.booked_start));
+}
+function fallbackSlots(fromYmd, days, now) {
+  const out = {};
+  for (let i = 0; i < days; i++) {
+    const ymd = addDays(fromYmd, i), [y, m, d] = ymd.split('-').map(Number);
+    const wd = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+    if (wd === 0 || wd === 6) continue;
+    const list = [];
+    for (let t = FALLBACK.startMin; t + FALLBACK.durationMin <= FALLBACK.endMin; t += FALLBACK.stepMin) {
+      const ms = cphToUtc(y, m, d, t);
+      if (ms >= now + FALLBACK.leadMs) list.push(ms);
+    }
+    if (list.length) out[ymd] = list;
+  }
+  return out;
+}
+// -> { source, durationMin, slots: { ymd: [ms,...] } }
+async function computeSlots(env, page, fromYmd, days) {
+  const now = Date.now();
+  const [y, m, d] = fromYmd.split('-').map(Number);
+  const fromMs = cphToUtc(y, m, d, 0), toYmd = addDays(fromYmd, days), [y2, m2, d2] = toYmd.split('-').map(Number);
+  const toMs = cphToUtc(y2, m2, d2, 0);
+  let res = null;
+  if (ghlOn(env, page)) {
+    try {
+      const calId = ghlCalendarId(env, page);
+      const [data, durationMin] = await Promise.all([
+        ghl(env, 'GET', `/calendars/${calId}/free-slots?startDate=${fromMs}&endDate=${toMs - 1}&timezone=${encodeURIComponent(TZ)}`, '2021-04-15'),
+        ghlDuration(env, calId),
+      ]);
+      const slots = {};
+      for (const [k, v] of Object.entries(data)) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(k) || !v || !Array.isArray(v.slots)) continue;
+        for (const s of v.slots) { const ms = Date.parse(s); if (Number.isFinite(ms) && ms > now && ms >= fromMs && ms < toMs) (slots[ymdCph(ms)] ||= []).push(ms); }
+      }
+      res = { source: 'ghl', durationMin, slots };
+    } catch (e) { res = null; console.log('ghl slots fejl', String(e && e.message || e)); }
+  }
+  if (!res) res = { source: 'fallback', durationMin: FALLBACK.durationMin, slots: fallbackSlots(fromYmd, days, now) };
+  // D1 er sikkerhedsnettet: tider vi selv har booket, er optaget uanset kilde
+  const taken = await bookedStarts(env, fromMs, toMs);
+  for (const k of Object.keys(res.slots)) {
+    res.slots[k] = res.slots[k].filter(ms => !taken.has(ms)).sort((a, b) => a - b);
+    if (!res.slots[k].length) delete res.slots[k];
+  }
+  return res;
+}
+async function handleSlots(request, env, ctx, url) {
+  if (!env.DB) return json({ error: 'no db' }, 503);
+  const page = url.searchParams.get('page');
+  if (!LEAD_PAGES[page]) return json({ error: 'bad page' }, 400);
+  const today = ymdCph(Date.now());
+  let from = url.searchParams.get('from') || today;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || isNaN(Date.parse(from))) return json({ error: 'bad from' }, 400);
+  if (from < today) from = today;
+  if (from > addDays(today, 120)) return json({ error: 'from too far' }, 400);
+  const days = Math.round(num(url.searchParams.get('days') || 14, 1, 31));
+  const cache = caches.default, key = new Request(`${url.origin}/__slots-cache/${page}/${from}/${days}`);
+  const hit = await cache.match(key).catch(() => null);
+  if (hit) return new Response(hit.body, { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'X-Cache': 'HIT' } });
+  const r = await computeSlots(env, page, from, days);
+  const slots = Object.fromEntries(Object.entries(r.slots).map(([k, v]) => [k, v.map(isoCph)]));
+  const body = JSON.stringify({ tz: TZ, source: r.source, durationMin: r.durationMin, slots });
+  ctx.waitUntil(cache.put(key, new Response(body, { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=60' } })).catch(() => {}));
+  return new Response(body, { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'X-Cache': 'MISS' } });
+}
+
+// ─── POST /api/book ───
+async function ghlBook(env, lead, startMs, endMs) {
+  const calendarId = ghlCalendarId(env, lead.page), locationId = env.GHL_LOCATION_ID;
+  const parts = (lead.name || '').trim().split(/\s+/);
+  const contact = { locationId, name: lead.name || undefined, firstName: parts[0] || undefined, lastName: parts.slice(1).join(' ') || undefined,
+    email: validEmail(lead.email) ? lead.email : undefined, phone: e164(lead.phone) || undefined, tags: ['lp-' + lead.page], source: 'fuldtbooketmusiker.dk/' + lead.page };
+  Object.keys(contact).forEach(k => contact[k] === undefined && delete contact[k]);
+  const c = await ghl(env, 'POST', '/contacts/upsert', '2021-07-28', contact);
+  const contactId = c.contact && c.contact.id;
+  if (!contactId) throw new Error('GHL upsert gav intet contact.id');
+  const appt = await ghl(env, 'POST', '/calendars/events/appointments', '2021-04-15', {
+    calendarId, locationId, contactId, startTime: isoCph(startMs), endTime: isoCph(endMs),
+    title: `Samtale: ${LEAD_PAGES[lead.page]} · ${lead.name || lead.email || lead.phone}`, appointmentStatus: 'confirmed', toNotify: true,
+  });
+  const apptId = appt.id || (appt.appointment && appt.appointment.id) || '';
+  let ans = {}; try { ans = JSON.parse(lead.answers_json || '{}'); } catch { }
+  const note = [`Fra fuldtbooketmusiker.dk/${lead.page} (${LEAD_PAGES[lead.page]})`, ...Object.entries(ans).filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`)].join('\n');
+  await ghl(env, 'POST', `/contacts/${contactId}/notes`, '2021-07-28', { body: note }).catch(e => console.log('ghl note fejl', e.message));
+  return { contactId, apptId };
+}
+async function handleBook(request, env, ctx) {
+  if (!env.DB) return json({ error: 'no db' }, 503);
+  if (!sameOrigin(request)) return json({ error: 'bad origin' }, 403);
+  const { b, err } = await readJSON(request, 2048); if (err) return err;
+  const lid = String(b.lid || '');
+  if (!LID_RE.test(lid)) return json({ error: 'bad lid' }, 400);
+  const startMs = Date.parse(String(b.start || ''));
+  if (!Number.isFinite(startMs)) return json({ error: 'bad start' }, 400);
+  const lead = await env.DB.prepare('SELECT * FROM leads WHERE id = ?').bind(lid).first();
+  if (!lead) return json({ error: 'unknown lead' }, 404);
+  if (!hasContact(lead)) return json({ error: 'missing contact' }, 400);
+  if (lead.booked_start) {
+    if (lead.booked_start === startMs) return json({ ok: true, start: isoCph(lead.booked_start), end: isoCph(lead.booked_end), source: lead.ghl_appt_id ? 'ghl' : 'fallback', already: true });
+    return json({ error: 'already booked', start: isoCph(lead.booked_start) }, 409);
+  }
+  const day = ymdCph(startMs);
+  const s = await computeSlots(env, lead.page, day, 1);
+  if (!(s.slots[day] || []).includes(startMs)) return json({ error: 'slot taken' }, 409);
+  const endMs = startMs + s.durationMin * 60000;
+  const claim = await env.DB.prepare(`UPDATE leads SET booked_start = ?, booked_end = ?, updated_ts = ?, done = 1
+      WHERE id = ? AND booked_start IS NULL AND NOT EXISTS (SELECT 1 FROM leads o WHERE o.booked_start = ?)`)
+    .bind(startMs, endMs, Date.now(), lid, startMs).run().catch(() => null); // unik index fanger samtidige bookinger
+  if (!claim || (claim.meta && claim.meta.changes) !== 1) return json({ error: 'slot taken' }, 409);
+  let source = 'fallback', ghlErr = '';
+  if (ghlOn(env, lead.page)) {
+    try {
+      const { contactId, apptId } = await ghlBook(env, lead, startMs, endMs);
+      await env.DB.prepare('UPDATE leads SET ghl_contact_id = ?, ghl_appt_id = ? WHERE id = ?').bind(contactId, apptId, lid).run();
+      source = 'ghl';
+    } catch (e) { ghlErr = str(e && e.message || e, 300); }
+  }
+  const booked = { ...lead, booked_start: startMs, booked_end: endMs };
+  ctx.waitUntil((async () => {
+    if (ghlErr) await tgSend(env, `⚠️ GHL fejlede: ${tgEsc(ghlErr)}\nBookingen er gemt i D1, opret den manuelt i GHL.\n\n` + leadText('📅 Booket', booked));
+    else if (await claimFlag(env, lid, 'booked')) await tgSend(env, leadText('📅 Booket', booked));
+    if (ghlErr) await claimFlag(env, lid, 'booked');
+  })().catch(() => {}));
+  return json({ ok: true, start: isoCph(startMs), end: isoCph(endMs), source });
+}
+
+// ─── /admin/api/leads ───
+async function leadsJSON(env, url) {
+  const { from } = rangeOf(url);
+  const rows = await all(env.DB, `SELECT id, page, created_ts, updated_ts, name, email, phone, answers_json, step, done, booked_start, booked_end,
+      ghl_contact_id, ghl_appt_id, src_json, ip, city, country, notified_flags FROM leads WHERE updated_ts >= ? ORDER BY updated_ts DESC LIMIT 300`, from);
+  const funnel = await all(env.DB, `SELECT page, COUNT(*) AS started, SUM(instr(notified_flags, 'contact,') > 0) AS contact, SUM(done) AS done,
+      SUM(booked_start IS NOT NULL) AS booked FROM leads WHERE created_ts >= ? GROUP BY page`, from);
+  return {
+    funnel,
+    rows: rows.map(r => {
+      let answers = {}, src = {}; try { answers = JSON.parse(r.answers_json || '{}'); } catch { } try { src = JSON.parse(r.src_json || '{}'); } catch { }
+      const { answers_json, src_json, ...rest } = r;
+      return { ...rest, answers, src, contact: r.notified_flags.includes('contact,') ? 1 : 0 };
+    }),
+  };
 }
 
 // ───────── router ─────────
@@ -349,6 +651,18 @@ export default {
       if (p === '/api/conv') {
         if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
         return await handleConv(request, env);
+      }
+      if (p === '/api/lead') {
+        if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
+        return await handleLead(request, env, ctx);
+      }
+      if (p === '/api/slots') {
+        if (request.method !== 'GET') return json({ error: 'GET only' }, 405);
+        return await handleSlots(request, env, ctx, url);
+      }
+      if (p === '/api/book') {
+        if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
+        return await handleBook(request, env, ctx);
       }
       if (p === '/api/t') {
         if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
@@ -371,6 +685,7 @@ export default {
         if (p === '/admin/api/stats') return await adminApi(env, ctx, url, statsJSON, COST.stats);
         if (p === '/admin/api/heat') return await adminApi(env, ctx, url, heatJSON, COST.heat);
         if (p === '/admin/api/visitors') return await adminApi(env, ctx, url, visitorsJSON, COST.visitors);
+        if (p === '/admin/api/leads') return await adminApi(env, ctx, url, leadsJSON, COST.leads, 30);
         return json({ error: 'not found' }, 404);
       }
     } catch (e) {

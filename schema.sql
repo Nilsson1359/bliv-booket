@@ -16,3 +16,23 @@ CREATE INDEX IF NOT EXISTS idx_events_ts ON events(ts);
 CREATE INDEX IF NOT EXISTS idx_events_type_ts ON events(type, ts);
 CREATE INDEX IF NOT EXISTS idx_events_sid ON events(sid);
 CREATE INDEX IF NOT EXISTS idx_events_vid ON events(vid);
+
+-- Leads fra /firmafest + /bryllup (formularen gemmer løbende; booked_* = epoch ms). Tilføjet 8/10 2026.
+CREATE TABLE IF NOT EXISTS leads (
+  id TEXT PRIMARY KEY,
+  page TEXT NOT NULL,
+  created_ts INTEGER NOT NULL,
+  updated_ts INTEGER NOT NULL,
+  name TEXT NOT NULL DEFAULT '', email TEXT NOT NULL DEFAULT '', phone TEXT NOT NULL DEFAULT '',
+  answers_json TEXT NOT NULL DEFAULT '{}',
+  step INTEGER NOT NULL DEFAULT 0, done INTEGER NOT NULL DEFAULT 0,
+  booked_start INTEGER, booked_end INTEGER,
+  ghl_contact_id TEXT, ghl_appt_id TEXT,
+  src_json TEXT NOT NULL DEFAULT '{}', vid TEXT, sid TEXT,
+  ip TEXT, city TEXT, country TEXT,
+  writes INTEGER NOT NULL DEFAULT 0,
+  notified_flags TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_leads_updated ON leads(updated_ts);
+CREATE INDEX IF NOT EXISTS idx_leads_created ON leads(created_ts);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_leads_booked ON leads(booked_start) WHERE booked_start IS NOT NULL;
