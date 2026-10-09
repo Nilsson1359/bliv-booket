@@ -978,19 +978,19 @@ Booker gerne Oscar igen :-)</p><div class="who"><div class="av">M</div><div clas
     <div class="rv">
       <div class="kvid" id="kvid">
         <img src="media/web/kevin-poster.jpg" alt="Oscar Jønsson interviewer Kevin Hartmann" loading="lazy" decoding="async">
-        <button class="kvid-play" type="button" id="kvidPlay" aria-label="Afspil interviewet med Kevin"><span class="play"><svg viewBox="0 0 24 24" width="30" height="30"><path fill="currentColor" d="M8 5v14l11-7z"/></svg></span><span class="vsl-lbl">Se hele samtalen · 18 min</span></button>
+        <button class="kvid-play" type="button" id="kvidPlay" aria-label="Afspil interviewet med Kevin"><span class="play"><svg viewBox="0 0 24 24" width="30" height="30"><path fill="currentColor" d="M8 5v14l11-7z"/></svg></span><span class="vsl-lbl">Se hele samtalen · 17 min</span></button>
         <span class="kvid-name"><b>Kevin Hartmann</b><small>Musiker · Bliv Booket-kunde</small></span>
       </div>
-      <div class="kchap"><span>Hop til</span><button type="button" data-kt="93"><i>1:33</i>Før: ringede selv rundt</button><button type="button" data-kt="137"><i>2:17</i>Jobs hver weekend</button><button type="button" data-kt="157"><i>2:37</i>Dobbelt så høj pris</button><button type="button" data-kt="515"><i>8:35</i>Jeg skulle bare møde op</button><button type="button" data-kt="587"><i>9:47</i>Mindset</button><button type="button" data-kt="691"><i>11:31</i>140.000 kr. på 3-4 måneder</button><button type="button" data-kt="998"><i>16:38</i>Råd til andre musikere</button></div>
+      <div class="kchap"><span>Hop til</span><button type="button" data-kt="23"><i>0:23</i>Før: ringede selv rundt</button><button type="button" data-kt="142"><i>2:22</i>Jobs hver weekend</button><button type="button" data-kt="157"><i>2:37</i>Dobbelt så høj pris</button><button type="button" data-kt="472"><i>7:52</i>Jeg skulle bare møde op</button><button type="button" data-kt="540"><i>9:00</i>Mindset</button><button type="button" data-kt="645"><i>10:45</i>180.000 kr. på 3-4 måneder</button><button type="button" data-kt="952"><i>15:52</i>Råd til andre musikere</button></div>
     </div>
     <div class="kstats rv">
-      <div class="kstat"><b>140.000 kr.</b><span>omsat på 3-4 måneder</span></div>
+      <div class="kstat"><b>180.000 kr.</b><span>omsat på 3-4 måneder</span></div>
       <div class="kstat"><b>3×</b><span>igen på det, han har brugt på annoncer</span></div>
       <div class="kstat"><b>10.000+ kr.</b><span>pr. job i dag, mod 4-5.000 kr. før</span></div>
       <div class="kstat"><b>25.000 kr.</b><span>hans største job til dato</span></div>
     </div>
     <p class="knote">Tallene er Kevins egne, som han fortæller dem i videoen</p>
-    <div class="kquotes rv"><figure class="kq"><p>Jeg vidste overhovedet ikke, hvor min næste booking skulle komme fra.</p><button type="button" data-kt="102"><svg viewBox="0 0 24 24" width="12" height="12"><path fill="currentColor" d="M8 5v14l11-7z"/></svg> Hør det ved 1:42</button></figure><figure class="kq"><p>Jeg har jobs hver weekend og er allerede begyndt at få bookinger ind for næste år.</p><button type="button" data-kt="143"><svg viewBox="0 0 24 24" width="12" height="12"><path fill="currentColor" d="M8 5v14l11-7z"/></svg> Hør det ved 2:23</button></figure><figure class="kq"><p>Alt var faktisk gjort for mig. Jeg skulle bare møde op.</p><button type="button" data-kt="520"><svg viewBox="0 0 24 24" width="12" height="12"><path fill="currentColor" d="M8 5v14l11-7z"/></svg> Hør det ved 8:40</button></figure></div>
+    <div class="kquotes rv"><figure class="kq"><p>Jeg vidste overhovedet ikke, hvor min næste booking kom fra.</p><button type="button" data-kt="100"><svg viewBox="0 0 24 24" width="12" height="12"><path fill="currentColor" d="M8 5v14l11-7z"/></svg> Hør det ved 1:40</button></figure><figure class="kq"><p>Jeg har jobs hver weekend og er allerede begyndt at få bookinger ind for næste år.</p><button type="button" data-kt="142"><svg viewBox="0 0 24 24" width="12" height="12"><path fill="currentColor" d="M8 5v14l11-7z"/></svg> Hør det ved 2:22</button></figure><figure class="kq"><p>Alt var faktisk gjort for mig. Jeg skulle bare møde op.</p><button type="button" data-kt="484"><svg viewBox="0 0 24 24" width="12" height="12"><path fill="currentColor" d="M8 5v14l11-7z"/></svg> Hør det ved 8:04</button></figure></div>
     <div class="cta-row center"><a class="btn" href="#ansoeg" data-magnet>Ansøg nu om en plads <span class="ar" aria-hidden="true"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8h10M9 4l4 4-4 4"/></svg></span></a></div>
   </div>
 </section>
@@ -1399,7 +1399,7 @@ Booker gerne Oscar igen :-)</p><div class="who"><div class="av">M</div><div clas
   /* Kevin-interview: HLS, indlæses først ved klik */
   const kv=document.getElementById('kvid');
   if(kv){
-    const KSRC='https://fuldtbooketmusiker.dk/media/kevin/master.m3u8';
+    const KSRC='https://fuldtbooketmusiker.dk/media/kevin2/master.m3u8';
     let kvv=null;
     function kStart(t){
       if(kvv){ if(t!=null)kvv.currentTime=t; kvv.play().catch(()=>{}); return; }
