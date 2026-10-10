@@ -71,6 +71,9 @@ STOCK = {
    flow=['f-skaenk', 'f-lys-bord', None, 'f-dansegulv'],
    mood=[('f-guldbord', 'Middagen'), ('f-coupe', 'Velkomst'), ('f-telt-dans', 'Dansegulvet'), ('real:h54', 'Live-sæt'), ('f-lyskaede', 'Aftenen'), ('f-glaede-sh', 'Festen'), ('real:h134', 'DJ'), ('f-tomlys', 'Midnat')]),
 }
+_SL = ROOT / 'media/ev/stem/list.json'
+STEM = json.load(open(_SL)) if _SL.exists() else []   # stemningsvideoer fra bryllup på Himmelbjerget (Frame.io, farvekorrigeret, 720p)
+STEM_CAT = {'sted': 'Stedet', 'velkomst': 'Velkomst', 'aften': 'Aftenen', 'fest': 'Dansegulvet'}
 REAL = json.load(open(ROOT / 'media/ev/real/meta.json'))   # Oscars egne fotos fra bryllup på Himmelbjerget 3/10 2026 (Frame.io)
 def simg(k, sizes='(max-width:820px) 92vw, 560px', eager=False, cls=''):
     if k.startswith('real:'):
@@ -585,6 +588,30 @@ main img,main video{filter:var(--imgfilter,none)}
 .rbgrid .rb1,.rbgrid .rb5{grid-column:span 2;grid-row:span 2}.rbgrid .rb1 img,.rbgrid .rb5 img{aspect-ratio:auto;height:100%}
 .rbgrid figcaption{position:absolute;left:10px;bottom:10px;background:rgba(0,0,0,.55);color:#fff;font-size:.82rem;font-weight:600;padding:5px 10px;border-radius:999px}
 @media (max-width:820px){.rbgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.rbgrid .rb1,.rbgrid .rb5{grid-row:auto}.rbgrid .rb1 img,.rbgrid .rb5 img,.rbgrid .rb4 img,.rbgrid .rb8 img{aspect-ratio:16/10;height:auto}}
+.svchips{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 16px}
+.svc{min-height:44px;padding:8px 16px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--ink);font:600 .92rem var(--body);cursor:pointer}
+.svc span{color:var(--mute);font-weight:500;margin-left:4px}
+.svc[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--onaccent)}.svc[aria-pressed=true] span{color:inherit;opacity:.75}
+.svgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.svgrid.lim .sv:nth-child(n+13){display:none}
+.sv{position:relative;display:block;padding:0;border:0;border-radius:var(--r);overflow:hidden;background:#000;cursor:pointer;aspect-ratio:16/9}
+.sv img{width:100%;height:100%;object-fit:cover;transition:transform .4s,opacity .3s;opacity:.92}
+.sv:hover img{transform:scale(1.04);opacity:1}
+.sv[hidden]{display:none !important}
+.svp{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:rgba(0,0,0,.55);backdrop-filter:blur(4px)}
+.svp::after{content:"";position:absolute;left:18px;top:14px;border-left:14px solid #fff;border-top:9px solid transparent;border-bottom:9px solid transparent}
+.sv b,.sv em{position:absolute;bottom:8px;font:600 .78rem var(--body);color:#fff;background:rgba(0,0,0,.55);padding:3px 8px;border-radius:999px;font-style:normal}
+.sv b{right:8px}.sv em{left:8px}
+.vbox{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.92);display:grid;place-items:center}
+.vbox[hidden]{display:none}
+.vb-in{width:min(1100px,100% - 32px);display:flex;flex-direction:column;gap:12px}
+.vb-in video{width:100%;max-height:calc(100dvh - 120px);background:#000;border-radius:8px}
+.vb-bar{display:flex;align-items:center;gap:12px;color:#fff;font:600 .95rem var(--body)}
+.vb-bar span{flex:1;text-align:center}
+.vb-bar button{width:48px;height:48px;border-radius:50%;border:1px solid rgba(255,255,255,.3);background:transparent;color:#fff;font-size:1.5rem;cursor:pointer}
+@media (max-width:980px){.svgrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:640px){.svgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.svgrid.lim .sv:nth-child(n+9){display:none}.vb-in{width:100%}.vb-in video{border-radius:0;max-height:calc(100dvh - 90px)}.vb-bar{padding:0 12px}}
+.ed .sv,.ed .svc,.ed .vb-in video{border-radius:0}
 .pal-mono .stars{background:linear-gradient(90deg,#0E0E0E 90%,rgba(14,14,14,.25) 90%);-webkit-background-clip:text;background-clip:text}
 .hero-split.land .media{aspect-ratio:4/3}
 @media (max-width:820px){.hero-split.land .media{aspect-ratio:16/10}}
@@ -738,6 +765,19 @@ def page(key, d, pal):
         real = f'''<section class="sec" id="rigtigt"><div class="wrap"><div class="narrow rv"><span class="eyebrow">Fra et rigtigt bryllup</span><h2>Himmelbjerget, oktober 2026</h2></div>
       <div class="rbgrid rv">{rf}</div><div class="cta-row" style="margin-top:26px">{cta(c["cta"], sec="rigtigt")}</div></div></section>'''
 
+    sv = ''
+    if key == 'bryllup' and STEM:
+        fmt = lambda t: f'{t // 60}:{t % 60:02d}'
+        chips = f'<button type="button" class="svc" data-cat="" aria-pressed="true">Alle <span>{len(STEM)}</span></button>' + ''.join(
+            f'<button type="button" class="svc" data-cat="{k}" aria-pressed="false">{v} <span>{sum(1 for x in STEM if x["cat"] == k)}</span></button>' for k, v in STEM_CAT.items() if any(x['cat'] == k for x in STEM))
+        tiles = ''.join(f'<button type="button" class="sv" data-i="{i}" data-cat="{x["cat"]}" data-src="/media/ev/stem/{x["id"]}.mp4" data-lbl="{STEM_CAT[x["cat"]]}" aria-label="Afspil klip {i+1}: {STEM_CAT[x["cat"]]}, {fmt(x["dur"])}"><img src="/media/ev/stem/{x["id"]}.webp" alt="" loading="lazy" decoding="async" width="640" height="360"><i class="svp" aria-hidden="true"></i><b>{fmt(x["dur"])}</b><em>{STEM_CAT[x["cat"]]}</em></button>' for i, x in enumerate(STEM))
+        sv = f'''<section class="sec alt" id="stemningsvideo"><div class="wrap"><div class="narrow rv"><span class="eyebrow">Se stemningen</span><h2>Et helt bryllup på Himmelbjerget, i video</h2>
+      <p class="lead">{len(STEM)} klip fra velkomst til sidste dans.</p></div>
+      <div class="svchips" role="group" aria-label="Vis klip fra">{chips}</div><div class="svgrid" id="svgrid">{tiles}</div>
+      <div class="cta-row" style="margin-top:22px"><button type="button" class="btn ghost" id="svMore">Vis alle {len(STEM)} klip</button>{cta(c["cta"], sec="stemningsvideo")}</div></div></section>
+<div class="vbox" id="vbox" hidden role="dialog" aria-modal="true" aria-label="Videoafspiller"><div class="vb-in"><video id="vbVid" controls playsinline preload="auto"></video>
+  <div class="vb-bar"><button type="button" id="vbPrev" aria-label="Forrige klip">‹</button><span id="vbLbl"></span><button type="button" id="vbNext" aria-label="Næste klip">›</button><button type="button" id="vbX" class="vb-x" aria-label="Luk">✕</button></div></div></div>'''
+
     revs = ''.join(f'<article class="rev clamp"><b>{R[k][0]}</b><p>{R[k][1]}</p><button type="button" data-more>Læs hele anmeldelsen</button><div class="who"><strong>{R[k][2]}</strong><span>{R[k][3]}</span></div></article>' for k in c['reviews'])
     reviews = f'''<section class="sec" id="anmeldelser"><div class="wrap"><div class="tp rv"><span class="score">4,5</span><div><div>{stars()}</div><span style="color:var(--ink2)">14 anmeldelser af Oscar Jønsson Musik på <a href="{TRUSTPILOT}" target="_blank" rel="noopener">Trustpilot</a></span></div></div>
       <h2 class="rv" style="margin-top:18px">Det siger dem, der har haft Oscar til deres fest</h2><div class="revs">{revs}</div>
@@ -802,6 +842,7 @@ def page(key, d, pal):
 {s6}
 {s7}
 {real}
+{sv}
 {reviews}
 {s8}
 {s9}

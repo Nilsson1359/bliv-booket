@@ -658,6 +658,23 @@ async function leadsJSON(env, url) {
   };
 }
 
+// ───────── video m. byte-range ─────────
+async function serveVideo(request, env) {
+  const res = await env.ASSETS.fetch(new Request(request.url, { method: 'GET', headers: { 'Accept-Encoding': 'identity' } }));
+  if (!res.ok) return res;
+  const h = new Headers(res.headers); h.set('Accept-Ranges', 'bytes'); h.set('Content-Type', 'video/mp4'); h.set('Cache-Control', 'public, max-age=86400');
+  const range = request.headers.get('Range');
+  if (!range) return new Response(request.method === 'HEAD' ? null : res.body, { status: 200, headers: h });
+  const buf = await res.arrayBuffer(), size = buf.byteLength;
+  const m = /bytes=(\d*)-(\d*)/.exec(range);
+  let start = m && m[1] !== '' ? +m[1] : NaN, end = m && m[2] !== '' ? +m[2] : NaN;
+  if (isNaN(start)) { start = Math.max(0, size - (isNaN(end) ? 0 : end)); end = size - 1; }
+  if (isNaN(end) || end >= size) end = size - 1;
+  if (!m || start > end || start >= size) { h.set('Content-Range', `bytes */${size}`); return new Response(null, { status: 416, headers: h }); }
+  h.set('Content-Range', `bytes ${start}-${end}/${size}`); h.set('Content-Length', String(end - start + 1));
+  return new Response(request.method === 'HEAD' ? null : buf.slice(start, end + 1), { status: 206, headers: h });
+}
+
 // ───────── router ─────────
 export default {
   async fetch(request, env, ctx) {
@@ -707,6 +724,8 @@ export default {
     } catch (e) {
       return json({ error: 'server error', detail: String(e && e.message || e).slice(0, 200) }, 500);
     }
+    // Video: Safari/iPhone kræver byte-range (206) for at afspille mp4; assets-bindingen svarer altid 200 med hele filen
+    if (/\.(mp4|m4v|mov)$/i.test(p) && (request.method === 'GET' || request.method === 'HEAD')) return await serveVideo(request, env);
     return env.ASSETS.fetch(request);
   },
 };

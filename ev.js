@@ -30,6 +30,38 @@
     $$('video[data-src]').forEach(function (v) { vo.observe(v); });
   } else { $$('.rv').forEach(function (el) { el.classList.add('in'); }); }
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) $$('video[autoplay]').forEach(function (v) { v.pause(); });
+  // Stemningsvideoer: filter, vis-alle, afspiller m. lyd (frem/tilbage, piletaster, swipe)
+  var svg = $('#svgrid');
+  if (svg) {
+    var tiles = $$('.sv', svg), cur = 0, vbox = $('#vbox'), vv = $('#vbVid'), lbl = $('#vbLbl'), more = $('#svMore');
+    svg.classList.add('lim');
+    var shown = function () { return tiles.filter(function (t) { return !t.hidden; }); };
+    $$('.svc').forEach(function (b) {
+      b.addEventListener('click', function () {
+        $$('.svc').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+        tiles.forEach(function (t) { t.hidden = !!b.dataset.cat && t.dataset.cat !== b.dataset.cat; });
+        if (b.dataset.cat) { svg.classList.remove('lim'); if (more) more.hidden = true; }
+      });
+    });
+    if (more) more.addEventListener('click', function () { svg.classList.remove('lim'); more.hidden = true; });
+    var play = function (i) {
+      var list = shown(); if (!list.length) return; cur = (i + list.length) % list.length; var t = list[cur];
+      vv.src = t.dataset.src; lbl.textContent = (cur + 1) + ' / ' + list.length + ' · ' + t.dataset.lbl;
+      var p = vv.play(); if (p && p.catch) p.catch(function () { });
+    };
+    var openV = function (t) { vbox.hidden = false; document.body.classList.add('lock'); play(shown().indexOf(t)); try { dispatchEvent(new CustomEvent('ev:video', { detail: t.dataset.src })); } catch (e) { } };
+    var closeV = function () { vv.pause(); vv.removeAttribute('src'); vv.load(); vbox.hidden = true; document.body.classList.remove('lock'); };
+    tiles.forEach(function (t) { t.addEventListener('click', function () { openV(t); }); });
+    $('#vbPrev').addEventListener('click', function () { play(cur - 1); });
+    $('#vbNext').addEventListener('click', function () { play(cur + 1); });
+    $('#vbX').addEventListener('click', closeV);
+    vbox.addEventListener('click', function (e) { if (e.target === vbox) closeV(); });
+    vv.addEventListener('ended', function () { play(cur + 1); });
+    addEventListener('keydown', function (e) { if (vbox.hidden) return; if (e.key === 'Escape') closeV(); else if (e.key === 'ArrowRight') play(cur + 1); else if (e.key === 'ArrowLeft') play(cur - 1); });
+    var x0 = null; vbox.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; }, { passive: true });
+    vbox.addEventListener('touchend', function (e) { if (x0 == null) return; var dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 60) play(cur + (dx < 0 ? 1 : -1)); x0 = null; }, { passive: true });
+  }
+
   // YouTube: thumbnail -> iframe ved klik (ingen YouTube-kode før man trykker)
   $$('.yt[data-yt]').forEach(function (b) {
     b.addEventListener('click', function () {

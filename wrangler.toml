@@ -11,6 +11,8 @@ routes = [
 [assets]
 directory = "./_site"
 binding = "ASSETS"
+# videoer går gennem Worker for byte-range (206), som iPhone/Safari kræver
+run_worker_first = ["/media/ev/stem/*", "/media/ev/v/*", "/media/clips/*"]
 [vars]
 META_PIXEL_ID = "1708597793574696"
 # GHL (zency) til /firmafest + /bryllup: tomme = fast skema (hverdage 9-17) + kun D1/Telegram. Token = secret GHL_TOKEN.

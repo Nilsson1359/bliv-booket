@@ -1,0 +1,260 @@
+[
+ {
+  "id": "c0165",
+  "cat": "sted",
+  "dur": 12,
+  "mb": 2.0
+ },
+ {
+  "id": "c0153",
+  "cat": "sted",
+  "dur": 14,
+  "mb": 1.7
+ },
+ {
+  "id": "c0168",
+  "cat": "sted",
+  "dur": 6,
+  "mb": 0.7
+ },
+ {
+  "id": "c0161",
+  "cat": "sted",
+  "dur": 15,
+  "mb": 2.6
+ },
+ {
+  "id": "film",
+  "cat": "velkomst",
+  "dur": 41,
+  "mb": 6.7
+ },
+ {
+  "id": "c0172",
+  "cat": "velkomst",
+  "dur": 70,
+  "mb": 10.5
+ },
+ {
+  "id": "c0170",
+  "cat": "velkomst",
+  "dur": 42,
+  "mb": 6.2
+ },
+ {
+  "id": "c0162",
+  "cat": "velkomst",
+  "dur": 24,
+  "mb": 3.5
+ },
+ {
+  "id": "c0163",
+  "cat": "velkomst",
+  "dur": 24,
+  "mb": 3.8
+ },
+ {
+  "id": "c0164",
+  "cat": "velkomst",
+  "dur": 19,
+  "mb": 2.3
+ },
+ {
+  "id": "c0167",
+  "cat": "velkomst",
+  "dur": 42,
+  "mb": 6.7
+ },
+ {
+  "id": "c0171",
+  "cat": "velkomst",
+  "dur": 23,
+  "mb": 2.2
+ },
+ {
+  "id": "c0175",
+  "cat": "velkomst",
+  "dur": 56,
+  "mb": 6.9
+ },
+ {
+  "id": "c0178",
+  "cat": "velkomst",
+  "dur": 17,
+  "mb": 1.9
+ },
+ {
+  "id": "c0179",
+  "cat": "velkomst",
+  "dur": 48,
+  "mb": 7.7
+ },
+ {
+  "id": "c0180",
+  "cat": "velkomst",
+  "dur": 21,
+  "mb": 2.6
+ },
+ {
+  "id": "c0181",
+  "cat": "velkomst",
+  "dur": 18,
+  "mb": 2.4
+ },
+ {
+  "id": "c0182",
+  "cat": "velkomst",
+  "dur": 41,
+  "mb": 7.0
+ },
+ {
+  "id": "c0154",
+  "cat": "velkomst",
+  "dur": 10,
+  "mb": 1.5
+ },
+ {
+  "id": "c0155",
+  "cat": "velkomst",
+  "dur": 11,
+  "mb": 1.8
+ },
+ {
+  "id": "c0158",
+  "cat": "velkomst",
+  "dur": 12,
+  "mb": 1.5
+ },
+ {
+  "id": "c0160",
+  "cat": "velkomst",
+  "dur": 10,
+  "mb": 1.5
+ },
+ {
+  "id": "c0187",
+  "cat": "aften",
+  "dur": 27,
+  "mb": 4.6
+ },
+ {
+  "id": "c0188",
+  "cat": "aften",
+  "dur": 16,
+  "mb": 3.0
+ },
+ {
+  "id": "c0189",
+  "cat": "aften",
+  "dur": 120,
+  "mb": 21.6
+ },
+ {
+  "id": "c0190",
+  "cat": "aften",
+  "dur": 78,
+  "mb": 12.8
+ },
+ {
+  "id": "c0191",
+  "cat": "aften",
+  "dur": 86,
+  "mb": 14.7
+ },
+ {
+  "id": "c0192",
+  "cat": "fest",
+  "dur": 48,
+  "mb": 7.6
+ },
+ {
+  "id": "c0197",
+  "cat": "fest",
+  "dur": 29,
+  "mb": 5.0
+ },
+ {
+  "id": "c0195",
+  "cat": "fest",
+  "dur": 18,
+  "mb": 2.6
+ },
+ {
+  "id": "c0199",
+  "cat": "fest",
+  "dur": 40,
+  "mb": 7.3
+ },
+ {
+  "id": "c0193",
+  "cat": "fest",
+  "dur": 16,
+  "mb": 2.8
+ },
+ {
+  "id": "c0194",
+  "cat": "fest",
+  "dur": 36,
+  "mb": 6.5
+ },
+ {
+  "id": "c0196",
+  "cat": "fest",
+  "dur": 18,
+  "mb": 3.2
+ },
+ {
+  "id": "c0198",
+  "cat": "fest",
+  "dur": 28,
+  "mb": 5.1
+ },
+ {
+  "id": "c0201",
+  "cat": "fest",
+  "dur": 18,
+  "mb": 3.3
+ },
+ {
+  "id": "c0202",
+  "cat": "fest",
+  "dur": 11,
+  "mb": 2.0
+ },
+ {
+  "id": "c0203",
+  "cat": "fest",
+  "dur": 36,
+  "mb": 6.6
+ },
+ {
+  "id": "c0204",
+  "cat": "fest",
+  "dur": 23,
+  "mb": 3.4
+ },
+ {
+  "id": "c0205",
+  "cat": "fest",
+  "dur": 28,
+  "mb": 4.9
+ },
+ {
+  "id": "c0206",
+  "cat": "fest",
+  "dur": 27,
+  "mb": 4.9
+ },
+ {
+  "id": "c0207",
+  "cat": "fest",
+  "dur": 50,
+  "mb": 8.9
+ },
+ {
+  "id": "c0208",
+  "cat": "fest",
+  "dur": 18,
+  "mb": 3.4
+ }
+]
