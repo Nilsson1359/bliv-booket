@@ -53,8 +53,11 @@ CLIPS = {
  'kirke': ('/media/ev/v/kirke.mp4', '/media/ev/v/kirke.webp', 'Gæster i kirken til vielsen'),
  'middag': ('/media/ev/v/middag.mp4', '/media/ev/v/middag.webp', 'Oscar spiller akustisk guitar og synger under middagen'),
  'duo': ('/media/ev/v/duo.mp4', '/media/ev/v/duo.webp', 'Oscar og en pianist på scenen i rødt og grønt lys'),
+ # v2 (13/10 2026): samme firmafest-klip, men starter på guitar-skuddet i stedet for kollegerne på gulvet
+ 'fest2': ('/media/ev/v/fest2.mp4', '/media/ev/v/fest2.webp', 'Oscar spiller el-guitar til en firmafest'),  # kun 4,0-7,9 s af fest.mp4: guitar, polonæse og dans
+ 'festdans': ('/media/ev/v/fest2.mp4', '/media/ev/v/fest-dans.webp', 'Kollegerne danser polonæse, mens Oscar spiller'),
 }
-LAND = {'fest', 'champagne', 'kirke', 'middag', 'duo'}
+LAND = {'fest', 'champagne', 'kirke', 'middag', 'duo', 'fest2', 'festdans'}
 def vsrc(k): f = CLIPS[k][0]; return f if f.startswith('/') else f'/media/clips/{f}.mp4'
 def vposter(k): p = CLIPS[k][1]; return p if p.startswith('/') else f'/media/ev/{p}-full.webp'
 YT = [('-EH6aN7DRlI', 'hvem', 'Hvem er Oscar Jønsson'),
@@ -71,11 +74,29 @@ STOCK = {
    flow=['f-skaenk', 'f-lys-bord', None, 'f-dansegulv'],
    mood=[('f-guldbord', 'Middagen'), ('f-coupe', 'Velkomst'), ('f-telt-dans', 'Dansegulvet'), ('real:h54', 'Live-sæt'), ('f-lyskaede', 'Aftenen'), ('f-glaede-sh', 'Festen'), ('real:h134', 'DJ'), ('f-tomlys', 'Midnat')]),
 }
+# v2: rettelser efter design-gennemgang 13/10 2026 (rigtige fotos de rigtige steder, videovæg højere op, kortere CTA m.m.)
+V2 = {
+ 'bryllup': dict(fan=[('p:p13', 'Velkomst'), ('p:p129', 'Live-sæt'), ('p:p85', 'Dansefest')], intro='p:p41',
+   s3=['p:p112', 'p:p81'], s6=['p:p130'], flow=['v:kirke', 'p:p4', 'p:p23', 'p:p8'], s8='p:p42', offer='p:p128', final='p:p97',
+   real=[('p110', 'Velkomst'), ('p102', 'Guitar og sang'), ('p124', 'Borddækningen'), ('p75', 'Live-sæt'), ('p52', 'Midt i festen'), ('p53', 'Dansegulvet'), ('p111', 'Polonæsen'), ('p101', 'DJ til sidste dans')],
+   cta_short='Få et tilbud på jeres bryllup', final_short='Fortæl om jeres bryllup'),
+ 'firmafest': dict(final_short='Fortæl om jeres firmafest', hero_clip='fest2', s3=['p:p129', 'p:p65'], s6=['p:p101'], flow=[None, None, None, 'i:/media/ev/v/fest-dans.webp']),
+}
+# videovæg: de stærkeste klip først (filmen, Oscar live, fyldt dansegulv), stedet og detaljer sidst
+STEM_FIRST = ['film', 'c0197', 'c0170', 'c0199', 'c0192', 'c0187', 'c0182', 'c0201', 'c0191', 'c0207', 'c0172', 'c0204']
+STEM_LAST = ['c0194', 'c0165', 'c0153', 'c0168', 'c0161']
+CONTACT = dict(mail='booking@oscartjoensson.dk', tel='+45 28 56 98 12', cvr='43415352', firma='Joensson Agency')
 _SL = ROOT / 'media/ev/stem/list.json'
 STEM = json.load(open(_SL)) if _SL.exists() else []   # stemningsvideoer fra bryllup på Himmelbjerget (Frame.io, farvekorrigeret, 720p)
 STEM_CAT = {'sted': 'Stedet', 'velkomst': 'Velkomst', 'aften': 'Aftenen', 'fest': 'Dansegulvet'}
 REAL = json.load(open(ROOT / 'media/ev/real/meta.json'))   # Oscars egne fotos fra bryllup på Himmelbjerget 3/10 2026 (Frame.io)
+# v2: håndplukket blandt alle 135 fotos (pN = N'te foto i Frame.io-mappen "2026-10-03 Bryllup Oscar Jønsson")
+R2 = json.load(open(ROOT / 'media/ev/r2/meta.json'))
 def simg(k, sizes='(max-width:820px) 92vw, 560px', eager=False, cls=''):
+    if k.startswith('p:'):
+        n = k[2:]; m = R2[n]; load = ' fetchpriority="high"' if eager else ' loading="lazy" decoding="async"'
+        srcset = ', '.join(f'/media/ev/r2/{n}-{x}.webp {min(x, m["w"])}w' for x in (480, 960, 1600) if x == 480 or m['w'] > (480 if x == 960 else 960))
+        return f'<img class="{cls}" src="/media/ev/r2/{n}-960.webp" srcset="{srcset}" sizes="{sizes}" alt="Oscar Jønsson spiller til bryllup på Himmelbjerget" width="{m["w"]}" height="{m["h"]}"{load}>'
     if k.startswith('real:'):
         n = k[5:]; m = REAL[n]; load = ' fetchpriority="high"' if eager else ' loading="lazy" decoding="async"'
         srcset = ', '.join(f'/media/ev/real/{n}-{x}.webp {x}w' for x in (480, 960, 1600))
@@ -274,6 +295,22 @@ for _k, (_n, _m, _v) in PAL.items():
         r = _cr(_c[fg], _c[bg]); assert r >= 4.5, f'kontrast {_k}: {fg} på {bg} = {r:.2f}'
 
 CSS = r'''
+.btn .s{display:none}
+@media (max-width:520px){.btn .l{display:none}.btn .s{display:inline}}
+.v2 .pc i{background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accentT);font-weight:600}
+.v2 .final .bg{opacity:.16}.v2 .final .bg::after{background:linear-gradient(180deg,var(--bg),color-mix(in srgb,var(--bg) 55%,transparent) 30%,color-mix(in srgb,var(--bg) 55%,transparent) 70%,var(--bg))}
+.v2 .lines span,.v2 .final .big,.v2 .final .lead{text-wrap:balance}
+.v2 .revs{align-items:start}
+@media (max-width:360px){.v2 .btn{font-size:.94rem;padding:14px 16px;gap:8px}}
+@media (max-width:520px){.v2 .offer{padding:22px 16px}.v2 .story-media .then{right:0}}
+.v2 .eyebrow,.v2 .sv b,.v2 .sv em,.v2 .ytgrid figcaption,.v2 .fl b span,.v2 .vol em,.v2 .rbgrid figcaption,.v2 .svc{font-size:.875rem}
+.v2 .fan figure:nth-child(1) figcaption{text-align:left;padding-left:12px}.v2 .fan figure:nth-child(3) figcaption{text-align:right;padding-right:12px}
+.duo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:clamp(28px,4vw,44px) auto 0;max-width:980px}
+.duo figure{margin:0;border-radius:var(--r);overflow:hidden;background:var(--card)}
+.duo img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;filter:var(--imgfilter,none)}
+.duo.one{grid-template-columns:minmax(0,1fr);max-width:860px}.duo.one img{aspect-ratio:16/9}
+footer .fc a{color:var(--ink2)}
+@media (max-width:700px){.v2 .center{text-align:left}.v2 .center .quote{text-align:left}.v2 .fan figure:nth-child(1) figcaption,.v2 .fan figure:nth-child(3) figcaption{visibility:hidden}.duo{gap:8px}.duo:not(.one) img{aspect-ratio:3/4}}
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:clip}
@@ -656,30 +693,36 @@ main img,main video{filter:var(--imgfilter,none)}
 ARROW = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>'
 X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>'
 
-def cta(label, cls='', sec=''):
-    return f'<button type="button" class="btn {cls}" data-open="{sec}">{H.escape(label)}{ARROW}</button>'
+def cta(label, cls='', sec='', short=''):
+    lab = f'<span class="l">{H.escape(label)}</span><span class="s">{H.escape(short)}</span>' if short else H.escape(label)
+    return f'<button type="button" class="btn {cls}" data-open="{sec}">{lab}{ARROW}</button>'
 
 def ps(lines, cls=''):
     return ''.join(f'<p class="{cls}">{l}</p>' for l in lines)
 
 def stars(): return '<span class="stars" role="img" aria-label="4,5 ud af 5 stjerner">★★★★★</span>'
 
-def page(key, d, pal):
-    c = P[key]; dd = D[d]; pn, pmode, pv = PAL[pal]
+def page(key, d, pal, v2=False):
+    c = dict(P[key]); dd = D[d]; pn, pmode, pv = PAL[pal]; v = V2[key] if v2 else {}
+    hero_cta = c['cta']
+    if v2 and v.get('cta_short'): c['cta'] = v['cta_short']   # midt på siden: kort CTA på én linje; hero viser den fulde på desktop
+    if v.get('hero_clip'): c['hero_clip'] = v['hero_clip']
+    def duo(ks, cls=''):
+        return f'<div class="duo{" one" if len(ks) == 1 else ""} rv">' + ''.join(f'<figure>{simg(k, sizes="(max-width:820px) 92vw, 600px")}</figure>' for k in ks) + '</div>' if ks else ''
     rating = f'<a class="rating" href="{TRUSTPILOT}" target="_blank" rel="noopener">{stars()}<span><b>4,5 ud af 5</b> · 14 anmeldelser på Trustpilot</span></a>'
     heroimg = img(c['hero_img'][0], c['hero_img'][1], sizes='100vw' if dd['hero'] == 'full' else '(max-width:820px) 92vw, 520px', eager=True, w=1600, h=900)
     hk = c['hero_clip']; hclip = CLIPS[hk]; land = hk in LAND
     hvideo = f'<video autoplay muted loop playsinline preload="metadata" poster="{vposter(hk)}" aria-label="{H.escape(hclip[2])}" data-hero width="{1280 if land else 720}" height="{720 if land else 960}"><source src="{vsrc(hk)}" type="video/mp4"></video>'
     copy = f'''<div class="copy rv"><span class="eyebrow">{c["eyebrow"]}</span><h1>{c["h1"]}</h1><p class="sub">{c["sub"]}</p>
-      <div class="cta-row">{cta(c["cta"], sec="hero")}</div>{rating}</div>'''
+      <div class="cta-row">{cta(hero_cta, sec="hero", short=v.get("cta_short", ""))}</div>{rating}</div>'''
     if dd['hero'] == 'split':
         hero = f'<section class="hero hero-split{" land" if land else ""}" id="top"><div class="wrap">{copy}<div class="media rv">{hvideo}</div></div></section>'
     elif dd['hero'] == 'fan':
         f3 = [('acoustic', 'Velkomst'), ('fest', 'Dansegulvet'), ('warm', 'Middag')]
-        if key == 'bryllup': f3 = [('real:h37', 'Velkomst'), ('beach', 'Guitar og sang'), ('real:h128', 'Dansefest')]
+        if key == 'bryllup': f3 = v.get('fan') or [('real:h37', 'Velkomst'), ('beach', 'Guitar og sang'), ('real:h128', 'Dansefest')]
         figs = ''
         for i, (k2, cap) in enumerate(f3):
-            if k2.startswith('real:'):
+            if k2.startswith(('real:', 'p:')):
                 figs += f'<figure>{simg(k2, sizes="280px", eager=i == 0)}<figcaption>{cap}</figcaption></figure>'; continue
             f, poster, alt = CLIPS[k2]
             media = (f'<video autoplay muted loop playsinline preload="metadata" poster="{vposter(k2)}" aria-label="{H.escape(alt)}" width="720" height="960"><source src="{vsrc(k2)}" type="video/mp4"></video>' if i == 1
@@ -707,7 +750,7 @@ def page(key, d, pal):
     introsec = f'''<section class="sec" id="intro"><div class="wrap"><div class="two">
       <div class="stack rv"><p class="big">{intro[0]}</p><p class="lead">{intro[1]}</p><p class="lead">{intro[2]}</p><p class="big" style="color:var(--accentT)">{intro[3]}</p>
       <div class="cta-row full">{cta(c["cta"], sec="intro")}</div></div>
-      <div class="photo rv">{simg(STOCK[key]["intro"]) if dd.get("ed") else img(c["hero_img"][0] if dd["hero"]!="split" else ("beach-duo2" if key=="bryllup" else "studio-a"), "Oscar spiller live", w=1600, h=900)}</div></div></div></section>'''
+      <div class="photo rv">{simg(v["intro"]) if v.get("intro") else simg(STOCK[key]["intro"]) if dd.get("ed") else img(c["hero_img"][0] if dd["hero"]!="split" else ("beach-duo2" if key=="bryllup" else "studio-a"), "Oscar spiller live", w=1600, h=900)}</div></div></div></section>'''
 
     t, a, b = c['s2']
     gal = ''.join(clip(k, cap) for k, cap in c['gallery'])
@@ -721,7 +764,7 @@ def page(key, d, pal):
 
     t, a, q, b, e = c['s3']
     s3 = f'''<section class="sec" id="stemning"><div class="wrap narrow center rv"><h2>{t}</h2><div class="stack">{ps(a, "lead")}
-      <p class="quote">{q}</p>{ps(b, "big")}<p class="lead">{e}</p></div></div></section>'''
+      <p class="quote">{q}</p>{ps(b, "big")}<p class="lead">{e}</p></div>{duo(v.get("s3"))}</div></section>'''
 
     t, a, items, b = c['s4']
     s4 = f'''<section class="sec alt" id="playliste"><div class="wrap"><div class="two">
@@ -745,12 +788,15 @@ def page(key, d, pal):
       <div class="ytgrid rv">{"".join(f'<figure>{yt(i)}<figcaption>{H.escape(YT[i][2])}</figcaption></figure>' for i in range(1, 7))}</div></div></div></section>'''
 
     t, a, q, b = c['s6']
-    s6 = f'''<section class="sec" id="vaelg"><div class="wrap narrow center rv"><h2>{t}</h2><div class="stack">{ps(a, "lead")}<p class="quote">{q}</p><p class="big">{b}</p></div></div></section>'''
+    s6 = f'''<section class="sec" id="vaelg"><div class="wrap narrow center rv"><h2>{t}</h2><div class="stack">{ps(a, "lead")}<p class="quote">{q}</p><p class="big">{b}</p></div>{duo(v.get("s6"))}</div></section>'''
 
     t, stages, b = c['s7']
+    if v.get('flow'): stages = [(n, tx, v['flow'][i] or ph, lv, ll) for i, (n, tx, ph, lv, ll) in enumerate(stages)]
     if dd.get('ed'): stages = [(n, tx, ('s:' + STOCK[key]['flow'][i]) if STOCK[key]['flow'][i] else ph, lv, ll) for i, (n, tx, ph, lv, ll) in enumerate(stages)]
     def flm(ph, n):
         if ph.startswith('s:'): return simg(ph[2:], sizes='(max-width:820px) 92vw, 360px')
+        if ph.startswith('p:'): return simg(ph, sizes='(max-width:820px) 92vw, 360px')
+        if ph.startswith('i:'): return f'<img src="{ph[2:]}" alt="{H.escape(CLIPS["festdans"][2])}" width="1280" height="720" loading="lazy" decoding="async">'
         if ph.startswith('v:'):
             k = ph[2:]; return f'<video muted loop playsinline preload="none" poster="{vposter(k)}" data-src="{vsrc(k)}" aria-label="{H.escape(CLIPS[k][2])}" width="960" height="540"></video>'
         return img(ph, n, widths=(480,), sizes="(max-width:820px) 40vw, 360px", w=480, h=640)
@@ -761,20 +807,25 @@ def page(key, d, pal):
     real = ''
     if key == 'bryllup' and not dd.get('ed'):
         RB = [('h22', 'Velkomst'), ('h24', 'Guitar og sang'), ('h3', 'Borddækningen'), ('h54', 'Live-sæt'), ('h92', 'Dansegulvet'), ('h128', 'Hænderne i vejret'), ('h110', 'Polonæsen'), ('h134', 'DJ til sidste dans')]
-        rf = ''.join(f'<figure class="rb rb{i+1}">{simg("real:" + k, sizes="(max-width:820px) 46vw, 300px")}<figcaption>{cap}</figcaption></figure>' for i, (k, cap) in enumerate(RB))
+        if v.get('real'): RB = v['real']
+        rf = ''.join(f'<figure class="rb rb{i+1}">{simg(("p:" if k.startswith("p") else "real:") + k, sizes="(max-width:820px) 46vw, 300px")}<figcaption>{cap}</figcaption></figure>' for i, (k, cap) in enumerate(RB))
         real = f'''<section class="sec" id="rigtigt"><div class="wrap"><div class="narrow rv"><span class="eyebrow">Fra et rigtigt bryllup</span><h2>Himmelbjerget, oktober 2026</h2></div>
       <div class="rbgrid rv">{rf}</div><div class="cta-row" style="margin-top:26px">{cta(c["cta"], sec="rigtigt")}</div></div></section>'''
 
     sv = ''
     if key == 'bryllup' and STEM:
+        stem = STEM
+        if v2:
+            pos = lambda x: STEM_FIRST.index(x['id']) if x['id'] in STEM_FIRST else (1000 + STEM_LAST.index(x['id']) if x['id'] in STEM_LAST else 100)
+            stem = sorted(STEM, key=pos)   # sorted() er stabil: resten beholder rækkefølgen fra dagen
         fmt = lambda t: f'{t // 60}:{t % 60:02d}'
-        chips = f'<button type="button" class="svc" data-cat="" aria-pressed="true">Alle <span>{len(STEM)}</span></button>' + ''.join(
-            f'<button type="button" class="svc" data-cat="{k}" aria-pressed="false">{v} <span>{sum(1 for x in STEM if x["cat"] == k)}</span></button>' for k, v in STEM_CAT.items() if any(x['cat'] == k for x in STEM))
-        tiles = ''.join(f'<button type="button" class="sv" data-i="{i}" data-cat="{x["cat"]}" data-src="/media/ev/stem/{x["id"]}.mp4" data-lbl="{STEM_CAT[x["cat"]]}" aria-label="Afspil klip {i+1}: {STEM_CAT[x["cat"]]}, {fmt(x["dur"])}"><img src="/media/ev/stem/{x["id"]}.webp" alt="" loading="lazy" decoding="async" width="640" height="360"><i class="svp" aria-hidden="true"></i><b>{fmt(x["dur"])}</b><em>{STEM_CAT[x["cat"]]}</em></button>' for i, x in enumerate(STEM))
+        chips = f'<button type="button" class="svc" data-cat="" aria-pressed="true">Alle <span>{len(stem)}</span></button>' + ''.join(
+            f'<button type="button" class="svc" data-cat="{k}" aria-pressed="false">{v} <span>{sum(1 for x in stem if x["cat"] == k)}</span></button>' for k, v in STEM_CAT.items() if any(x['cat'] == k for x in stem))
+        tiles = ''.join(f'<button type="button" class="sv" data-i="{i}" data-cat="{x["cat"]}" data-src="/media/ev/stem/{x["id"]}.mp4" data-lbl="{STEM_CAT[x["cat"]]}" aria-label="Afspil klip {i+1}: {STEM_CAT[x["cat"]]}, {fmt(x["dur"])}"><img src="/media/ev/stem/{x["id"]}.webp" alt="" loading="lazy" decoding="async" width="640" height="360"><i class="svp" aria-hidden="true"></i><b>{fmt(x["dur"])}</b><em>{STEM_CAT[x["cat"]]}</em></button>' for i, x in enumerate(stem))
         sv = f'''<section class="sec alt" id="stemningsvideo"><div class="wrap"><div class="narrow rv"><span class="eyebrow">Se stemningen</span><h2>Et helt bryllup på Himmelbjerget, i video</h2>
-      <p class="lead">{len(STEM)} klip fra velkomst til sidste dans.</p></div>
+      <p class="lead">{len(stem)} klip fra velkomst til sidste dans.</p></div>
       <div class="svchips" role="group" aria-label="Vis klip fra">{chips}</div><div class="svgrid" id="svgrid">{tiles}</div>
-      <div class="cta-row" style="margin-top:22px"><button type="button" class="btn ghost" id="svMore">Vis alle {len(STEM)} klip</button>{cta(c["cta"], sec="stemningsvideo")}</div></div></section>
+      <div class="cta-row" style="margin-top:22px"><button type="button" class="btn ghost" id="svMore">Vis alle {len(stem)} klip</button>{cta(c["cta"], sec="stemningsvideo")}</div></div></section>
 <div class="vbox" id="vbox" hidden role="dialog" aria-modal="true" aria-label="Videoafspiller"><div class="vb-in"><video id="vbVid" controls playsinline preload="auto"></video>
   <div class="vb-bar"><button type="button" id="vbPrev" aria-label="Forrige klip">‹</button><span id="vbLbl"></span><button type="button" id="vbNext" aria-label="Næste klip">›</button><button type="button" id="vbX" class="vb-x" aria-label="Luk">✕</button></div></div></div>'''
 
@@ -784,7 +835,7 @@ def page(key, d, pal):
       <div class="cta-row center" style="margin-top:28px">{cta(c["cta"], sec="anmeldelser")}</div></div></section>'''
 
     t, a, b = c['s8']
-    s8 = f'''<section class="sec alt" id="vaerdi"><div class="wrap"><div class="two"><div class="photo rv">{simg(STOCK[key]["s8"]) if dd.get("ed") else img("studio-b", "Oscar spiller guitar og synger", w=1600, h=1066)}</div>
+    s8 = f'''<section class="sec alt" id="vaerdi"><div class="wrap"><div class="two"><div class="photo rv">{simg(v["s8"]) if v.get("s8") else simg(STOCK[key]["s8"]) if dd.get("ed") else img("studio-b", "Oscar spiller guitar og synger", w=1600, h=1066)}</div>
       <div class="stack rv"><h2>{t}</h2>{ps(a, "lead")}<p class="big" style="color:var(--accentT)">{b}</p></div></div></div></section>'''
 
     t, a, parts, b = c['s9']
@@ -795,12 +846,12 @@ def page(key, d, pal):
     t, a, items, b = c['s10']
     s10 = f'''<section class="sec alt" id="tilbud"><div class="wrap"><div class="offer rv"><div class="stack"><h2>{t}</h2><p class="lead">{a}</p>
       <ul class="check">{"".join(f"<li>{x}</li>" for x in items)}</ul><p class="big">{b}</p><div class="cta-row full">{cta(c["cta"], sec="tilbud")}</div></div>
-      <div class="photo">{simg(STOCK[key]["offer"]) if (dd.get("ed") and STOCK[key]["offer"]) else img("studio-warm-sq", "Oscar med akustisk guitar", widths=(480, 960), w=1200, h=1200)}</div></div></div></section>'''
+      <div class="photo">{simg(v["offer"], sizes="(max-width:820px) 92vw, 420px") if v.get("offer") else simg(STOCK[key]["offer"]) if (dd.get("ed") and STOCK[key]["offer"]) else img("studio-warm-sq", "Oscar med akustisk guitar", widths=(480, 960), w=1200, h=1200)}</div></div></div></section>'''
 
     t, lines, b, ctal, small = c['s11']
-    s11 = f'''<section class="sec final" id="slut"><div class="bg">{simg(STOCK[key]["final"], sizes="100vw") if dd.get("ed") else img(c["hero_img"][0], "", sizes="100vw", w=1600, h=900)}</div><div class="wrap narrow rv"><h2>{t}</h2>
+    s11 = f'''<section class="sec final" id="slut"><div class="bg">{simg(v["final"], sizes="100vw") if v.get("final") else simg(STOCK[key]["final"], sizes="100vw") if dd.get("ed") else img(c["hero_img"][0], "", sizes="100vw", w=1600, h=900)}</div><div class="wrap narrow rv"><h2>{t}</h2>
       <div class="lines">{"".join(f"<span>{x}</span>" for x in lines)}</div><p class="big" style="color:var(--accentT)">{b}</p>
-      <div class="cta-row" style="justify-content:center;margin-top:26px">{cta(ctal, sec="slut")}</div><p class="lead" style="margin-top:16px">{small}</p></div></section>'''
+      <div class="cta-row" style="justify-content:center;margin-top:26px">{cta(ctal, sec="slut", short=v.get("final_short", ""))}</div><p class="lead" style="margin-top:16px">{small}</p></div></section>'''
 
     cfg = dict(page=key, label=c['label'], title=c['form']['title'], steps=c['form']['steps'])
     pixel = ''
@@ -821,35 +872,37 @@ def page(key, d, pal):
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23C9A46A'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' font-family='Georgia' fill='%2314110E'%3EO%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?{dd["fonts"]}&display=swap">
-<link rel="preload" as="image" href="{vposter(('beach' if key=='bryllup' else 'gigblue') if dd['hero']=='name' else hk) if (dd['hero'] in ('split','fan','name') or land) else '/media/ev/'+c['hero_img'][0]+'-960.webp'}">
+<link rel="preload" as="image" href="{('/media/ev/r2/' + v['fan'][0][0][2:] + '-480.webp') if v.get('fan') else vposter(('beach' if key=='bryllup' else 'gigblue') if dd['hero']=='name' else hk) if (dd['hero'] in ('split','fan','name') or land) else '/media/ev/'+c['hero_img'][0]+'-960.webp'}">
 {pixel}
 <script src="/track.js" async></script>
 <style>:root{{{pv};{dd["vars"]};--scheme:{pmode}}}{CSS}</style>
 </head>
-<body class="dir-{d}{" ed" if dd.get("ed") else ""} pal-{pal}">
+<body class="dir-{d}{" ed" if dd.get("ed") else ""}{" v2" if v2 else ""} pal-{pal}">
 <header class="nav" id="nav"><div class="wrap"><a class="logo" href="#top">Oscar Jønsson<small>Musik</small></a>{cta("Få et tilbud", "sm", sec="nav")}</div></header>
 <main>
 {hero}
 {strip}
 {introsec}
+{sv if v2 else ""}
 {s2}
 {mood}
 {s3}
 {s4}
 {s5}
+{real if v2 else ""}
 {story}
 {music}
 {s6}
 {s7}
-{real}
-{sv}
+{"" if v2 else real}
+{"" if v2 else sv}
 {reviews}
 {s8}
 {s9}
 {s10}
 {s11}
 </main>
-<footer><div class="wrap"><span>© 2026 Oscar Jønsson Musik{' · Stemningsbilleder: <a href="https://unsplash.com/license" target="_blank" rel="noopener">Unsplash</a>' if dd.get('ed') else ''}</span><span>Livemusik og DJ til {"firmafester" if key=="firmafest" else "bryllupper"} i hele Danmark</span></div></footer>
+<footer><div class="wrap">{f'<span class="fc"><a href="mailto:{CONTACT["mail"]}">{CONTACT["mail"]}</a> · <a href="tel:{CONTACT["tel"].replace(" ", "")}">{CONTACT["tel"]}</a> · CVR {CONTACT["cvr"]} · <a href="/privatliv">Privatlivspolitik</a></span>' if v2 else ""}<span>© 2026 Oscar Jønsson Musik{' · Stemningsbilleder: <a href="https://unsplash.com/license" target="_blank" rel="noopener">Unsplash</a>' if dd.get('ed') else ''}</span><span>Livemusik og DJ til {"firmafester" if key=="firmafest" else "bryllupper"} i hele Danmark</span></div></footer>
 <div class="sticky" id="sticky">{cta(c["cta"] if len(c["cta"])<34 else "Få et tilbud", sec="sticky")}</div>
 <div class="fm" id="bkModal" hidden role="dialog" aria-modal="true" aria-labelledby="fmTitle">
   <div class="fm-card"><div class="fm-top"><b id="fmTitle">{c["form"]["title"]}</b><span class="saved" id="fmSaved" hidden>Gemt</span><button type="button" class="fm-x" id="fmX" aria-label="Luk">{X}</button></div>
@@ -867,6 +920,10 @@ for key in P:
             html_ = page(key, d, pal)
             (OUT / f'{key}-{d}-{pal}.html').write_text(html_)
             if pal == dd['pals'][0]: (OUT / f'{key}-{d}.html').write_text(html_)  # standard-farve (gamle links virker)
+
+for key, (d, _) in {'firmafest': ('a', ''), 'bryllup': ('b', '')}.items():
+    for pal in D[d]['pals']:
+        (OUT / f'{key}-{d}-{pal}-v2.html').write_text(page(key, d, pal, v2=True))
 
 # ───────────────────────── live-valg + oversigtsside (/ev/) ─────────────────────────
 LIVE = {'firmafest': ('a', 'messing'), 'bryllup': ('b', 'champagne')}   # ÉN kilde: build.sh kopierer ev/_live-*.html
@@ -886,6 +943,18 @@ for d, dd in D.items():
   <div class="meta"><div class="top"><h3>{d.upper()} · {dd["name"]}</h3><span class="kind">{dd["kind"]}</span></div><p>{dd["note"]}</p>
   <div class="chips" role="group" aria-label="Farver">{chips}</div>
   <div class="act"><a class="b pri open" href="/ev/firmafest-{d}-{p0}">Åbn siden</a><a class="b form" href="/ev/firmafest-{d}-{p0}#form">Se formularen</a></div></div>
+</article>'''
+# Runde 2 (13/10 2026): rettede udgaver af de to live-valg, øverst i oversigten
+r2 = ''
+for key, d in (('bryllup', 'b'), ('firmafest', 'a')):
+    p0 = LIVE[key][1]
+    links = ''.join(f'<a class="ch" href="/ev/{key}-{d}-{p}-v2"><i style="background:linear-gradient(135deg,{chip(p)[0]} 50%,{chip(p)[1]} 50%)"></i><span>{chip(p)[3]}</span></a>' for p in D[d]['pals'])
+    r2 += f'''<article class="card">
+  <a class="shot" href="/ev/{key}-{d}-{p0}-v2"><img class="sd" src="/ev/thumbs/{key}-v2-d.webp" alt="" loading="lazy" width="720" height="450"><img class="sm" src="/ev/thumbs/{key}-v2-m.webp" alt="" loading="lazy" width="195" height="422"><span class="live">Ny · v2</span></a>
+  <div class="meta"><div class="top"><h3>{P[key]["label"]} · {D[d]["name"]} v2</h3><span class="kind">Runde 2</span></div>
+  <p>{"Rigtige bryllupsfotos de rigtige steder, videovæggen lige efter intro med de bedste klip først, kortere knapper, fotos i teksttunge sektioner, kontakt, CVR og privatlivspolitik." if key == "bryllup" else "Nyt hero-klip uden gulv-scenen, polonæse-billede ved Dansegulv, fotos i teksttunge sektioner, dæmpede ikoner, kontakt, CVR og privatlivspolitik."}</p>
+  <div class="chips" role="group" aria-label="Farver">{links}</div>
+  <div class="act"><a class="b pri" href="/ev/{key}-{d}-{p0}-v2">Åbn v2</a><a class="b" href="/{key}">Sammenlign med live</a></div></div>
 </article>'''
 (OUT / 'index.html').write_text(f'''<!doctype html><html lang="da"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
 <title>Oscar Jønsson · Versioner</title><meta name="description" content="Alle versioner og farver af Oscars landingssider til firmafester og bryllupper.">
@@ -922,6 +991,7 @@ h3{{font:400 1.7rem/1.1 "Bodoni Moda",Georgia,serif;margin:0;letter-spacing:-.01
 .chips{{display:flex;flex-wrap:wrap;gap:8px}}
 .ch{{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:6px 12px 6px 7px;border:1px solid var(--line);background:transparent;color:var(--ink);font:500 .85rem Jost,sans-serif;cursor:pointer}}
 .ch i{{width:28px;height:28px;border-radius:50%;border:1px solid var(--line);flex:none}}
+a.ch{{text-decoration:none}}
 .ch[aria-pressed=true]{{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}}
 .act{{display:flex;flex-wrap:wrap;gap:10px;margin-top:auto;padding-top:6px}}
 .b{{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:12px 18px;border:1px solid var(--ink);color:var(--ink);text-decoration:none;font:500 .78rem Jost,sans-serif;letter-spacing:.16em;text-transform:uppercase}}
@@ -932,6 +1002,7 @@ footer{{margin:56px 0 0;padding:22px 0 40px;border-top:1px solid var(--line);col
 <header><h1><small>Oscar Jønsson · Landingssider</small>Versioner &amp; farver</h1>
 <div class="seg" role="group" aria-label="Side"><button type="button" data-page="firmafest" aria-pressed="true">Firmafest</button><button type="button" data-page="bryllup" aria-pressed="false">Bryllup</button></div></header>
 <div class="lives">Live nu: <a href="/firmafest">fuldtbooketmusiker.dk/firmafest</a><a href="/bryllup">fuldtbooketmusiker.dk/bryllup</a></div>
+<h2>Runde 2 · rettet efter gennemgang 13/10</h2><div class="grid">{r2}</div>
 <h2>Performance</h2><div class="grid">{cards["Performance"]}</div>
 <h2>High-end</h2><div class="grid">{cards["High-end"]}</div>
 <footer>Del linket: fuldtbooketmusiker.dk/ev/ · Tryk på en farve for at se versionen i den farve.</footer></div>
@@ -941,7 +1012,7 @@ let page=/bryllup/.test(location.hash)?'bryllup':'firmafest';
 const sel={{}};
 function draw(){{
   document.querySelectorAll('.seg button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.page===page)));
-  document.querySelectorAll('.card').forEach(c=>{{
+  document.querySelectorAll('.card[data-dir]').forEach(c=>{{
     const d=c.dataset.dir, pal=sel[d]||DATA.dirs[d].pals[0][0], base=`/ev/${{page}}-${{d}}-${{pal}}`;
     c.querySelector('.sd').src=`/ev/thumbs/${{page}}-${{d}}-${{pal}}-d.webp`; c.querySelector('.sm').src=`/ev/thumbs/${{page}}-${{d}}-${{pal}}-m.webp`;
     c.querySelector('.shot').href=base; c.querySelector('.open').href=base; c.querySelector('.form').href=base+'#form';

@@ -33,6 +33,7 @@ h3{font:400 1.7rem/1.1 "Bodoni Moda",Georgia,serif;margin:0;letter-spacing:-.01e
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .ch{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:6px 12px 6px 7px;border:1px solid var(--line);background:transparent;color:var(--ink);font:500 .85rem Jost,sans-serif;cursor:pointer}
 .ch i{width:28px;height:28px;border-radius:50%;border:1px solid var(--line);flex:none}
+a.ch{text-decoration:none}
 .ch[aria-pressed=true]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
 .act{display:flex;flex-wrap:wrap;gap:10px;margin-top:auto;padding-top:6px}
 .b{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:12px 18px;border:1px solid var(--ink);color:var(--ink);text-decoration:none;font:500 .78rem Jost,sans-serif;letter-spacing:.16em;text-transform:uppercase}
@@ -43,6 +44,19 @@ footer{margin:56px 0 0;padding:22px 0 40px;border-top:1px solid var(--line);colo
 <header><h1><small>Oscar Jønsson · Landingssider</small>Versioner &amp; farver</h1>
 <div class="seg" role="group" aria-label="Side"><button type="button" data-page="firmafest" aria-pressed="true">Firmafest</button><button type="button" data-page="bryllup" aria-pressed="false">Bryllup</button></div></header>
 <div class="lives">Live nu: <a href="/firmafest">fuldtbooketmusiker.dk/firmafest</a><a href="/bryllup">fuldtbooketmusiker.dk/bryllup</a></div>
+<h2>Runde 2 · rettet efter gennemgang 13/10</h2><div class="grid"><article class="card">
+  <a class="shot" href="/ev/bryllup-b-champagne-v2"><img class="sd" src="/ev/thumbs/bryllup-v2-d.webp" alt="" loading="lazy" width="720" height="450"><img class="sm" src="/ev/thumbs/bryllup-v2-m.webp" alt="" loading="lazy" width="195" height="422"><span class="live">Ny · v2</span></a>
+  <div class="meta"><div class="top"><h3>Bryllup · Champagne v2</h3><span class="kind">Runde 2</span></div>
+  <p>Rigtige bryllupsfotos de rigtige steder, videovæggen lige efter intro med de bedste klip først, kortere knapper, fotos i teksttunge sektioner, kontakt, CVR og privatlivspolitik.</p>
+  <div class="chips" role="group" aria-label="Farver"><a class="ch" href="/ev/bryllup-b-champagne-v2"><i style="background:linear-gradient(135deg,#F6F1E8 50%,#7E5F35 50%)"></i><span>Champagne</span></a><a class="ch" href="/ev/bryllup-b-salvie-v2"><i style="background:linear-gradient(135deg,#FAF8F3 50%,#55644E 50%)"></i><span>Elfenben & salvie</span></a><a class="ch" href="/ev/bryllup-b-sten-v2"><i style="background:linear-gradient(135deg,#F3F4F6 50%,#2B3542 50%)"></i><span>Sten & blågrå</span></a><a class="ch" href="/ev/bryllup-b-hvid-v2"><i style="background:linear-gradient(135deg,#FFFFFF 50%,#111111 50%)"></i><span>Hvid</span></a></div>
+  <div class="act"><a class="b pri" href="/ev/bryllup-b-champagne-v2">Åbn v2</a><a class="b" href="/bryllup">Sammenlign med live</a></div></div>
+</article><article class="card">
+  <a class="shot" href="/ev/firmafest-a-messing-v2"><img class="sd" src="/ev/thumbs/firmafest-v2-d.webp" alt="" loading="lazy" width="720" height="450"><img class="sm" src="/ev/thumbs/firmafest-v2-m.webp" alt="" loading="lazy" width="195" height="422"><span class="live">Ny · v2</span></a>
+  <div class="meta"><div class="top"><h3>Firmafest · Aftenlys v2</h3><span class="kind">Runde 2</span></div>
+  <p>Nyt hero-klip uden gulv-scenen, polonæse-billede ved Dansegulv, fotos i teksttunge sektioner, dæmpede ikoner, kontakt, CVR og privatlivspolitik.</p>
+  <div class="chips" role="group" aria-label="Farver"><a class="ch" href="/ev/firmafest-a-messing-v2"><i style="background:linear-gradient(135deg,#14110E 50%,#C9A46A 50%)"></i><span>Messing</span></a><a class="ch" href="/ev/firmafest-a-kul-v2"><i style="background:linear-gradient(135deg,#121417 50%,#C9CED6 50%)"></i><span>Kul & sølv</span></a><a class="ch" href="/ev/firmafest-a-bordeaux-v2"><i style="background:linear-gradient(135deg,#170D10 50%,#D9A88A 50%)"></i><span>Bordeaux</span></a><a class="ch" href="/ev/firmafest-a-skov-v2"><i style="background:linear-gradient(135deg,#0F1512 50%,#C8A962 50%)"></i><span>Skovgrøn & messing</span></a></div>
+  <div class="act"><a class="b pri" href="/ev/firmafest-a-messing-v2">Åbn v2</a><a class="b" href="/firmafest">Sammenlign med live</a></div></div>
+</article></div>
 <h2>Performance</h2><div class="grid"><article class="card" data-dir="a">
   <a class="shot" href="/ev/firmafest-a-messing"><img class="sd" src="/ev/thumbs/firmafest-a-messing-d.webp" alt="" loading="lazy" width="720" height="450"><img class="sm" src="/ev/thumbs/firmafest-a-messing-m.webp" alt="" loading="lazy" width="195" height="422"><span class="live" hidden>Live nu</span></a>
   <div class="meta"><div class="top"><h3>A · Aftenlys</h3><span class="kind">Performance</span></div><p>Mørk og varm. Split-hero med video, kort, tal og CTA overalt. Cormorant + Manrope.</p>
@@ -77,7 +91,7 @@ let page=/bryllup/.test(location.hash)?'bryllup':'firmafest';
 const sel={};
 function draw(){
   document.querySelectorAll('.seg button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.page===page)));
-  document.querySelectorAll('.card').forEach(c=>{
+  document.querySelectorAll('.card[data-dir]').forEach(c=>{
     const d=c.dataset.dir, pal=sel[d]||DATA.dirs[d].pals[0][0], base=`/ev/${page}-${d}-${pal}`;
     c.querySelector('.sd').src=`/ev/thumbs/${page}-${d}-${pal}-d.webp`; c.querySelector('.sm').src=`/ev/thumbs/${page}-${d}-${pal}-m.webp`;
     c.querySelector('.shot').href=base; c.querySelector('.open').href=base; c.querySelector('.form').href=base+'#form';
