@@ -255,6 +255,10 @@ PAL = {
  'hvid':     ('Hvid', 'light', '--bg:#FFFFFF;--bg2:#F6F5F2;--card:#FFFFFF;--ink:#111111;--ink2:#444444;--mute:#6B6B6B;--line:rgba(17,17,17,.13);--accent:#111111;--accentT:#111111;--onaccent:#FFFFFF'),
  'mono':     ('Monokrom', 'light', '--bg:#FAFAF8;--bg2:#F1F1EE;--card:#FFFFFF;--ink:#0E0E0E;--ink2:#3F3F3F;--mute:#696969;--line:rgba(14,14,14,.13);--accent:#0E0E0E;--accentT:#0E0E0E;--onaccent:#FFFFFF;--imgfilter:grayscale(1) contrast(1.04)'),
  'salvie':   ('Elfenben & salvie', 'light', '--bg:#FAF8F3;--bg2:#F0EEE6;--card:#FFFFFF;--ink:#1D211C;--ink2:#4A5047;--mute:#6A7066;--line:rgba(29,33,28,.12);--accent:#55644E;--accentT:#4A5844;--onaccent:#FFFFFF'),
+ 'midnat':   ('Midnat & guld', 'dark', '--bg:#0E1220;--bg2:#131829;--card:#1A2034;--ink:#EEF0F6;--ink2:#C1C6D4;--mute:#939AAD;--line:rgba(238,240,246,.12);--accent:#CDB079;--accentT:#D8BE8C;--onaccent:#121524'),
+ 'espresso': ('Espresso & kobber', 'dark', '--bg:#16100C;--bg2:#1D1611;--card:#251C16;--ink:#F3EBE3;--ink2:#CDBFB1;--mute:#A08F80;--line:rgba(243,235,227,.12);--accent:#C98A5E;--accentT:#D79C72;--onaccent:#1A100A'),
+ 'blush':    ('Blush & bordeaux', 'light', '--bg:#F8F0EE;--bg2:#F1E4E1;--card:#FFFBFA;--ink:#24171A;--ink2:#523F42;--mute:#735E61;--line:rgba(36,23,26,.12);--accent:#7A2E3B;--accentT:#7A2E3B;--onaccent:#FFF8F6'),
+ 'sand':     ('Sand & terrakotta', 'light', '--bg:#F4EEE6;--bg2:#ECE3D7;--card:#FFFCF8;--ink:#221B16;--ink2:#51463D;--mute:#6F6357;--line:rgba(34,27,22,.12);--accent:#9A4F2F;--accentT:#8F4829;--onaccent:#FFF9F4'),
  'sten':     ('Sten & blågrå', 'light', '--bg:#F3F4F6;--bg2:#E8EBEF;--card:#FFFFFF;--ink:#1A1D22;--ink2:#474D57;--mute:#646A74;--line:rgba(26,29,34,.12);--accent:#2B3542;--accentT:#2B3542;--onaccent:#FFFFFF'),
 }
 
@@ -883,6 +887,7 @@ def page(key, d, pal, v2=False):
 {hero}
 {strip}
 {introsec}
+{reviews if v2 else ""}
 {sv if v2 else ""}
 {s2}
 {mood}
@@ -896,7 +901,7 @@ def page(key, d, pal, v2=False):
 {s7}
 {"" if v2 else real}
 {"" if v2 else sv}
-{reviews}
+{"" if v2 else reviews}
 {s8}
 {s9}
 {s10}
@@ -922,7 +927,7 @@ for key in P:
             if pal == dd['pals'][0]: (OUT / f'{key}-{d}.html').write_text(html_)  # standard-farve (gamle links virker)
 
 for key, (d, _) in {'firmafest': ('a', ''), 'bryllup': ('b', '')}.items():
-    for pal in D[d]['pals']:
+    for pal in PAL:   # v2 i ALLE farver (kundevalg på /ev/farver)
         (OUT / f'{key}-{d}-{pal}-v2.html').write_text(page(key, d, pal, v2=True))
 
 # ───────────────────────── live-valg + oversigtsside (/ev/) ─────────────────────────
@@ -948,7 +953,7 @@ for d, dd in D.items():
 r2 = ''
 for key, d in (('bryllup', 'b'), ('firmafest', 'a')):
     p0 = LIVE[key][1]
-    links = ''.join(f'<a class="ch" href="/ev/{key}-{d}-{p}-v2"><i style="background:linear-gradient(135deg,{chip(p)[0]} 50%,{chip(p)[1]} 50%)"></i><span>{chip(p)[3]}</span></a>' for p in D[d]['pals'])
+    links = ''.join(f'<a class="ch" href="/ev/{key}-{d}-{p}-v2"><i style="background:linear-gradient(135deg,{chip(p)[0]} 50%,{chip(p)[1]} 50%)"></i><span>{chip(p)[3]}</span></a>' for p in PAL)
     r2 += f'''<article class="card">
   <a class="shot" href="/ev/{key}-{d}-{p0}-v2"><img class="sd" src="/ev/thumbs/{key}-v2-d.webp" alt="" loading="lazy" width="720" height="450"><img class="sm" src="/ev/thumbs/{key}-v2-m.webp" alt="" loading="lazy" width="195" height="422"><span class="live">Ny · v2</span></a>
   <div class="meta"><div class="top"><h3>{P[key]["label"]} · {D[d]["name"]} v2</h3><span class="kind">Runde 2</span></div>
@@ -1002,7 +1007,7 @@ footer{{margin:56px 0 0;padding:22px 0 40px;border-top:1px solid var(--line);col
 <header><h1><small>Oscar Jønsson · Landingssider</small>Versioner &amp; farver</h1>
 <div class="seg" role="group" aria-label="Side"><button type="button" data-page="firmafest" aria-pressed="true">Firmafest</button><button type="button" data-page="bryllup" aria-pressed="false">Bryllup</button></div></header>
 <div class="lives">Live nu: <a href="/firmafest">fuldtbooketmusiker.dk/firmafest</a><a href="/bryllup">fuldtbooketmusiker.dk/bryllup</a></div>
-<h2>Runde 2 · rettet efter gennemgang 13/10</h2><div class="grid">{r2}</div>
+<h2>Runde 2 · rettet efter gennemgang 13/10</h2><p style="margin:0 0 18px;color:var(--ink2)">Til kunden (v2 i alle {len(PAL)} farver, uden interne mærker): <a href="/ev/farver" style="color:var(--ink)">fuldtbooketmusiker.dk/ev/farver</a></p><div class="grid">{r2}</div>
 <h2>Performance</h2><div class="grid">{cards["Performance"]}</div>
 <h2>High-end</h2><div class="grid">{cards["High-end"]}</div>
 <footer>Del linket: fuldtbooketmusiker.dk/ev/ · Tryk på en farve for at se versionen i den farve.</footer></div>
@@ -1025,4 +1030,59 @@ document.querySelectorAll('.ch').forEach(b=>b.onclick=()=>{{sel[b.closest('.card
 draw();
 </script></body></html>''')
 (OUT / 'temaer.html').write_text('<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=/ev/"><link rel="canonical" href="/ev/"><title>Versioner</title><a href="/ev/">Versioner</a>')
+# ───────────────────────── kundeside: /ev/farver (v2 i alle farver, uden interne mærker) ─────────────────────────
+V2DIR = {'bryllup': 'b', 'firmafest': 'a'}
+def fcard(key, pal):
+    bg, ac, ink, name = chip(pal); d = V2DIR[key]; u = f'/ev/{key}-{d}-{pal}-v2'
+    return (f'<article class="fc" data-page="{key}"><a class="shot" href="{u}" target="_blank" rel="noopener">'
+            f'<img class="sd" src="/ev/thumbs/v2-{key}-{pal}-d.webp" alt="{key.capitalize()} i farven {name}" loading="lazy" width="720" height="450">'
+            f'<img class="sm" src="/ev/thumbs/v2-{key}-{pal}-m.webp" alt="" loading="lazy" width="195" height="422"></a>'
+            f'<div class="meta"><i style="background:linear-gradient(135deg,{bg} 50%,{ac} 50%)"></i><h3>{name}</h3><a class="b" href="{u}" target="_blank" rel="noopener">Se siden</a></div></article>')
+groups = ''
+for key in ('bryllup', 'firmafest'):
+    for mode, lbl in (('light', 'Lyse'), ('dark', 'Mørke')):
+        cards_ = ''.join(fcard(key, pal) for pal, (n, m, _) in PAL.items() if m == mode)
+        groups += f'<section class="grp" data-page="{key}"{"" if key == "bryllup" else " hidden"}><h2>{lbl} farver</h2><div class="grid">{cards_}</div></section>'
+(OUT / 'farver.html').write_text(f"""<!doctype html><html lang="da"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>Oscar Jønsson · Farver</title><meta name="description" content="Se Oscar Jønssons sider til bryllupper og firmafester i {len(PAL)} farver.">
+<meta property="og:title" content="Oscar Jønsson · Vælg farve"><meta property="og:description" content="Se siderne til bryllup og firmafest i {len(PAL)} farver."><meta property="og:image" content="https://fuldtbooketmusiker.dk/ev/thumbs/v2-bryllup-champagne-d.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap">
+<style>
+:root{{--bg:#F6F1E8;--card:#FFFDF9;--ink:#1F1A15;--ink2:#4E463D;--mute:#6E655A;--line:rgba(31,26,21,.12);--accent:#7E5F35}}
+@media (prefers-color-scheme:dark){{:root:not([data-theme=light]){{--bg:#14110E;--card:#1C1814;--ink:#F4EEE5;--ink2:#C9BFB2;--mute:#9C9184;--line:rgba(244,238,229,.13);--accent:#D8B67E}}}}
+*{{box-sizing:border-box}}body{{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "DM Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased}}
+.wrap{{width:min(1240px,100% - 32px);margin:auto}}
+header{{padding:clamp(40px,7vw,80px) 0 22px;display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:22px;border-bottom:1px solid var(--line)}}
+.eb{{display:block;font-size:.85rem;letter-spacing:.24em;text-transform:uppercase;color:var(--ink2);margin-bottom:14px}}
+h1{{font:400 clamp(2.6rem,7vw,4.8rem)/.95 "Instrument Serif",Georgia,serif;margin:0;letter-spacing:-.01em}}
+h1 em{{color:var(--accent)}}
+.intro{{max-width:560px;color:var(--ink2);margin:14px 0 0}}
+.seg{{display:inline-flex;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px}}
+.seg button{{font:600 .95rem "DM Sans",sans-serif;padding:12px 24px;min-height:46px;border:0;border-radius:999px;background:transparent;color:var(--ink);cursor:pointer}}
+.seg button[aria-pressed=true]{{background:var(--ink);color:var(--bg)}}
+h2{{font:500 .85rem "DM Sans",sans-serif;letter-spacing:.22em;text-transform:uppercase;color:var(--ink2);margin:44px 0 16px;display:flex;align-items:center;gap:14px}}
+h2::after{{content:"";flex:1;height:1px;background:var(--line)}}
+.grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,290px),1fr));gap:20px}}
+.fc{{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}}
+.shot{{position:relative;display:block;aspect-ratio:16/10;overflow:hidden;background:#000}}
+.shot .sd{{width:100%;height:100%;object-fit:cover;object-position:top;display:block;transition:transform .5s}}
+@media (hover:hover){{.shot:hover .sd{{transform:scale(1.03)}}}}
+.shot .sm{{position:absolute;right:10px;bottom:-30%;width:26%;height:auto;border:3px solid #fff;border-radius:6px;box-shadow:0 14px 30px -10px rgba(0,0,0,.55)}}
+.meta{{display:flex;align-items:center;gap:12px;padding:14px 16px}}
+.meta i{{width:30px;height:30px;border-radius:50%;border:1px solid var(--line);flex:none}}
+h3{{font:400 1.45rem/1.1 "Instrument Serif",Georgia,serif;margin:0;flex:1}}
+.b{{display:inline-flex;align-items:center;min-height:44px;padding:10px 18px;border-radius:999px;background:var(--ink);color:var(--bg);text-decoration:none;font-weight:600;font-size:.92rem;white-space:nowrap}}
+footer{{margin:56px 0 0;padding:22px 0 40px;border-top:1px solid var(--line);color:var(--mute);font-size:.92rem}}
+</style></head><body><div class="wrap">
+<header><div><span class="eb">Oscar Jønsson · Livemusik &amp; DJ</span><h1>Vælg en <em>farve</em></h1>
+<p class="intro">Samme side i {len(PAL)} farver. Tryk på en farve for at se hele siden, også på mobilen.</p></div>
+<div class="seg" role="group" aria-label="Side"><button type="button" data-page="bryllup" aria-pressed="true">Bryllup</button><button type="button" data-page="firmafest" aria-pressed="false">Firmafest</button></div></header>
+{groups}
+<footer>Oscar Jønsson Musik · booking@oscartjoensson.dk</footer></div>
+<script>
+function show(pg){{document.querySelectorAll('.seg button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.page===pg)));document.querySelectorAll('.grp').forEach(g=>g.hidden=g.dataset.page!==pg);try{{history.replaceState(null,'','#'+pg)}}catch(e){{}}}}
+document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>show(b.dataset.page));
+if(location.hash==='#firmafest')show('firmafest');
+</script></body></html>""")
 print('ev/: ' + ' '.join(sorted(p.name for p in OUT.iterdir())))
