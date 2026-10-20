@@ -87,6 +87,8 @@ STEM_FIRST = ['film', 'c0197', 'c0170', 'c0199', 'c0192', 'c0187', 'c0182', 'c02
 STEM_LAST = ['c0194', 'c0165', 'c0153', 'c0168', 'c0161']
 CONTACT = dict(mail='booking@oscartjoensson.dk', tel='+45 28 56 98 12', cvr='43415352', firma='Joensson Agency')
 _SL = ROOT / 'media/ev/stem/list.json'
+STEM_V = '?g=2'   # bump ved ny udgave af klippene (20/10 2026: S-Log3-originaler gradet pr. klip), så browser-cache (1 døgn) ikke viser de gamle
+
 STEM = json.load(open(_SL)) if _SL.exists() else []   # stemningsvideoer fra bryllup på Himmelbjerget (Frame.io, farvekorrigeret, 720p)
 STEM_CAT = {'sted': 'Stedet', 'velkomst': 'Velkomst', 'aften': 'Aftenen', 'fest': 'Dansegulvet'}
 REAL = json.load(open(ROOT / 'media/ev/real/meta.json'))   # Oscars egne fotos fra bryllup på Himmelbjerget 3/10 2026 (Frame.io)
@@ -825,7 +827,7 @@ def page(key, d, pal, v2=False):
         fmt = lambda t: f'{t // 60}:{t % 60:02d}'
         chips = f'<button type="button" class="svc" data-cat="" aria-pressed="true">Alle <span>{len(stem)}</span></button>' + ''.join(
             f'<button type="button" class="svc" data-cat="{k}" aria-pressed="false">{v} <span>{sum(1 for x in stem if x["cat"] == k)}</span></button>' for k, v in STEM_CAT.items() if any(x['cat'] == k for x in stem))
-        tiles = ''.join(f'<button type="button" class="sv" data-i="{i}" data-cat="{x["cat"]}" data-src="/media/ev/stem/{x["id"]}.mp4" data-lbl="{STEM_CAT[x["cat"]]}" aria-label="Afspil klip {i+1}: {STEM_CAT[x["cat"]]}, {fmt(x["dur"])}"><img src="/media/ev/stem/{x["id"]}.webp" alt="" loading="lazy" decoding="async" width="640" height="360"><i class="svp" aria-hidden="true"></i><b>{fmt(x["dur"])}</b><em>{STEM_CAT[x["cat"]]}</em></button>' for i, x in enumerate(stem))
+        tiles = ''.join(f'<button type="button" class="sv" data-i="{i}" data-cat="{x["cat"]}" data-src="/media/ev/stem/{x["id"]}.mp4{STEM_V}" data-lbl="{STEM_CAT[x["cat"]]}" aria-label="Afspil klip {i+1}: {STEM_CAT[x["cat"]]}, {fmt(x["dur"])}"><img src="/media/ev/stem/{x["id"]}.webp{STEM_V}" alt="" loading="lazy" decoding="async" width="640" height="360"><i class="svp" aria-hidden="true"></i><b>{fmt(x["dur"])}</b><em>{STEM_CAT[x["cat"]]}</em></button>' for i, x in enumerate(stem))
         sv = f'''<section class="sec alt" id="stemningsvideo"><div class="wrap"><div class="narrow rv"><span class="eyebrow">Se stemningen</span><h2>Et helt bryllup på Himmelbjerget, i video</h2>
       <p class="lead">{len(stem)} klip fra velkomst til sidste dans.</p></div>
       <div class="svchips" role="group" aria-label="Vis klip fra">{chips}</div><div class="svgrid" id="svgrid">{tiles}</div>
