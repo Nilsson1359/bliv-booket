@@ -87,7 +87,7 @@ STEM_FIRST = ['film', 'c0197', 'c0170', 'c0199', 'c0192', 'c0187', 'c0182', 'c02
 STEM_LAST = ['c0194', 'c0165', 'c0153', 'c0168', 'c0161']
 CONTACT = dict(mail='booking@oscartjoensson.dk', tel='+45 28 56 98 12', cvr='43415352', firma='Joensson Agency')
 _SL = ROOT / 'media/ev/stem/list.json'
-STEM_V = '?g=2'   # bump ved ny udgave af klippene (20/10 2026: S-Log3-originaler gradet pr. klip), så browser-cache (1 døgn) ikke viser de gamle
+STEM_V = '?g=3'   # bump ved ny udgave af klippene (20/10 2026: S-Log3-originaler gradet pr. klip, runde 2 m. højlys-knæ + skyggeløft), så browser-cache (1 døgn) ikke viser de gamle
 
 STEM = json.load(open(_SL)) if _SL.exists() else []   # stemningsvideoer fra bryllup på Himmelbjerget (Frame.io, farvekorrigeret, 720p)
 STEM_CAT = {'sted': 'Stedet', 'velkomst': 'Velkomst', 'aften': 'Aftenen', 'fest': 'Dansegulvet'}

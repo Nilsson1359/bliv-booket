@@ -19,10 +19,18 @@ lin=lin*np.array([1+warm-tint*0.5,1-tint,1-warm-tint*0.5])
 Y=np.einsum('nj,j->n',lin,np.array([0.2126,0.7152,0.0722]))[:,None]
 # mætning: lidt mindre i de lyse og mørkeste toner, så hud og lys ikke bliver neon
 lin=np.maximum(Y+(lin-Y)*sat,0)
+# højlys-knæ: luminans over `knee` (lineær) presses blødt sammen, farvetone bevares (vinduer/markise brænder ikke ud)
+knee=p.get('knee',0.7); ks=p.get('ks',1.5)
+Y=np.einsum('nj,j->n',lin,np.array([0.2126,0.7152,0.0722]))
+Yc=np.where(Y>knee,knee+(Y-knee)/(1+(Y-knee)/ks),Y)
+lin=lin*(Yc/np.maximum(Y,1e-9))[:,None]
 a,b2,c,d,e=2.51,0.03,2.43,0.59,0.14
 x=lin*pre
 t=np.clip((x*(a*x+b2))/(x*(c*x+d)+e),0,1)
 t=lift+(1-lift)*t
+# skyggeløft: hæver mørke mellemtoner uden at gøre sort grå (0 og 1 står fast)
+sh=p.get('shadow',0.0)
+t=t+sh*t*(1-t)**3*4
 o=np.where(t<0.018,4.5*t,1.099*np.power(t,0.45)-0.099)
 with open(out,'w') as f:
     f.write(f'LUT_3D_SIZE {N}\n'); f.write('\n'.join(f'{v[0]:.5f} {v[1]:.5f} {v[2]:.5f}' for v in o)+'\n')

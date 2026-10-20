@@ -17,4 +17,9 @@ ffmpeg -i <original-url> -i media/ev/stem/cXXXX.mp4 -map 0:v:0 -map 1:a:0 \
   -vf "setparams=range=pc,scale=1280:720:in_range=pc:out_range=pc:flags=lanczos,format=rgb48le,lut3d=CXXXX.cube:interp=tetrahedral,scale=out_color_matrix=bt709:out_range=tv,format=yuv420p" \
   -c:v libx264 -preset slow -crf 22 -maxrate 1800k -bufsize 3600k -colorspace bt709 -color_primaries bt709 -color_trc bt709 -c:a copy -movflags +faststart cxxxx.mp4
 ```
+Runde 2 (samme dag): `knee`/`ks` = blødt højlys-knæ i lineær luminans (vinduer/markise brænder ikke ud, målt 0 % udbrændt),
+`shadow` = skyggeløft (0.05 dag, 0.10 aften), modlys-klip (C0161/62/63/67/70/72/78/79/82) får mere eksponering og knæ 0.5,
+aftenklip `dn` = hqdn3d + maxrate 1500k. `render.py` laver LUT + render af alle klip, `qa.py` måler hele længden
+(udbrændt/knust/spring/middel). Signerede Frame.io-URL'er (files.json) er ikke i git; hent nye via sharet.
+
 Plakatbilleder (`.webp`, 640x360) tages fra det nye klip ved 2,5 s. Bump `STEM_V` i gen_events.py ved ny udgave.
