@@ -590,10 +590,14 @@ async function ghlBook(env, lead, startMs, endMs) {
     title: `Samtale: ${LEAD_PAGES[lead.page]} · ${lead.name || lead.email || lead.phone}`, appointmentStatus: 'confirmed', toNotify: true,
   });
   const apptId = appt.id || (appt.appointment && appt.appointment.id) || '';
+  // Google Meet-link: GHL lægger det i aftalens address (nogle gange først et øjeblik efter oprettelsen)
+  const meetOf = a => { const u = String((a && (a.address || (a.appointment && a.appointment.address))) || ''); return /^https:\/\/meet\.google\.com\/[a-z-]+$/.test(u) ? u : ''; };
+  let meet = meetOf(appt);
+  if (!meet && apptId) meet = meetOf(await ghl(env, 'GET', `/calendars/events/appointments/${apptId}`, '2021-04-15').catch(() => null));
   let ans = {}; try { ans = JSON.parse(lead.answers_json || '{}'); } catch { }
   const note = [`Fra fuldtbooketmusiker.dk/${lead.page} (${LEAD_PAGES[lead.page]})`, ...Object.entries(ans).filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`)].join('\n');
   await ghl(env, 'POST', `/contacts/${contactId}/notes`, '2021-07-28', { body: note }).catch(e => console.log('ghl note fejl', e.message));
-  return { contactId, apptId };
+  return { contactId, apptId, meet };
 }
 async function handleBook(request, env, ctx) {
   if (!env.DB) return json({ error: 'no db' }, 503);
@@ -631,8 +635,8 @@ async function handleBook(request, env, ctx) {
   let source = 'fallback', ghlErr = '';
   if (ghlOn(env, lead.page)) {
     try {
-      const { contactId, apptId } = await ghlBook(env, lead, startMs, endMs);
-      await env.DB.prepare('UPDATE leads SET ghl_contact_id = ?, ghl_appt_id = ? WHERE id = ?').bind(contactId, apptId, lid).run();
+      const { contactId, apptId, meet } = await ghlBook(env, lead, startMs, endMs);
+      await env.DB.prepare('UPDATE leads SET ghl_contact_id = ?, ghl_appt_id = ?, meet_url = ? WHERE id = ?').bind(contactId, apptId, meet || '', lid).run();
       source = 'ghl';
     } catch (e) { ghlErr = str(e && e.message || e, 300); }
   }
@@ -703,7 +707,7 @@ const READ_LID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-
 async function bookedLead(env, url) {
   const lid = String(url.searchParams.get('lid') || ''), gig = OSCAR_HOSTS[url.hostname];
   if (!env.DB || !gig || !READ_LID_RE.test(lid)) return null;
-  const l = await env.DB.prepare('SELECT id, page, name, booked_start, booked_end FROM leads WHERE id = ? AND booked_start > ?').bind(lid, Date.now() - 3 * 86400000).first();
+  const l = await env.DB.prepare('SELECT id, page, name, booked_start, booked_end, meet_url FROM leads WHERE id = ? AND booked_start > ?').bind(lid, Date.now() - 3 * 86400000).first();
   if (!l || !l.booked_start || l.page !== gig) return null;
   return l;
 }
@@ -711,7 +715,7 @@ async function handleBooking(env, url) {
   const l = await bookedLead(env, url);
   if (!l) return json({ error: 'not found' }, 404);
   const end = l.booked_end || l.booked_start + 30 * 60000;
-  return new Response(JSON.stringify({ page: l.page, first: (l.name || '').trim().split(/\s+/)[0] || '', start: isoCph(l.booked_start), end: isoCph(end), min: Math.round((end - l.booked_start) / 60000) }),
+  return new Response(JSON.stringify({ page: l.page, first: (l.name || '').trim().split(/\s+/)[0] || '', start: isoCph(l.booked_start), end: isoCph(end), min: Math.round((end - l.booked_start) / 60000), meet: l.meet_url || '' }),
     { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'private, no-store' } });
 }
 async function handleIcs(env, url) {
@@ -723,9 +727,10 @@ async function handleIcs(env, url) {
   const what = l.page === 'bryllup' ? 'jeres bryllup' : l.page === 'firmafest' ? 'jeres firmafest' : 'jeres fest';
   const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Oscar Jonsson Musik//DA', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'BEGIN:VEVENT',
     `UID:${l.id}@oscartjoensson.dk`, `DTSTAMP:${z(Date.now())}`, `DTSTART:${z(l.booked_start)}`, `DTEND:${z(end)}`,
-    `SUMMARY:${esc('Snak med Oscar Jønsson om musikken')}`,
-    `DESCRIPTION:${esc(`Oscar ringer dig op og hører om ${what}.`)}`,
-    'BEGIN:VALARM', 'TRIGGER:-PT15M', 'ACTION:DISPLAY', `DESCRIPTION:${esc('Snak med Oscar om 15 min')}`, 'END:VALARM',
+    `SUMMARY:${esc('Videomøde med Oscar Jønsson om musikken')}`,
+    ...(l.meet_url ? [`LOCATION:${esc(l.meet_url)}`, `URL:${l.meet_url}`] : []),
+    `DESCRIPTION:${esc(`Videomøde på Google Meet om musikken til ${what}.\n` + (l.meet_url ? `Deltag: ${l.meet_url}` : 'Linket står i jeres bekræftelsesmail.'))}`,
+    'BEGIN:VALARM', 'TRIGGER:-PT15M', 'ACTION:DISPLAY', `DESCRIPTION:${esc('Videomøde med Oscar om 15 min')}`, 'END:VALARM',
     'END:VEVENT', 'END:VCALENDAR'].join('\r\n') + '\r\n';
   return new Response(ics, { headers: { 'Content-Type': 'text/calendar; charset=utf-8', 'Content-Disposition': 'inline; filename="snak-med-oscar.ics"', 'Cache-Control': 'private, no-store' } });
 }

@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS leads (
   name TEXT NOT NULL DEFAULT '', email TEXT NOT NULL DEFAULT '', phone TEXT NOT NULL DEFAULT '',
   answers_json TEXT NOT NULL DEFAULT '{}',
   step INTEGER NOT NULL DEFAULT 0, done INTEGER NOT NULL DEFAULT 0,
-  booked_start INTEGER, booked_end INTEGER, booked_ip TEXT,
+  booked_start INTEGER, booked_end INTEGER, booked_ip TEXT, meet_url TEXT,
   ghl_contact_id TEXT, ghl_appt_id TEXT,
   src_json TEXT NOT NULL DEFAULT '{}', vid TEXT, sid TEXT,
   ip TEXT, city TEXT, country TEXT,
@@ -40,3 +40,5 @@ CREATE INDEX IF NOT EXISTS idx_leads_ip ON leads(ip, created_ts);
 -- 8/10: booked_ip = IP der faktisk bookede (misbrugs-værn tæller på den). Eksisterende DB'er fik den én gang via:
 --   ALTER TABLE leads ADD COLUMN booked_ip TEXT;
 CREATE INDEX IF NOT EXISTS idx_leads_booked_ip ON leads(booked_ip, booked_start);
+-- 21/10: meet_url = Google Meet-link fra GHL-aftalen (vises på tak-siden og i kalenderfilen). Eksisterende DB fik den via:
+--   ALTER TABLE leads ADD COLUMN meet_url TEXT;

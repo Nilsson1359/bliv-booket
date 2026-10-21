@@ -964,8 +964,9 @@ var show=function(d){
  var st=new Date(d.start),en=d.end?new Date(d.end):new Date(st.getTime()+30*60000),min=Math.round((en-st)/60000);
  var day=st.toLocaleDateString('da-DK',{weekday:'long',day:'numeric',month:'long',timeZone:tz}),tm=st.toLocaleTimeString('da-DK',{hour:'2-digit',minute:'2-digit',timeZone:tz});
  $('#tkWhenB').textContent=day.charAt(0).toUpperCase()+day.slice(1)+' kl. '+tm;
- $('#tkWhenS').textContent='Ca. '+min+' min · Oscar ringer dig op';
- var z=function(x){return x.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'')},title='Snak med Oscar Jønsson om musikken',det='Oscar ringer dig op og hører om '+(page==='bryllup'?'jeres bryllup':'jeres firmafest')+'.';
+ $('#tkWhenS').textContent='Ca. '+min+' min · Videomøde på Google Meet';
+ if(d.meet&&/^https:\/\/meet\.google\.com\//.test(d.meet)){$('#tkJoin').href=d.meet;$('#tkJoin').hidden=false}
+ var z=function(x){return x.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'')},title='Videomøde med Oscar Jønsson om musikken',det='Videomøde på Google Meet om musikken til '+(page==='bryllup'?'jeres bryllup':'jeres firmafest')+'. '+(d.meet?'Deltag: '+d.meet:'Linket står i jeres bekræftelsesmail.');
  var gcal='https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent(title)+'&dates='+z(st)+'/'+z(en)+'&details='+encodeURIComponent(det);
  var ics=lid?'/api/ics?lid='+encodeURIComponent(lid):'data:text/calendar;charset=utf-8,'+encodeURIComponent(['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Oscar Jonsson Musik//DA','BEGIN:VEVENT','UID:'+Date.now()+'@oscartjoensson.dk','DTSTAMP:'+z(new Date()),'DTSTART:'+z(st),'DTEND:'+z(en),'SUMMARY:'+title,'DESCRIPTION:'+det,'END:VEVENT','END:VCALENDAR'].join('\r\n'));
  // én knap: Android -> Google Kalender, alt andet (iPhone, Mac, Outlook) -> kalenderfil, som åbner "Tilføj" direkte
@@ -1011,11 +1012,12 @@ def tak_page(key, d, pal):
   <div class="tk-copy" data-notrack>
     <div class="done-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12.5l4.5 4.5L19 7"/></svg></div>
     <span class="eyebrow">Tak for jeres booking</span>
-    <h1>Tak<span id="tkName"></span>.<br><em id="tkH2">Snakken er booket.</em></h1>
-    <p class="lead" id="tkSub">Jeg glæder mig til at snakke med dig og høre alt om {word}.</p><p class="sign" id="tkSign">Oscar</p>
-    <div class="tk-when" id="tkWhen" hidden><small>Jeres samtale</small><b id="tkWhenB"></b><span id="tkWhenS"></span></div>
+    <h1>Tak<span id="tkName"></span>.<br><em id="tkH2">Mødet er booket.</em></h1>
+    <p class="lead" id="tkSub">Vi ser frem til mødet. Jeg glæder mig til at snakke med dig og høre alt om {word}.</p><p class="sign" id="tkSign">Oscar</p>
+    <div class="tk-when" id="tkWhen" hidden><small>Jeres møde</small><b id="tkWhenB"></b><span id="tkWhenS"></span></div>
     <div class="tk-cal" id="tkCal" hidden>
       <a class="btn" id="tkAdd" href="#">Læg i kalender <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18M12 13v5M9.5 15.5h5"/></svg></a>
+      <a class="btn ghost" id="tkJoin" href="#" target="_blank" rel="noopener" hidden>Deltag i mødet på Google Meet</a>
       <button type="button" class="tk-more" id="tkMore">Bruger du en anden kalender?</button>
       <div class="tk-alt" id="tkAlt" hidden><a class="btn sm ghost" id="tkG" href="#" target="_blank" rel="noopener">Google Kalender</a><a class="btn sm ghost" id="tkI" href="#">Apple / Outlook</a></div>
     </div>
@@ -1026,7 +1028,7 @@ def tak_page(key, d, pal):
 <section class="sec alt"><div class="wrap">
   <span class="eyebrow">Det sker nu</span><h2>Tre trin til den rigtige musik</h2>
   <div class="tk-steps">
-    <div class="tk-step"><i>01</i><b>Oscar ringer jer op</b><p>På det tidspunkt, I har valgt. Snakken er uforpligtende.</p></div>
+    <div class="tk-step"><i>01</i><b>I mødes på video</b><p>På Google Meet, på det tidspunkt I har valgt. Linket står i jeres bekræftelsesmail og i kalenderen. Mødet er uforpligtende.</p></div>
     <div class="tk-step"><i>02</i><b>I taler om aftenen</b><p>Gæsterne, programmet og den stemning, I drømmer om, fra {"vielsen" if key == "bryllup" else "velkomsten"} til sidste dans.</p></div>
     <div class="tk-step"><i>03</i><b>I får et tilbud</b><p>Et tilbud på musikken, tilpasset {word}. Først derefter beslutter I jer.</p></div>
   </div>

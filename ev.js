@@ -168,7 +168,7 @@
         '<div><label class="flab" for="cMail">E-mail</label><input class="fin" id="cMail" type="email" inputmode="email" autocomplete="email" value="' + esc(S.email) + '" placeholder="navn@mail.dk"></div>' +
         '<div><label class="flab" for="cTel">Telefon</label><input class="fin" id="cTel" type="tel" inputmode="tel" autocomplete="tel" value="' + esc(S.phone) + '" placeholder="12 34 56 78"></div></div>';
       calHtml = '<div class="calbox" id="calBox"><div class="calwait" id="calWait"><b>Vælg et tidspunkt til en kort snak</b><span>Udfyld navn, e-mail og telefon, så kommer de ledige tider frem her.</span></div>' +
-        '<div class="calin" id="calIn" hidden><span class="k">Vælg et tidspunkt</span><p class="calh">Vi ringer jer op og hører om ' + (EV.page === 'bryllup' ? 'jeres bryllup' : 'jeres fest') + ', så I får et tilbud, der passer. Samtalen tager cirka en halv time.</p>' +
+        '<div class="calin" id="calIn" hidden><span class="k">Vælg et tidspunkt</span><p class="calh">Vi mødes på et kort videomøde (Google Meet) og hører om ' + (EV.page === 'bryllup' ? 'jeres bryllup' : 'jeres fest') + ', så I får et tilbud, der passer. Mødet tager cirka en halv time.</p>' +
         '<div class="days" id="cDays"><div class="skel" style="width:100%"></div></div><div class="times" id="cTimes"></div>' +
         '<p class="ferr" id="cErr" role="alert"></p><div class="calfoot"><button type="button" class="btn" id="cBook" disabled>Vælg et tidspunkt</button>' +
         '<button type="button" class="falt" id="cCall">Ingen af tiderne passer. Ring mig hellere op</button></div></div></div>';
@@ -325,17 +325,17 @@
     if (b) {
       var st = new Date(b.start), en = b.end ? new Date(b.end) : new Date(st.getTime() + 30 * 60000);
       var z = function (d) { return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, ''); };
-      var title = 'Snak med Oscar Jønsson om musikken', det = 'Vi ringer dig op på ' + (S.phone || 'dit nummer') + '.';
+      var title = 'Videomøde med Oscar Jønsson om musikken', det = 'Videomøde på Google Meet. Linket står i jeres bekræftelsesmail.';
       gcal = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent(title) + '&dates=' + z(st) + '/' + z(en) + '&details=' + encodeURIComponent(det);
       ics = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Oscar Jonsson Musik//DA', 'BEGIN:VEVENT', 'UID:' + S.lid + '@fuldtbooketmusiker.dk', 'DTSTAMP:' + z(new Date()), 'DTSTART:' + z(st), 'DTEND:' + z(en), 'SUMMARY:' + title, 'DESCRIPTION:' + det, 'END:VEVENT', 'END:VCALENDAR'].join('\r\n'));
     }
     B.innerHTML = '<div class="fq"><div class="done-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12.5l4.5 4.5L19 7"/></svg></div>' +
-      '<h3>' + (b ? 'Tak' + (f ? ', ' + esc(f) : '') + '. Snakken er booket.' : 'Tak' + (f ? ', ' + esc(f) : '') + '. Vi ringer jer op.') + '</h3>' +
-      (b ? '<p class="big" style="font-size:1.35rem">' + esc(fmtLong(b.start)) + '</p><p class="h">Vi ringer på ' + esc(S.phone) + '. Læg tiden i kalenderen, så den ikke glipper.</p>' +
+      '<h3>' + (b ? 'Tak' + (f ? ', ' + esc(f) : '') + '. Mødet er booket.' : 'Tak' + (f ? ', ' + esc(f) : '') + '. Vi ringer jer op.') + '</h3>' +
+      (b ? '<p class="big" style="font-size:1.35rem">' + esc(fmtLong(b.start)) + '</p><p class="h">Vi ser frem til mødet. Linket til Google Meet står i jeres bekræftelsesmail. Læg tiden i kalenderen, så den ikke glipper.</p>' +
         '<div class="cal-add"><a class="btn sm" href="' + gcal + '" target="_blank" rel="noopener">Google Kalender</a><a class="btn sm ghost" href="' + ics + '" download="snak-med-oscar.ics">Apple / Outlook</a></div>'
         : '<p class="h">Vi har jeres oplysninger og ringer på ' + esc(S.phone || 'jeres nummer') + ' inden for én hverdag.</p>') +
       '<p class="k" style="margin-top:8px">Det sker nu</p><div class="next3">' +
-      '<div>' + (b ? 'Vi ringer jer op på tidspunktet. Samtalen tager cirka en halv time.' : 'Vi ringer jer op og hører om aftenen. Det tager cirka en halv time.') + '</div>' +
+      '<div>' + (b ? 'I mødes med Oscar på Google Meet på tidspunktet. Mødet tager cirka en halv time.' : 'Vi ringer jer op og hører om aftenen. Det tager cirka en halv time.') + '</div>' +
       '<div>Vi taler om gæsterne, programmet og den stemning, I ønsker.</div>' +
       '<div>I får et tilbud på musikken, tilpasset ' + (EV.page === 'bryllup' ? 'jeres bryllup' : 'jeres firmafest') + '.</div></div>' +
       '<button type="button" class="btn ghost" id="dClose" style="align-self:flex-start;margin-top:6px">Tilbage til siden</button></div>';
