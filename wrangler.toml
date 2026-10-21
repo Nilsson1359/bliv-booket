@@ -12,7 +12,7 @@ routes = [
 directory = "./_site"
 binding = "ASSETS"
 # videoer går gennem Worker for byte-range (206), som iPhone/Safari kræver
-run_worker_first = ["/media/ev/stem/*", "/media/ev/v/*", "/media/clips/*"]
+run_worker_first = true   # alt via Worker: Oscars underdomæner skal kunne vise gig-siden på "/" (og video skal have byte-range)
 [vars]
 META_PIXEL_ID = "1708597793574696"
 # GHL (Oscars egen konto) til /firmafest + /bryllup. Token = secret GHL_TOKEN (Private Integration, alle scopes, 20/10 2026).

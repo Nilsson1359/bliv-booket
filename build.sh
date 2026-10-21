@@ -8,7 +8,7 @@ cp tak-charcoal-silver.html _site/tak.html
 python3 gen_onboarding.py >/dev/null && mv onboarding.html _site/onboarding.html
 cp track.js _site/track.js
 # Oscars gig-sider (gen_events.py): valgt retning -> /firmafest + /bryllup, alle retninger som preview i /ev/
-# Live-version vælges i LIVE i gen_events.py (firmafest = A/messing, bryllup = B/champagne fra 8/10 2026). Oversigt: /ev/
+# Live-version vælges i LIVE i gen_events.py (fra 21/10 2026: v2 i champagne, firmafest = A, bryllup = B). Oversigt: /ev/
 python3 gen_events.py >/dev/null && cp -r ev _site/ev && rm -f _site/ev/_live-*.html && cp ev/_live-firmafest.html _site/firmafest.html && cp ev/_live-bryllup.html _site/bryllup.html && cp ev.js _site/ev.js
 cp privatliv.html _site/privatliv.html   # linkes fra footeren på v2-siderne
 cp _headers _site/_headers

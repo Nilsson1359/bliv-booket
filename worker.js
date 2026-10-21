@@ -88,7 +88,10 @@ async function handleTrack(request, env) {
   const ua = request.headers.get('User-Agent') || '';
   const { device, browser, os } = parseUA(ua);
   let ref_host = ''; try { if (b.ref) ref_host = new URL(b.ref).hostname.replace(/^www\./, ''); } catch { }
-  if (/fuldtbooketmusiker\.dk$/.test(ref_host)) ref_host = '';
+  if (/fuldtbooketmusiker\.dk$/.test(ref_host) || OSCAR_HOSTS[ref_host]) ref_host = '';
+  // Oscars underdomæner: "/" er gig-siden, så dashboardet viser /bryllup og /firmafest uanset domæne
+  const gig = OSCAR_HOSTS[new URL(request.url).hostname];
+  if (gig && (!b.path || b.path === '/')) b.path = '/' + gig;
   await env.DB.prepare(`INSERT INTO events (ts,type,vid,sid,pv,path,ref,ref_host,utm_source,utm_medium,utm_campaign,utm_content,
       ip,country,region,city,postal,lat,lon,ua,device,browser,os,vw,vh,dw,dh,x,y,sec,secy,label,depth,dur)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
@@ -676,11 +679,30 @@ async function serveVideo(request, env) {
   return new Response(request.method === 'HEAD' ? null : buf.slice(start, end + 1), { status: 206, headers: h });
 }
 
+// Oscars egne underdomæner (Cloudflare for SaaS -> denne Worker): forsiden er gig-siden, resten af Bliv Booket vises ikke der
+const OSCAR_HOSTS = { 'bryllup.oscartjoensson.dk': 'bryllup', 'firmafest.oscartjoensson.dk': 'firmafest' };
+const OSCAR_PASS = /^\/(api\/(lead|slots|book|t)$|media\/|ev\.js$|track\.js$|privatliv$|favicon)/;
+async function oscarHost(request, env, url, gig) {
+  const p = url.pathname;
+  if (p === '/' || p === '/index.html') {
+    const r = await env.ASSETS.fetch(new Request(url.origin + '/' + gig, { method: request.method, headers: request.headers }));
+    const h = new Headers(r.headers); h.set('Cache-Control', 'public, max-age=300');
+    return new Response(r.body, { status: r.status, headers: h });
+  }
+  const other = Object.entries(OSCAR_HOSTS).find(([, g]) => '/' + g === p);
+  if (other) return Response.redirect(`https://${other[0]}/${url.search}`, 301);   // /bryllup og /firmafest -> rigtigt underdomæne
+  if (p === '/admin' || p.startsWith('/admin/')) return Response.redirect('https://fuldtbooketmusiker.dk' + p, 302);
+  if (!OSCAR_PASS.test(p)) return Response.redirect(`https://${url.hostname}/`, 302);
+  return null;   // filer og API: samme vej som på fuldtbooketmusiker.dk
+}
+
 // ───────── router ─────────
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const p = url.pathname;
+    const gig = OSCAR_HOSTS[url.hostname];
+    if (gig) { const r = await oscarHost(request, env, url, gig); if (r) return r; }
     try {
       if (p === '/api/conv') {
         if (request.method !== 'POST') return json({ error: 'POST only' }, 405);

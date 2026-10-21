@@ -933,9 +933,10 @@ for key, (d, _) in {'firmafest': ('a', ''), 'bryllup': ('b', '')}.items():
         (OUT / f'{key}-{d}-{pal}-v2.html').write_text(page(key, d, pal, v2=True))
 
 # ───────────────────────── live-valg + oversigtsside (/ev/) ─────────────────────────
-LIVE = {'firmafest': ('a', 'messing'), 'bryllup': ('b', 'champagne')}   # ÉN kilde: build.sh kopierer ev/_live-*.html
+LIVE = {'firmafest': ('a', 'champagne'), 'bryllup': ('b', 'champagne')}   # ÉN kilde: build.sh kopierer ev/_live-*.html
+LIVE_V2 = True   # 21/10 2026: Oskar valgte v2 i champagne til begge sider
 for key, (d, pal) in LIVE.items():
-    (OUT / f'_live-{key}.html').write_text((OUT / f'{key}-{d}-{pal}.html').read_text())
+    (OUT / f'_live-{key}.html').write_text((OUT / f'{key}-{d}-{pal}{"-v2" if LIVE_V2 else ""}.html').read_text())
 
 def chip(pal):
     n, m, v = PAL[pal]; c = dict(x.split(':', 1) for x in v.split(';'))
