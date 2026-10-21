@@ -1041,7 +1041,7 @@ def tak_page(key, d, pal):
   <div class="tk-steps">
     <div class="tk-step"><i>01</i><b>Vi mødes på video</b><p>På Google Meet, på det tidspunkt I har valgt. Linket står i jeres bekræftelsesmail og i kalenderen. Mødet er uforpligtende.</p></div>
     <div class="tk-step"><i>02</i><b>Vi taler om aftenen</b><p>Gæsterne, programmet og den stemning, I drømmer om, fra {"vielsen" if key == "bryllup" else "velkomsten"} til sidste dans.</p></div>
-    <div class="tk-step"><i>03</i><b>I får et tilbud</b><p>Et tilbud på musikken, tilpasset {word}. Først derefter beslutter I jer.</p></div>
+    <div class="tk-step"><i>03</i><b>Vi sender jer et tilbud</b><p>Et tilbud på musikken, tilpasset {word}. Først derefter beslutter I jer.</p></div>
   </div>
   <div class="tk-tip"><span aria-hidden="true">✓</span><span>Tænk gerne over et par sange, I elsker, eller som betyder noget for jer. Så kan Oscar bygge aftenen op omkring dem.</span></div>
 </div></section>

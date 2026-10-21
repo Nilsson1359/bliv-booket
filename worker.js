@@ -690,7 +690,7 @@ async function oscarHost(request, env, url, gig) {
   const p = url.pathname;
   if (p === '/' || p === '/index.html' || p === '/tak' || p === '/tak/') {
     const r = await env.ASSETS.fetch(new Request(url.origin + (p.startsWith('/tak') ? '/tak-' : '/') + gig, { method: request.method, headers: request.headers }));
-    const h = new Headers(r.headers); h.set('Cache-Control', 'public, max-age=300');
+    const h = new Headers(r.headers); h.set('Cache-Control', 'public, max-age=60');
     return new Response(r.body, { status: r.status, headers: h });
   }
   const other = Object.entries(OSCAR_HOSTS).find(([, g]) => '/' + g === p);
