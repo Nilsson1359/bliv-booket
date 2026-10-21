@@ -698,11 +698,15 @@ async function oscarHost(request, env, url, gig) {
 
 // ─── tak-side: GET /api/booking?lid= (fornavn + tid, ingen kontaktdata) og GET /api/ics?lid= (kalenderfil) ───
 // lid er et tilfældigt id, som kun findes i kundens egen browser, så det fungerer som adgangsnøgle.
+// Kun lange tilfældige id'er (crypto.randomUUID, 36 tegn), kun bookinger fra værtsnavnets egen side, kun indtil 3 døgn efter samtalen
+const READ_LID_RE = /^[A-Za-z0-9-]{32,40}$/;
 async function bookedLead(env, url) {
   const lid = String(url.searchParams.get('lid') || '');
-  if (!env.DB || !LID_RE.test(lid)) return null;
-  const l = await env.DB.prepare('SELECT id, page, name, booked_start, booked_end FROM leads WHERE id = ?').bind(lid).first();
-  return l && l.booked_start ? l : null;
+  if (!env.DB || !READ_LID_RE.test(lid)) return null;
+  const gig = OSCAR_HOSTS[url.hostname];
+  const l = await env.DB.prepare('SELECT id, page, name, booked_start, booked_end FROM leads WHERE id = ? AND booked_start > ?').bind(lid, Date.now() - 3 * 86400000).first();
+  if (!l || !l.booked_start || (gig && l.page !== gig)) return null;
+  return l;
 }
 async function handleBooking(env, url) {
   const l = await bookedLead(env, url);
