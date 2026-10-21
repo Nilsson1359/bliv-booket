@@ -681,7 +681,7 @@ async function serveVideo(request, env) {
 
 // Oscars egne underdomæner (Cloudflare for SaaS -> denne Worker): forsiden er gig-siden, resten af Bliv Booket vises ikke der
 const OSCAR_HOSTS = { 'bryllup.oscartjoensson.dk': 'bryllup', 'firmafest.oscartjoensson.dk': 'firmafest' };
-const OSCAR_PASS = /^\/(api\/(lead|slots|book|t)$|media\/|ev\.js$|track\.js$|privatliv$|favicon)/;
+const OSCAR_PASS = /^\/(api\/(lead|slots|book|booking|ics|t)$|media\/|ev\.js$|track\.js$|privatliv$|favicon)/;
 async function oscarHost(request, env, url, gig) {
   const p = url.pathname;
   if (p === '/' || p === '/index.html' || p === '/tak' || p === '/tak/') {
@@ -694,6 +694,37 @@ async function oscarHost(request, env, url, gig) {
   if (p === '/admin' || p.startsWith('/admin/')) return Response.redirect('https://fuldtbooketmusiker.dk' + p, 302);
   if (!OSCAR_PASS.test(p)) return Response.redirect(`https://${url.hostname}/`, 302);
   return null;   // filer og API: samme vej som på fuldtbooketmusiker.dk
+}
+
+// ─── tak-side: GET /api/booking?lid= (fornavn + tid, ingen kontaktdata) og GET /api/ics?lid= (kalenderfil) ───
+// lid er et tilfældigt id, som kun findes i kundens egen browser, så det fungerer som adgangsnøgle.
+async function bookedLead(env, url) {
+  const lid = String(url.searchParams.get('lid') || '');
+  if (!env.DB || !LID_RE.test(lid)) return null;
+  const l = await env.DB.prepare('SELECT id, page, name, phone, booked_start, booked_end FROM leads WHERE id = ?').bind(lid).first();
+  return l && l.booked_start ? l : null;
+}
+async function handleBooking(env, url) {
+  const l = await bookedLead(env, url);
+  if (!l) return json({ error: 'not found' }, 404);
+  const end = l.booked_end || l.booked_start + 30 * 60000;
+  return new Response(JSON.stringify({ page: l.page, first: (l.name || '').trim().split(/\s+/)[0] || '', start: isoCph(l.booked_start), end: isoCph(end), min: Math.round((end - l.booked_start) / 60000) }),
+    { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'private, no-store' } });
+}
+async function handleIcs(env, url) {
+  const l = await bookedLead(env, url);
+  if (!l) return new Response('Bookingen blev ikke fundet.', { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+  const end = l.booked_end || l.booked_start + 30 * 60000;
+  const z = ms => new Date(ms).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  const esc = t => String(t).replace(/[\\;,]/g, m => '\\' + m).replace(/\n/g, '\\n');
+  const what = l.page === 'bryllup' ? 'jeres bryllup' : l.page === 'firmafest' ? 'jeres firmafest' : 'jeres fest';
+  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Oscar Jonsson Musik//DA', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'BEGIN:VEVENT',
+    `UID:${l.id}@oscartjoensson.dk`, `DTSTAMP:${z(Date.now())}`, `DTSTART:${z(l.booked_start)}`, `DTEND:${z(end)}`,
+    `SUMMARY:${esc('Snak med Oscar Jønsson om musikken')}`,
+    `DESCRIPTION:${esc(`Oscar ringer dig op${l.phone ? ' på ' + (e164(l.phone) || l.phone) : ''} og hører om ${what}.`)}`,
+    'BEGIN:VALARM', 'TRIGGER:-PT15M', 'ACTION:DISPLAY', `DESCRIPTION:${esc('Snak med Oscar om 15 min')}`, 'END:VALARM',
+    'END:VEVENT', 'END:VCALENDAR'].join('\r\n') + '\r\n';
+  return new Response(ics, { headers: { 'Content-Type': 'text/calendar; charset=utf-8', 'Content-Disposition': 'inline; filename="snak-med-oscar.ics"', 'Cache-Control': 'private, no-store' } });
 }
 
 // ───────── router ─────────
@@ -721,6 +752,8 @@ export default {
         if (request.method !== 'GET') return json({ error: 'GET only' }, 405);
         return await handleSlots(request, env, ctx, url);
       }
+      if (p === '/api/booking' && request.method === 'GET') return await handleBooking(env, url);
+      if (p === '/api/ics' && request.method === 'GET') return await handleIcs(env, url);
       if (p === '/api/book') {
         if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
         return await handleBook(request, env, ctx);

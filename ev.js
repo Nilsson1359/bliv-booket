@@ -310,7 +310,7 @@
         }
         S.booked = { start: res.x.start || picked, end: res.x.end || null }; persist();
         // på Oscars eget domæne: rigtig tak-side (/tak læser navn og tid fra ev_state_<side>)
-        if (/oscartjoensson\.dk$/.test(location.hostname)) { fireConv(true, true); location.assign('/tak'); return; }
+        if (/^(bryllup|firmafest)\.oscartjoensson\.dk$/.test(location.hostname)) { fireConv(true, true); location.assign('/tak?b=' + encodeURIComponent(S.lid)); return; }
         renderDone(true);
       }).catch(function () { bb.disabled = false; bb.textContent = 'Prøv igen'; cErr('Ingen forbindelse. Prøv igen om lidt.'); });
     };
