@@ -79,8 +79,8 @@ V2 = {
  'bryllup': dict(fan=[('p:p13', 'Velkomst'), ('p:p129', 'Live-sæt'), ('p:p85', 'Dansefest')], intro='p:p41',
    s3=['p:p112', 'p:p81'], s6=['p:p130'], flow=['v:kirke', 'p:p4', 'p:p23', 'p:p8'], s8='p:p42', offer='p:p128', final='p:p97',
    real=[('p110', 'Velkomst'), ('p102', 'Guitar og sang'), ('p124', 'Borddækningen'), ('p75', 'Live-sæt'), ('p52', 'Midt i festen'), ('p53', 'Dansegulvet'), ('p111', 'Polonæsen'), ('p101', 'DJ til sidste dans')],
-   cta_short='Få et tilbud på jeres bryllup', final_short='Fortæl om jeres bryllup'),
- 'firmafest': dict(final_short='Fortæl om jeres firmafest', hero_clip='fest2', s3=['p:p129', 'p:p65'], s6=['p:p101'], flow=[None, None, None, 'i:/media/ev/v/fest-dans.webp']),
+   cta_short='Få et tilbud på jeres bryllup', final_short='Fortæl om jeres bryllup', s5='p:p22'),
+ 'firmafest': dict(final_short='Fortæl om jeres firmafest', s5='p:p92', hero_clip='fest2', s3=['p:p129', 'p:p65'], s6=['p:p101'], flow=[None, None, None, 'i:/media/ev/v/fest-dans.webp']),
 }
 # videovæg: de stærkeste klip først (filmen, Oscar live, fyldt dansegulv), stedet og detaljer sidst
 STEM_FIRST = ['film', 'c0197', 'c0170', 'c0199', 'c0192', 'c0187', 'c0182', 'c0201', 'c0191', 'c0207', 'c0172', 'c0204']
@@ -394,6 +394,11 @@ p{margin:0;text-wrap:pretty}
 .ic b{display:block;font-family:var(--display);font-size:1.5rem;color:var(--accentT);font-weight:var(--hw);margin-bottom:6px;line-height:1}
 .photo{border-radius:var(--r);overflow:hidden;aspect-ratio:4/3;background:var(--card)}
 .photo img,.photo video{width:100%;height:100%;object-fit:cover}
+.plist{list-style:none;margin:10px 0 6px;padding:0;background:var(--card);border:1px solid var(--line);border-radius:var(--r)}
+.plist li{display:flex;gap:14px;align-items:center;padding:16px 20px;font-size:1.02rem}
+.plist li+li{border-top:1px solid var(--line)}
+.plist i{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accentT);font-style:normal;font-weight:700;font-size:.85rem}
+.s5img{align-items:center}.s5img .photo img{width:100%;height:auto;aspect-ratio:4/3;object-fit:cover;border-radius:var(--r)}
 .pcards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:10px 0 6px}
 .pc{display:flex;gap:14px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;font-size:1rem}
 .pc i{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,#d65f5f 18%,transparent);color:#E58A8A;font-style:normal;font-weight:700;font-size:.9rem}
@@ -774,11 +779,16 @@ def page(key, d, pal, v2=False):
 
     t, a, items, b = c['s4']
     s4 = f'''<section class="sec alt" id="playliste"><div class="wrap"><div class="two">
-      <div class="stack rv"><h2>{t}</h2><p class="lead">{a}</p><div class="pcards">{"".join(f'<div class="pc"><i>✕</i><span>{x}</span></div>' for x in items)}</div></div>
+      <div class="stack rv"><h2>{t}</h2><p class="lead">{a}</p>{(f'<ul class="plist">' + "".join(f'<li><i aria-hidden="true">✓</i><span>{x}</span></li>' for x in items) + '</ul>') if v2 else ('<div class="pcards">' + "".join(f'<div class="pc"><i>✕</i><span>{x}</span></div>' for x in items) + '</div>')}</div>
       <div class="stack rv">{ps(b[:1], "big")}{ps(b[1:], "lead")}<div class="cta-row full">{cta(c["cta"], sec="playliste")}</div></div></div></div></section>'''
 
     t, a, qs, b = c['s5']
-    s5 = f'''<section class="sec" id="ansvar"><div class="wrap"><div class="two">
+    if v2 and v.get('s5'):
+        s5 = f'''<section class="sec" id="ansvar"><div class="wrap"><div class="two s5img">
+      <div class="photo rv">{simg(v["s5"], sizes="(max-width:820px) 92vw, 600px")}</div>
+      <div class="stack rv"><h2>{t}</h2><p class="lead">{a[0]}</p><p class="lead">{" ".join(b)}</p></div></div></div></section>'''
+    else:
+      s5 = f'''<section class="sec" id="ansvar"><div class="wrap"><div class="two">
       <div class="stack rv"><h2>{t}</h2>{ps(a, "lead")}</div>
       <div class="stack rv"><div class="bubbles">{"".join(f'<div class="bubble">{x}</div>' for x in qs)}</div>{ps(b[:1], "big")}{ps(b[1:], "lead")}</div></div></div></section>'''
 

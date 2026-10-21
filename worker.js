@@ -710,13 +710,15 @@ async function bookedLead(env, url) {
   if (!env.DB || !gig || !READ_LID_RE.test(lid)) return null;
   const l = await env.DB.prepare('SELECT id, page, name, booked_start, booked_end, meet_url FROM leads WHERE id = ? AND booked_start > ?').bind(lid, Date.now() - 3 * 86400000).first();
   if (!l || !l.booked_start || l.page !== gig) return null;
+  const end = l.booked_end || l.booked_start + 30 * 60000;
+  l.meet_url = MEET_RE.test(l.meet_url || '') && end > Date.now() ? l.meet_url : '';   // én regel for begge adresser
   return l;
 }
 async function handleBooking(env, url) {
   const l = await bookedLead(env, url);
   if (!l) return json({ error: 'not found' }, 404);
   const end = l.booked_end || l.booked_start + 30 * 60000;
-  return new Response(JSON.stringify({ page: l.page, first: (l.name || '').trim().split(/\s+/)[0] || '', start: isoCph(l.booked_start), end: isoCph(end), min: Math.round((end - l.booked_start) / 60000), meet: MEET_RE.test(l.meet_url || '') && end > Date.now() ? l.meet_url : '' }),
+  return new Response(JSON.stringify({ page: l.page, first: (l.name || '').trim().split(/\s+/)[0] || '', start: isoCph(l.booked_start), end: isoCph(end), min: Math.round((end - l.booked_start) / 60000), meet: l.meet_url }),
     { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'private, no-store' } });
 }
 async function handleIcs(env, url) {
@@ -725,7 +727,7 @@ async function handleIcs(env, url) {
   const end = l.booked_end || l.booked_start + 30 * 60000;
   const z = ms => new Date(ms).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
   const esc = t => String(t).replace(/[\\;,]/g, m => '\\' + m).replace(/\n/g, '\\n');
-  const meet = MEET_RE.test(l.meet_url || '') ? l.meet_url : '';
+  const meet = l.meet_url;
   const what = l.page === 'bryllup' ? 'jeres bryllup' : l.page === 'firmafest' ? 'jeres firmafest' : 'jeres fest';
   const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Oscar Jonsson Musik//DA', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'BEGIN:VEVENT',
     `UID:${l.id}@oscartjoensson.dk`, `DTSTAMP:${z(Date.now())}`, `DTSTART:${z(l.booked_start)}`, `DTEND:${z(end)}`,
