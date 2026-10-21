@@ -921,6 +921,114 @@ def page(key, d, pal, v2=False):
 </html>
 '''
 
+# ───────────────────────── tak-side (efter booking) ─────────────────────────
+# Vises på <gig>.oscartjoensson.dk/tak. Navn/tid læses fra browserens ev_state_<side> (sat af ev.js), så intet ekstra serverkald.
+TAK_CSS = r'''
+.tk-hero{padding:clamp(104px,11vw,140px) 0 clamp(40px,6vw,80px)}
+.tk-hero .wrap{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:clamp(28px,5vw,64px);align-items:center}
+.tk-copy{display:flex;flex-direction:column;gap:16px;align-items:flex-start}
+.tk-copy h1{font-family:var(--display);font-weight:var(--hw);font-size:clamp(2.3rem,5.4vw,4.1rem);line-height:1.02;letter-spacing:-.01em;margin:0}
+.tk-copy h1 em{font-style:italic;color:var(--accentT)}
+.tk-when{display:flex;flex-direction:column;gap:2px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 20px;min-width:min(100%,360px)}
+.tk-when small{font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accentT);font-weight:600}
+.tk-when b{font-family:var(--display);font-weight:var(--hw);font-size:clamp(1.35rem,2.6vw,1.75rem);line-height:1.15;color:var(--ink)}
+.tk-when span{color:var(--ink2);font-size:.98rem}
+.tk-pic{position:relative;margin:0;width:100%}
+.tk-pic img{width:100%;height:auto;aspect-ratio:4/5;object-fit:cover;border-radius:calc(var(--r) + 6px);box-shadow:0 30px 70px -30px rgba(0,0,0,.45)}
+.tk-pic figcaption{position:absolute;left:16px;bottom:16px;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(6px);border-radius:999px;padding:8px 14px;font-size:.9rem;color:var(--ink)}
+.tk-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:26px}
+.tk-step{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:22px}
+.tk-step i{font-style:normal;font-family:var(--display);font-size:2rem;color:var(--accentT);line-height:1}
+.tk-step b{display:block;margin:10px 0 6px;font-size:1.05rem}
+.tk-step p{margin:0;color:var(--ink2);font-size:.98rem}
+.tk-tip{margin-top:18px;display:flex;gap:12px;align-items:flex-start;background:color-mix(in srgb,var(--accent) 12%,transparent);border-radius:var(--r);padding:16px 18px;color:var(--ink)}
+.tk-meet{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(24px,4vw,56px);align-items:center}
+.tk-yt .yt{width:100%;border-radius:var(--r);overflow:hidden}
+.tk-soc{display:flex;gap:10px;flex-wrap:wrap}
+@media (max-width:820px){.tk-hero .wrap,.tk-meet{grid-template-columns:minmax(0,1fr)}.tk-pic img{aspect-ratio:4/3}.tk-steps{grid-template-columns:minmax(0,1fr)}}
+'''
+TAK_JS = r'''(function(){
+var page=document.body.dataset.page,S=null;try{S=JSON.parse(localStorage.getItem('ev_state_'+page)||'null')}catch(e){}
+var $=function(s){return document.querySelector(s)},esc=function(s){return String(s||'').replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+var tz='Europe/Copenhagen',f=S&&S.name?String(S.name).trim().split(/\s+/)[0]:'',b=S&&S.booked;
+if(f)$('#tkName').textContent=', '+f;
+if(b&&b.start){
+ var st=new Date(b.start),en=b.end?new Date(b.end):new Date(st.getTime()+30*60000),min=Math.round((en-st)/60000);
+ var day=st.toLocaleDateString('da-DK',{weekday:'long',day:'numeric',month:'long',timeZone:tz}),tm=st.toLocaleTimeString('da-DK',{hour:'2-digit',minute:'2-digit',timeZone:tz});
+ $('#tkWhenB').textContent=day.charAt(0).toUpperCase()+day.slice(1)+' kl. '+tm;
+ $('#tkWhenS').textContent='Ca. '+min+' min'+(S.phone?' · vi ringer på '+S.phone:'');
+ var z=function(d){return d.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'')},title='Snak med Oscar Jønsson om musikken',det='Oscar ringer dig op'+(S.phone?' på '+S.phone:'')+'.';
+ $('#tkG').href='https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent(title)+'&dates='+z(st)+'/'+z(en)+'&details='+encodeURIComponent(det);
+ $('#tkI').href='data:text/calendar;charset=utf-8,'+encodeURIComponent(['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Oscar Jonsson Musik//DA','BEGIN:VEVENT','UID:'+(S.lid||Date.now())+'@oscartjoensson.dk','DTSTAMP:'+z(new Date()),'DTSTART:'+z(st),'DTEND:'+z(en),'SUMMARY:'+title,'DESCRIPTION:'+det,'END:VEVENT','END:VCALENDAR'].join('\r\n'));
+ $('#tkWhen').hidden=false;$('#tkCal').hidden=false;
+}else if(S&&(S.callback||S.done)){
+ $('#tkH2').textContent='Vi ringer jer op.';$('#tkSub').textContent='Vi har jeres oplysninger og ringer'+(S.phone?' på '+S.phone:'')+' inden for én hverdag.';
+}
+document.querySelectorAll('.yt[data-yt]').forEach(function(btn){btn.addEventListener('click',function(){var i=document.createElement('iframe');i.src='https://www.youtube-nocookie.com/embed/'+encodeURIComponent(btn.dataset.yt)+'?autoplay=1&rel=0&playsinline=1&modestbranding=1';i.allow='autoplay; encrypted-media; picture-in-picture';i.allowFullscreen=true;i.title='YouTube';i.style.cssText='position:absolute;inset:0;width:100%;height:100%;border:0';btn.style.position='relative';btn.appendChild(i);btn.classList.add('on')},{once:true})});
+})();'''
+
+def tak_page(key, d, pal):
+    c = dict(P[key]); dd = D[d]; pn, pmode, pv = PAL[pal]
+    word = 'jeres bryllup' if key == 'bryllup' else 'jeres firmafest'
+    pic = simg('p:p102', sizes='(max-width:820px) 92vw, 520px', eager=True) if key == 'bryllup' else img(c['hero_img'][0], 'Oscar Jønsson spiller live', sizes='(max-width:820px) 92vw, 520px', eager=True, w=1600, h=900)
+    cap = 'Himmelbjerget, oktober 2026' if key == 'bryllup' else 'Oscar live til firmafest'
+    revs = ''.join(f'<article class="rev"><b>{R[k][0]}</b><p>{R[k][1]}</p><div class="who"><strong>{R[k][2]}</strong><span>{R[k][3]}</span></div></article>' for k in c['reviews'][:3])
+    return f'''<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Tak for din booking · Oscar Jønsson</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="{pv.split("--bg:")[1].split(";")[0]}">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23C9A46A'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' font-family='Georgia' fill='%2314110E'%3EO%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?{dd["fonts"]}&display=swap">
+<script src="/track.js" async></script>
+<style>:root{{{pv};{dd["vars"]};--scheme:{pmode}}}{CSS}{TAK_CSS}</style>
+</head>
+<body class="dir-{d} v2 pal-{pal}" data-page="{key}">
+<header class="nav" id="nav"><div class="wrap"><a class="logo" href="/">Oscar Jønsson<small>Musik</small></a><a class="btn sm ghost" href="/">Til forsiden</a></div></header>
+<main>
+<section class="tk-hero"><div class="wrap">
+  <div class="tk-copy">
+    <div class="done-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12.5l4.5 4.5L19 7"/></svg></div>
+    <span class="eyebrow">Tak for jeres booking</span>
+    <h1>Tak<span id="tkName"></span>.<br><em id="tkH2">Snakken er booket.</em></h1>
+    <p class="lead" id="tkSub">Oscar glæder sig til at høre om {word}. Læg tiden i kalenderen, så den ikke glipper.</p>
+    <div class="tk-when" id="tkWhen" hidden><small>Jeres samtale</small><b id="tkWhenB"></b><span id="tkWhenS"></span></div>
+    <div class="cal-add" id="tkCal" hidden><a class="btn sm" id="tkG" href="#" target="_blank" rel="noopener">Google Kalender</a><a class="btn sm ghost" id="tkI" href="#" download="snak-med-oscar.ics">Apple / Outlook</a></div>
+  </div>
+  <figure class="tk-pic">{pic}<figcaption>{cap}</figcaption></figure>
+</div></section>
+
+<section class="sec alt"><div class="wrap">
+  <span class="eyebrow">Det sker nu</span><h2>Tre trin til den rigtige musik</h2>
+  <div class="tk-steps">
+    <div class="tk-step"><i>01</i><b>Oscar ringer jer op</b><p>På det tidspunkt, I har valgt. Snakken er uforpligtende.</p></div>
+    <div class="tk-step"><i>02</i><b>I taler om aftenen</b><p>Gæsterne, programmet og den stemning, I drømmer om, fra {"vielsen" if key == "bryllup" else "velkomsten"} til sidste dans.</p></div>
+    <div class="tk-step"><i>03</i><b>I får et tilbud</b><p>Et tilbud på musikken, tilpasset {word}. Først derefter beslutter I jer.</p></div>
+  </div>
+  <div class="tk-tip"><span aria-hidden="true">✓</span><span>Tænk gerne over et par sange, I elsker, eller som betyder noget for jer. Så kan Oscar bygge aftenen op omkring dem.</span></div>
+</div></section>
+
+<section class="sec"><div class="wrap"><div class="tk-meet">
+  <div class="stack"><span class="eyebrow">Imens I venter</span><h2>Mød Oscar</h2>{ps(STORY["p"], "lead")}<p class="sign">{STORY["sign"]}</p>
+    <div class="tk-soc"><a class="btn sm ghost" href="https://www.instagram.com/oscartjoensson/" target="_blank" rel="noopener">Instagram</a><a class="btn sm ghost" href="https://www.youtube.com/@oscartjoensson" target="_blank" rel="noopener">YouTube</a><a class="btn sm ghost" href="https://www.tiktok.com/@oscartjoensson" target="_blank" rel="noopener">TikTok</a></div></div>
+  <div class="tk-yt">{yt(0, "big").replace(' loading="lazy"', '')}</div>
+</div></div></section>
+
+<section class="sec alt"><div class="wrap">
+  <div class="tp"><span class="score">4,5</span><div><div>{stars()}</div><span style="color:var(--ink2)">14 anmeldelser af Oscar Jønsson Musik på <a href="{TRUSTPILOT}" target="_blank" rel="noopener">Trustpilot</a></span></div></div>
+  <h2 style="margin-top:18px">Det siger dem, der har haft Oscar til deres fest</h2><div class="revs">{revs}</div>
+</div></section>
+</main>
+<footer><div class="wrap"><span class="fc"><a href="mailto:{CONTACT["mail"]}">{CONTACT["mail"]}</a> · <a href="tel:{CONTACT["tel"].replace(" ", "")}">{CONTACT["tel"]}</a> · CVR {CONTACT["cvr"]} · <a href="/privatliv">Privatlivspolitik</a></span><span>© 2026 Oscar Jønsson Musik</span></div></footer>
+<script>{TAK_JS}</script>
+</body>
+</html>
+'''
+
 for key in P:
     for d, dd in D.items():
         for pal in dd['pals']:
@@ -937,6 +1045,7 @@ LIVE = {'firmafest': ('a', 'champagne'), 'bryllup': ('b', 'champagne')}   # ÉN 
 LIVE_V2 = True   # 21/10 2026: Oskar valgte v2 i champagne til begge sider
 for key, (d, pal) in LIVE.items():
     (OUT / f'_live-{key}.html').write_text((OUT / f'{key}-{d}-{pal}{"-v2" if LIVE_V2 else ""}.html').read_text())
+    (OUT / f'_tak-{key}.html').write_text(tak_page(key, d, pal))   # -> <gig>.oscartjoensson.dk/tak
 
 def chip(pal):
     n, m, v = PAL[pal]; c = dict(x.split(':', 1) for x in v.split(';'))

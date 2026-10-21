@@ -168,7 +168,7 @@
         '<div><label class="flab" for="cMail">E-mail</label><input class="fin" id="cMail" type="email" inputmode="email" autocomplete="email" value="' + esc(S.email) + '" placeholder="navn@mail.dk"></div>' +
         '<div><label class="flab" for="cTel">Telefon</label><input class="fin" id="cTel" type="tel" inputmode="tel" autocomplete="tel" value="' + esc(S.phone) + '" placeholder="12 34 56 78"></div></div>';
       calHtml = '<div class="calbox" id="calBox"><div class="calwait" id="calWait"><b>Vælg et tidspunkt til en kort snak</b><span>Udfyld navn, e-mail og telefon, så kommer de ledige tider frem her.</span></div>' +
-        '<div class="calin" id="calIn" hidden><span class="k">Vælg et tidspunkt</span><p class="calh">Vi ringer jer op og hører om ' + (EV.page === 'bryllup' ? 'jeres bryllup' : 'jeres fest') + ', så I får et tilbud, der passer. Samtalen tager cirka et kvarter.</p>' +
+        '<div class="calin" id="calIn" hidden><span class="k">Vælg et tidspunkt</span><p class="calh">Vi ringer jer op og hører om ' + (EV.page === 'bryllup' ? 'jeres bryllup' : 'jeres fest') + ', så I får et tilbud, der passer. Samtalen tager cirka en halv time.</p>' +
         '<div class="days" id="cDays"><div class="skel" style="width:100%"></div></div><div class="times" id="cTimes"></div>' +
         '<p class="ferr" id="cErr" role="alert"></p><div class="calfoot"><button type="button" class="btn" id="cBook" disabled>Vælg et tidspunkt</button>' +
         '<button type="button" class="falt" id="cCall">Ingen af tiderne passer. Ring mig hellere op</button></div></div></div>';
@@ -308,7 +308,10 @@
           cErr('Det lykkedes ikke at booke. Prøv igen, eller tryk nedenfor, så ringer vi.'); bb.disabled = false; bb.textContent = 'Prøv igen';
           return;
         }
-        S.booked = { start: res.x.start || picked, end: res.x.end || null }; persist(); renderDone(true);
+        S.booked = { start: res.x.start || picked, end: res.x.end || null }; persist();
+        // på Oscars eget domæne: rigtig tak-side (/tak læser navn og tid fra ev_state_<side>)
+        if (/oscartjoensson\.dk$/.test(location.hostname)) { fireConv(true, true); location.assign('/tak'); return; }
+        renderDone(true);
       }).catch(function () { bb.disabled = false; bb.textContent = 'Prøv igen'; cErr('Ingen forbindelse. Prøv igen om lidt.'); });
     };
   };
@@ -320,7 +323,7 @@
     var b = S.booked, f = first();
     var gcal = '', ics = '';
     if (b) {
-      var st = new Date(b.start), en = b.end ? new Date(b.end) : new Date(st.getTime() + 20 * 60000);
+      var st = new Date(b.start), en = b.end ? new Date(b.end) : new Date(st.getTime() + 30 * 60000);
       var z = function (d) { return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, ''); };
       var title = 'Snak med Oscar Jønsson om musikken', det = 'Vi ringer dig op på ' + (S.phone || 'dit nummer') + '.';
       gcal = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent(title) + '&dates=' + z(st) + '/' + z(en) + '&details=' + encodeURIComponent(det);
@@ -332,15 +335,18 @@
         '<div class="cal-add"><a class="btn sm" href="' + gcal + '" target="_blank" rel="noopener">Google Kalender</a><a class="btn sm ghost" href="' + ics + '" download="snak-med-oscar.ics">Apple / Outlook</a></div>'
         : '<p class="h">Vi har jeres oplysninger og ringer på ' + esc(S.phone || 'jeres nummer') + ' inden for én hverdag.</p>') +
       '<p class="k" style="margin-top:8px">Det sker nu</p><div class="next3">' +
-      '<div>' + (b ? 'Vi ringer jer op på tidspunktet. Samtalen tager cirka et kvarter.' : 'Vi ringer jer op og hører om aftenen. Det tager cirka et kvarter.') + '</div>' +
+      '<div>' + (b ? 'Vi ringer jer op på tidspunktet. Samtalen tager cirka en halv time.' : 'Vi ringer jer op og hører om aftenen. Det tager cirka en halv time.') + '</div>' +
       '<div>Vi taler om gæsterne, programmet og den stemning, I ønsker.</div>' +
       '<div>I får et tilbud på musikken, tilpasset ' + (EV.page === 'bryllup' ? 'jeres bryllup' : 'jeres firmafest') + '.</div></div>' +
       '<button type="button" class="btn ghost" id="dClose" style="align-self:flex-start;margin-top:6px">Tilbage til siden</button></div>';
     $('#dClose').addEventListener('click', close);
-    if (fresh || !S.leadFired) {
-      S.leadFired = true; persist();
-      try { if (window.fbq) fbq('track', b ? 'Schedule' : 'Lead', { content_name: EV.page }, { eventID: S.lid }); } catch (e) { }
-      try { (window.dataLayer = window.dataLayer || []).push({ event: b ? 'ev_booked' : 'ev_lead', page: EV.page }); } catch (e) { }
-    }
+    if (fresh || !S.leadFired) fireConv(!!b, true);
+  };
+  // konvertering til annoncer (pixel/GTM, hvis de er på siden): én gang pr. lead
+  var fireConv = function (booked, force) {
+    if (S.leadFired && !force) return;
+    S.leadFired = true; persist();
+    try { if (window.fbq) fbq('track', booked ? 'Schedule' : 'Lead', { content_name: EV.page }, { eventID: S.lid }); } catch (e) { }
+    try { (window.dataLayer = window.dataLayer || []).push({ event: booked ? 'ev_booked' : 'ev_lead', page: EV.page }); } catch (e) { }
   };
 })();

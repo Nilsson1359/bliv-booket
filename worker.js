@@ -684,8 +684,8 @@ const OSCAR_HOSTS = { 'bryllup.oscartjoensson.dk': 'bryllup', 'firmafest.oscartj
 const OSCAR_PASS = /^\/(api\/(lead|slots|book|t)$|media\/|ev\.js$|track\.js$|privatliv$|favicon)/;
 async function oscarHost(request, env, url, gig) {
   const p = url.pathname;
-  if (p === '/' || p === '/index.html') {
-    const r = await env.ASSETS.fetch(new Request(url.origin + '/' + gig, { method: request.method, headers: request.headers }));
+  if (p === '/' || p === '/index.html' || p === '/tak' || p === '/tak/') {
+    const r = await env.ASSETS.fetch(new Request(url.origin + (p.startsWith('/tak') ? '/tak-' : '/') + gig, { method: request.method, headers: request.headers }));
     const h = new Headers(r.headers); h.set('Cache-Control', 'public, max-age=300');
     return new Response(r.body, { status: r.status, headers: h });
   }
@@ -704,7 +704,7 @@ export default {
     const gig = OSCAR_HOSTS[url.hostname];
     if (gig) { const r = await oscarHost(request, env, url, gig); if (r) return r; }
     // gamle adresser (annoncer/links) -> Oscars eget domæne; kunder skal ikke lande på fuldtbooketmusiker.dk. Forhåndsvisninger under /ev/ bliver.
-    else if ((p === '/bryllup' || p === '/firmafest' || p === '/bryllup/' || p === '/firmafest/') && !url.searchParams.has('nt')) {
+    else if ((p === '/bryllup' || p === '/firmafest' || p === '/bryllup/' || p === '/firmafest/') && url.searchParams.get('nt') !== '1') {
       const host = Object.keys(OSCAR_HOSTS).find(h => OSCAR_HOSTS[h] === p.replace(/\//g, ''));
       return Response.redirect(`https://${host}/${url.search}`, 301);
     }
