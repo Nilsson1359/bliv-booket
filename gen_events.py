@@ -12,7 +12,7 @@ OUT.mkdir(exist_ok=True)
 CHOSEN = sys.argv[1] if len(sys.argv) > 1 else 'a'
 
 TRUSTPILOT = 'https://dk.trustpilot.com/review/oscartjoensson.dk'
-PIXEL_ID = ''   # [MANGLER] Oscars egen Meta-pixel til gig-annoncerne; tom = ingen pixel/GTM
+PIXEL_ID = '958915546667923'   # Oscars egen Meta-pixel (fra hans GHL-side), sat på 21/10 2026 efter Oskars ordre; tom = ingen pixel
 
 # ───────────────────────── anmeldelser (Trustpilot, ordret) ─────────────────────────
 R = {
@@ -713,6 +713,10 @@ def ps(lines, cls=''):
 
 def stars(): return '<span class="stars" role="img" aria-label="4,5 ud af 5 stjerner">★★★★★</span>'
 
+def pixel_tag():
+    if not PIXEL_ID: return ''
+    return f"<script>if(!/[?&]nt=1\\b/.test(location.search)){{!function(f,b,e,v,n,t,s){{if(f.fbq)return;n=f.fbq=function(){{n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)}};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','{PIXEL_ID}');fbq('track','PageView');}}</script>"
+
 def page(key, d, pal, v2=False):
     c = dict(P[key]); dd = D[d]; pn, pmode, pv = PAL[pal]; v = V2[key] if v2 else {}
     hero_cta = c['cta']
@@ -870,9 +874,7 @@ def page(key, d, pal, v2=False):
       <div class="cta-row" style="justify-content:center;margin-top:26px">{cta(ctal, sec="slut", short=v.get("final_short", ""))}</div><p class="lead" style="margin-top:16px">{small}</p></div></section>'''
 
     cfg = dict(page=key, label=c['label'], title=c['form']['title'], steps=c['form']['steps'])
-    pixel = ''
-    if PIXEL_ID:
-        pixel = f"<script>if(!/[?&]nt=1\\b/.test(location.search)){{!function(f,b,e,v,n,t,s){{if(f.fbq)return;n=f.fbq=function(){{n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)}};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','{PIXEL_ID}');fbq('track','PageView');}}</script>"
+    pixel = pixel_tag()
     og = f'https://fuldtbooketmusiker.dk/media/ev/{c["hero_img"][0]}-1600.webp'
     return f'''<!doctype html>
 <html lang="da">
@@ -992,7 +994,8 @@ var local=function(){
  if(S&&S.name)$('#tkName').textContent=', '+nameOf(S.name);
  if(S&&(S.callback||S.done)&&!S.booked){$('#tkH2').textContent='Vi ringer jer op.';$('#tkSub').textContent='Jeg har jeres oplysninger og ringer jer op inden for én hverdag. Jeg glæder mig til at snakke med jer.'}
 };
-if(lid){fetch('/api/booking?lid='+encodeURIComponent(lid)).then(function(r){return r.ok?r.json():null}).then(function(d){d&&d.start?show(d):local()}).catch(local)}else local();
+var conv=function(){try{if(!window.fbq||!lid||localStorage.getItem('ev_conv_'+lid))return;fbq('track','Schedule',{content_name:page},{eventID:lid});localStorage.setItem('ev_conv_'+lid,'1')}catch(e){}};
+if(lid){fetch('/api/booking?lid='+encodeURIComponent(lid)).then(function(r){return r.ok?r.json():null}).then(function(d){d&&d.start?(show(d),conv()):local()}).catch(local)}else local();
 document.querySelectorAll('.yt[data-yt]').forEach(function(btn){btn.addEventListener('click',function(){var i=document.createElement('iframe');i.src='https://www.youtube-nocookie.com/embed/'+encodeURIComponent(btn.dataset.yt)+'?autoplay=1&rel=0&playsinline=1&modestbranding=1';i.allow='autoplay; encrypted-media; picture-in-picture';i.allowFullscreen=true;i.title='YouTube';i.style.cssText='position:absolute;inset:0;width:100%;height:100%;border:0';btn.style.position='relative';btn.appendChild(i);btn.classList.add('on')},{once:true})});
 })();'''
 
@@ -1013,6 +1016,7 @@ def tak_page(key, d, pal):
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23C9A46A'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' font-family='Georgia' fill='%2314110E'%3EO%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?{dd["fonts"]}&display=swap">
+{pixel_tag()}
 <script src="/track.js" async></script>
 <style>:root{{{pv};{dd["vars"]};--scheme:{pmode}}}{CSS}{TAK_CSS}</style>
 </head>
