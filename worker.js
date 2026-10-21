@@ -479,7 +479,8 @@ async function ghl(env, method, path, version, body) {
   try {
     const r = await fetch(GHL_BASE + path, {
       method, signal: ctl.signal,
-      headers: { Authorization: 'Bearer ' + env.GHL_TOKEN, Version: version, Accept: 'application/json', ...(body ? { 'Content-Type': 'application/json' } : {}) },
+      // GHL's Cloudflare afviser kald uden User-Agent (fejl 1010)
+      headers: { 'User-Agent': 'fuldtbooketmusiker.dk/1.0', Authorization: 'Bearer ' + env.GHL_TOKEN, Version: version, Accept: 'application/json', ...(body ? { 'Content-Type': 'application/json' } : {}) },
       body: body ? JSON.stringify(body) : undefined,
     });
     const data = await r.json().catch(() => ({}));
