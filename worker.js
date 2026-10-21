@@ -703,6 +703,11 @@ export default {
     const p = url.pathname;
     const gig = OSCAR_HOSTS[url.hostname];
     if (gig) { const r = await oscarHost(request, env, url, gig); if (r) return r; }
+    // gamle adresser (annoncer/links) -> Oscars eget domæne; kunder skal ikke lande på fuldtbooketmusiker.dk. Forhåndsvisninger under /ev/ bliver.
+    else if ((p === '/bryllup' || p === '/firmafest' || p === '/bryllup/' || p === '/firmafest/') && !url.searchParams.has('nt')) {
+      const host = Object.keys(OSCAR_HOSTS).find(h => OSCAR_HOSTS[h] === p.replace(/\//g, ''));
+      return Response.redirect(`https://${host}/${url.search}`, 301);
+    }
     try {
       if (p === '/api/conv') {
         if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
