@@ -1,0 +1,10 @@
+# Pages-projekt der kun videresender til Worker "fuldtbooketmusiker" (se public/_worker.js).
+# Domæner: bryllup.oscartjoensson.dk + firmafest.oscartjoensson.dk (CNAME hos Simply -> oscar-gig.pages.dev)
+# Deploy: cd oscar-pages && npx wrangler pages deploy
+name = "oscar-gig"
+pages_build_output_dir = "./public"
+compatibility_date = "2026-09-01"
+
+[[services]]
+binding = "APP"
+service = "fuldtbooketmusiker"
