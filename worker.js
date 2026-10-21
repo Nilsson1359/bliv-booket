@@ -701,7 +701,7 @@ async function oscarHost(request, env, url, gig) {
 async function bookedLead(env, url) {
   const lid = String(url.searchParams.get('lid') || '');
   if (!env.DB || !LID_RE.test(lid)) return null;
-  const l = await env.DB.prepare('SELECT id, page, name, phone, booked_start, booked_end FROM leads WHERE id = ?').bind(lid).first();
+  const l = await env.DB.prepare('SELECT id, page, name, booked_start, booked_end FROM leads WHERE id = ?').bind(lid).first();
   return l && l.booked_start ? l : null;
 }
 async function handleBooking(env, url) {
@@ -721,7 +721,7 @@ async function handleIcs(env, url) {
   const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Oscar Jonsson Musik//DA', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'BEGIN:VEVENT',
     `UID:${l.id}@oscartjoensson.dk`, `DTSTAMP:${z(Date.now())}`, `DTSTART:${z(l.booked_start)}`, `DTEND:${z(end)}`,
     `SUMMARY:${esc('Snak med Oscar Jønsson om musikken')}`,
-    `DESCRIPTION:${esc(`Oscar ringer dig op${l.phone ? ' på ' + (e164(l.phone) || l.phone) : ''} og hører om ${what}.`)}`,
+    `DESCRIPTION:${esc(`Oscar ringer dig op og hører om ${what}.`)}`,
     'BEGIN:VALARM', 'TRIGGER:-PT15M', 'ACTION:DISPLAY', `DESCRIPTION:${esc('Snak med Oscar om 15 min')}`, 'END:VALARM',
     'END:VEVENT', 'END:VCALENDAR'].join('\r\n') + '\r\n';
   return new Response(ics, { headers: { 'Content-Type': 'text/calendar; charset=utf-8', 'Content-Disposition': 'inline; filename="snak-med-oscar.ics"', 'Cache-Control': 'private, no-store' } });

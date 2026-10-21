@@ -479,7 +479,8 @@ main img,main video{filter:var(--imgfilter,none)}
 <script>(function(){
 var page=document.body.dataset.page,S=null;try{S=JSON.parse(localStorage.getItem('ev_state_'+page)||'null')}catch(e){}
 var $=function(s){return document.querySelector(s)},tz='Europe/Copenhagen';
-var lid=new URLSearchParams(location.search).get('b')||(S&&S.lid)||'';
+var hm=/[#&]b=([A-Za-z0-9-]{8,40})/.exec(location.hash),lid=hm?hm[1]:(S&&S.lid)||'';
+if(hm)try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}
 var nameOf=function(n){return n?String(n).trim().split(/\s+/)[0]:''};
 var show=function(d){
  if(d.first)$('#tkName').textContent=', '+d.first;
