@@ -591,7 +591,7 @@ async function ghlBook(env, lead, startMs, endMs) {
   });
   const apptId = appt.id || (appt.appointment && appt.appointment.id) || '';
   // Google Meet-link: GHL lægger det i aftalens address (nogle gange først et øjeblik efter oprettelsen)
-  const meetOf = a => { const u = String((a && (a.address || (a.appointment && a.appointment.address))) || ''); return /^https:\/\/meet\.google\.com\/[a-z-]+$/.test(u) ? u : ''; };
+  const meetOf = a => { const u = String((a && (a.address || (a.appointment && a.appointment.address))) || ''); return MEET_RE.test(u) ? u : ''; };
   let meet = meetOf(appt);
   if (!meet && apptId) meet = meetOf(await ghl(env, 'GET', `/calendars/events/appointments/${apptId}`, '2021-04-15').catch(() => null));
   let ans = {}; try { ans = JSON.parse(lead.answers_json || '{}'); } catch { }
@@ -703,6 +703,7 @@ async function oscarHost(request, env, url, gig) {
 // ─── tak-side: GET /api/booking?lid= (fornavn + tid, ingen kontaktdata) og GET /api/ics?lid= (kalenderfil) ───
 // lid er et tilfældigt id, som kun findes i kundens egen browser, så det fungerer som adgangsnøgle.
 // Kun på Oscars egne værter, kun rigtige UUID v4 (crypto.randomUUID), kun egen sides bookinger, kun indtil 3 døgn efter samtalen
+const MEET_RE = /^https:\/\/meet\.google\.com\/[a-z]{3,4}-[a-z]{3,4}-[a-z]{3,4}$/;   // Google Meet-kode, fx abc-defg-hij
 const READ_LID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 async function bookedLead(env, url) {
   const lid = String(url.searchParams.get('lid') || ''), gig = OSCAR_HOSTS[url.hostname];
@@ -715,7 +716,7 @@ async function handleBooking(env, url) {
   const l = await bookedLead(env, url);
   if (!l) return json({ error: 'not found' }, 404);
   const end = l.booked_end || l.booked_start + 30 * 60000;
-  return new Response(JSON.stringify({ page: l.page, first: (l.name || '').trim().split(/\s+/)[0] || '', start: isoCph(l.booked_start), end: isoCph(end), min: Math.round((end - l.booked_start) / 60000), meet: l.meet_url || '' }),
+  return new Response(JSON.stringify({ page: l.page, first: (l.name || '').trim().split(/\s+/)[0] || '', start: isoCph(l.booked_start), end: isoCph(end), min: Math.round((end - l.booked_start) / 60000), meet: MEET_RE.test(l.meet_url || '') && end > Date.now() ? l.meet_url : '' }),
     { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'private, no-store' } });
 }
 async function handleIcs(env, url) {
@@ -724,12 +725,13 @@ async function handleIcs(env, url) {
   const end = l.booked_end || l.booked_start + 30 * 60000;
   const z = ms => new Date(ms).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
   const esc = t => String(t).replace(/[\\;,]/g, m => '\\' + m).replace(/\n/g, '\\n');
+  const meet = MEET_RE.test(l.meet_url || '') ? l.meet_url : '';
   const what = l.page === 'bryllup' ? 'jeres bryllup' : l.page === 'firmafest' ? 'jeres firmafest' : 'jeres fest';
   const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Oscar Jonsson Musik//DA', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'BEGIN:VEVENT',
     `UID:${l.id}@oscartjoensson.dk`, `DTSTAMP:${z(Date.now())}`, `DTSTART:${z(l.booked_start)}`, `DTEND:${z(end)}`,
     `SUMMARY:${esc('Videomøde med Oscar Jønsson om musikken')}`,
-    ...(l.meet_url ? [`LOCATION:${esc(l.meet_url)}`, `URL:${l.meet_url}`] : []),
-    `DESCRIPTION:${esc(`Videomøde på Google Meet om musikken til ${what}.\n` + (l.meet_url ? `Deltag: ${l.meet_url}` : 'Linket står i jeres bekræftelsesmail.'))}`,
+    ...(meet ? [`LOCATION:${esc(meet)}`, `URL:${esc(meet)}`] : []),
+    `DESCRIPTION:${esc(`Videomøde på Google Meet om musikken til ${what}.\n` + (meet ? `Deltag: ${meet}` : 'Linket står i jeres bekræftelsesmail.'))}`,
     'BEGIN:VALARM', 'TRIGGER:-PT15M', 'ACTION:DISPLAY', `DESCRIPTION:${esc('Videomøde med Oscar om 15 min')}`, 'END:VALARM',
     'END:VEVENT', 'END:VCALENDAR'].join('\r\n') + '\r\n';
   return new Response(ics, { headers: { 'Content-Type': 'text/calendar; charset=utf-8', 'Content-Disposition': 'inline; filename="snak-med-oscar.ics"', 'Cache-Control': 'private, no-store' } });

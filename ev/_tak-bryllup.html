@@ -489,8 +489,9 @@ var show=function(d){
  var day=st.toLocaleDateString('da-DK',{weekday:'long',day:'numeric',month:'long',timeZone:tz}),tm=st.toLocaleTimeString('da-DK',{hour:'2-digit',minute:'2-digit',timeZone:tz});
  $('#tkWhenB').textContent=day.charAt(0).toUpperCase()+day.slice(1)+' kl. '+tm;
  $('#tkWhenS').textContent='Ca. '+min+' min · Videomøde på Google Meet';
- if(d.meet&&/^https:\/\/meet\.google\.com\//.test(d.meet)){$('#tkJoin').href=d.meet;$('#tkJoin').hidden=false}
- var z=function(x){return x.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'')},title='Videomøde med Oscar Jønsson om musikken',det='Videomøde på Google Meet om musikken til '+(page==='bryllup'?'jeres bryllup':'jeres firmafest')+'. '+(d.meet?'Deltag: '+d.meet:'Linket står i jeres bekræftelsesmail.');
+ var meet=(d.meet&&/^https:\/\/meet\.google\.com\/[a-z]{3,4}-[a-z]{3,4}-[a-z]{3,4}$/.test(d.meet))?d.meet:'';
+ if(meet){$('#tkJoin').href=meet;$('#tkJoin').hidden=false}
+ var z=function(x){return x.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'')},title='Videomøde med Oscar Jønsson om musikken',det='Videomøde på Google Meet om musikken til '+(page==='bryllup'?'jeres bryllup':'jeres firmafest')+'. '+(meet?'Deltag: '+meet:'Linket står i jeres bekræftelsesmail.');
  var gcal='https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent(title)+'&dates='+z(st)+'/'+z(en)+'&details='+encodeURIComponent(det);
  var ics=lid?'/api/ics?lid='+encodeURIComponent(lid):'data:text/calendar;charset=utf-8,'+encodeURIComponent(['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Oscar Jonsson Musik//DA','BEGIN:VEVENT','UID:'+Date.now()+'@oscartjoensson.dk','DTSTAMP:'+z(new Date()),'DTSTART:'+z(st),'DTEND:'+z(en),'SUMMARY:'+title,'DESCRIPTION:'+det,'END:VEVENT','END:VCALENDAR'].join('\r\n'));
  // én knap: Android -> Google Kalender, alt andet (iPhone, Mac, Outlook) -> kalenderfil, som åbner "Tilføj" direkte
