@@ -807,7 +807,7 @@ async function salesJSON(env, url) {
     const showed = showedEv.length > 0;
     const noshow = !showed && ev.some(e => e.status === 'noshow');
     const upcoming = ev.some(e => e.start > now && e.status !== 'cancelled');
-    const cancelled = booked && ev.every(e => e.status === 'cancelled');
+    const cancelled = ev.length > 0 && ev.every(e => e.status === 'cancelled');
     const br = msgs.filter(m => m.b), brTs = br.length ? br[0].ts : 0;
     const opened = br.some(m => m.op);
     const replied = !!brTs && msgs.some(m => m.d === 'in' && m.t !== 'call' && m.ts > brTs);
@@ -845,8 +845,16 @@ async function salesJSON(env, url) {
   return { synced: core.synced, pending: core.pending || 0, costPerMeeting, totals: t, stages, leads: leads.sort((a, b) => b.created - a.created) };
 }
 
-async function salesPost(request, env, p) {
-  if ((request.headers.get('Origin') || '') !== new URL(request.url).origin) return json({ error: 'forkert oprindelse' }, 403);
+// Client Portal-admin (client.fuldtbooketmusiker.dk) henter de samme tal via service binding: /api/sales-feed[/sync|/settings|/deal]
+// med hemmelig nøgle (secret SALES_FEED_KEY, samme værdi som i fbm-client).
+async function salesFeedOk(request, env) {
+  const k = request.headers.get('X-Feed-Key') || '';
+  return !!env.SALES_FEED_KEY && k.length >= 32 && (await sha256(k)) === (await sha256(env.SALES_FEED_KEY));
+}
+
+async function salesPost(request, env, p, trusted = false) {
+  if (!trusted && (request.headers.get('Origin') || '') !== new URL(request.url).origin) return json({ error: 'forkert oprindelse' }, 403);
+  p = p.replace('/api/sales-feed/', '/admin/api/sales/');
   const body = await request.json().catch(() => ({}));
   await salesTables(env.DB);
   if (p === '/admin/api/sales/sync') return json(await salesSync(env));
@@ -964,6 +972,12 @@ export default {
       return Response.redirect(`https://${host}/${url.search}`, 301);
     }
     try {
+      if (p === '/api/sales-feed' || p.startsWith('/api/sales-feed/')) {
+        if (!(await salesFeedOk(request, env))) return json({ error: 'unauthorized' }, 401);
+        if (p === '/api/sales-feed' && request.method === 'GET') return json(await salesJSON(env, url));
+        if (request.method === 'POST') return await salesPost(request, env, p, true);
+        return json({ error: 'not found' }, 404);
+      }
       if (p === '/api/conv') {
         if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
         return await handleConv(request, env);
