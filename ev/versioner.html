@@ -1,0 +1,47 @@
+<!doctype html><html lang="da"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>Tekstversioner · Oscar Jønsson</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap">
+<style>
+:root{--bg:#F6F1E8;--bg2:#EFE7DA;--card:#FFFDF9;--ink:#1F1A15;--ink2:#4E463D;--mute:#6E655A;--line:rgba(31,26,21,.12);--accent:#7E5F35;--on:#FFFBF4}
+*{box-sizing:border-box}html,body{margin:0;height:100%}
+body{font-family:"DM Sans",system-ui,sans-serif;background:var(--bg2);color:var(--ink);display:flex;flex-direction:column}
+header{background:var(--bg);border-bottom:1px solid var(--line);padding:14px 20px 12px}
+.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+h1{font-family:"Instrument Serif",Georgia,serif;font-weight:400;font-size:1.6rem;margin:0;line-height:1.1}
+.tools{margin-left:auto;display:flex;gap:8px;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;background:var(--card)}
+.seg button{border:0;background:none;font:inherit;font-size:.88rem;padding:6px 14px;border-radius:999px;cursor:pointer;color:var(--ink2)}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--on)}
+a.open{font-size:.88rem;color:var(--accent);text-decoration:none;font-weight:600;white-space:nowrap}
+.rows{display:grid;gap:8px;margin-top:12px}
+.row{display:flex;align-items:center;gap:10px;min-width:0}
+.row b{flex:none;width:86px;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);font-weight:600}
+.chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:7px 12px;font:inherit;font-size:.9rem;cursor:pointer;color:var(--ink);text-align:left;display:flex;gap:8px;align-items:baseline}
+.chip span{font-weight:600}.chip em{font-style:normal;color:var(--mute);font-size:.84rem}
+.chip[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--on)}.chip[aria-pressed=true] em{color:var(--on);opacity:.85}
+.chip:focus-visible,.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+main{flex:1;min-height:0;display:flex;justify-content:center;padding:16px}
+.frame{width:100%;height:100%;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 10px 40px rgba(31,26,21,.12);transition:width .25s}
+body.mob .frame{width:390px;max-height:844px;border-radius:28px;border:8px solid #1F1A15}
+iframe{width:100%;height:100%;border:0;display:block}
+@media (max-width:700px){header{padding:12px 16px 10px}.tools .seg{display:none}main{padding:0}.frame{border-radius:0;border:0;box-shadow:none}.row b{width:auto;min-width:64px}.row{align-items:flex-start;flex-direction:column;gap:4px}.chips{width:100%}}
+</style></head><body>
+<header><div class="top"><h1>Oscar Jønsson · tekstversioner</h1>
+<div class="tools"><div class="seg" role="group" aria-label="Visning"><button type="button" data-dev="desk" aria-pressed="true">Computer</button><button type="button" data-dev="mob" aria-pressed="false">Mobil</button></div>
+<a class="open" id="open" href="#" target="_blank" rel="noopener">Åbn i ny fane ↗</a></div></div>
+<div class="rows"><div class="row"><b>Bryllup</b><div class="chips" role="group" aria-label="bryllup"><button type="button" class="chip" data-id="bryllup-nu" data-src="https://bryllup.oscartjoensson.dk/?nt=1" aria-pressed="false"><span>Nu</span><em>Den nuværende side</em></button><button type="button" class="chip" data-id="bryllup-v2" data-src="https://bryllup.oscartjoensson.dk/v2?nt=1" aria-pressed="false"><span>V2</span><em>Tilbudssiden (hele dokumentet)</em></button><button type="button" class="chip" data-id="bryllup-v3" data-src="https://bryllup.oscartjoensson.dk/v3?nt=1" aria-pressed="false"><span>V3</span><em>Tilbudssiden + headline version 2</em></button><button type="button" class="chip" data-id="bryllup-v4" data-src="https://bryllup.oscartjoensson.dk/v4?nt=1" aria-pressed="false"><span>V4</span><em>Tilbudssiden + headline version 1</em></button><button type="button" class="chip" data-id="bryllup-v5" data-src="https://bryllup.oscartjoensson.dk/v5?nt=1" aria-pressed="false"><span>V5</span><em>Tilbudssiden + ny headline: én artist hele dagen</em></button></div></div><div class="row"><b>Firmafest</b><div class="chips" role="group" aria-label="firmafest"><button type="button" class="chip" data-id="firmafest-nu" data-src="https://firmafest.oscartjoensson.dk/?nt=1" aria-pressed="false"><span>Nu</span><em>Den nuværende side</em></button><button type="button" class="chip" data-id="firmafest-v2" data-src="https://firmafest.oscartjoensson.dk/v2?nt=1" aria-pressed="false"><span>V2</span><em>Headline version 1</em></button><button type="button" class="chip" data-id="firmafest-v3" data-src="https://firmafest.oscartjoensson.dk/v3?nt=1" aria-pressed="false"><span>V3</span><em>Ny headline: festudvalgets ansvar</em></button><button type="button" class="chip" data-id="firmafest-v4" data-src="https://firmafest.oscartjoensson.dk/v4?nt=1" aria-pressed="false"><span>V4</span><em>Ny headline: ikke bare endnu en DJ</em></button></div></div></div></header>
+<main><div class="frame"><iframe id="f" title="Forhåndsvisning af siden"></iframe></div></main>
+<script>
+var f=document.getElementById('f'),op=document.getElementById('open'),chips=[].slice.call(document.querySelectorAll('.chip'));
+function show(id){var c=chips.filter(function(x){return x.dataset.id===id})[0]||chips[1];
+  chips.forEach(function(x){x.setAttribute('aria-pressed',x===c)});f.src=c.dataset.src;op.href=c.dataset.src;
+  c.scrollIntoView({block:'nearest',inline:'nearest'});history.replaceState(null,'','#'+c.dataset.id)}
+chips.forEach(function(c){c.onclick=function(){show(c.dataset.id)}});
+[].forEach.call(document.querySelectorAll('[data-dev]'),function(b){b.onclick=function(){document.body.classList.toggle('mob',b.dataset.dev==='mob');
+  [].forEach.call(document.querySelectorAll('[data-dev]'),function(x){x.setAttribute('aria-pressed',x===b)})}});
+show(location.hash.slice(1)||(location.hostname.indexOf('firmafest')===0?'firmafest-v2':'bryllup-v2'));
+</script></body></html>
