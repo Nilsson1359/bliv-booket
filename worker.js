@@ -4,6 +4,7 @@
 //  GET  /admin      dashboard (login m. ADMIN_PASSWORD-secret, signeret cookie 30 dage)
 //  GET  /admin/api/stats|heat|visitors|leads  JSON til dashboardet
 //  POST /api/lead, GET /api/slots, POST /api/book  formular + booking på /firmafest og /bryllup (se 'leads' nedenfor)
+//  GET  /admin/api/sales  salgstal fra GHL-pipelinen "fuldt booket musiker" (cron hvert 10. min henter, se 'salg' nedenfor)
 import ADMIN_HTML from './admin.html';
 
 const ALLOWED_EVENTS = new Set(['Lead', 'PageView', 'Schedule', 'Contact']);
@@ -666,6 +667,206 @@ async function leadsJSON(env, url) {
   };
 }
 
+// ───────── salg: GHL-pipelinen "fuldt booket musiker" (22/10 2026) ─────────
+// Charlies salgstal (møder, brochure, opkald, closing, CAC/AOV/ROAS) regnes ud fra Oscars GHL.
+// Cron (hvert 10. min) henter pipeline + kalendere + samtaler og gemmer et let øjebliksbillede i D1 `kv`;
+// dashboardet læser kun D1. Gratis Worker = højst 50 udgående kald pr. kørsel, så samtaler hentes i bidder.
+// Annoncekroner: ingen Meta-adgang endnu, så forbrug = kr. pr. booket møde (indstilling, standard 100 kr).
+// Lukket på kald/DM + kontant indbetalt skrives ind pr. kunde i dashboardet (`sales_deal`), GHL har ingen betalinger.
+const FBM = {
+  pipeline: 'YHh9YrfPgUjeimsRU3Vx',                        // "fuldt booket musiker"
+  calendars: ['fI7JGGwe6o7PqtOEECqc', 'ie1qAG2yhrzV4greL3Ma'], // Discovery Call + 2 Kald
+  since: Date.UTC(2026, 8, 20),                            // pipelinen startede 24/9
+  maxCalls: 42,                                            // GHL-kald pr. kørsel (gratis-grænse 50 inkl. alt andet)
+};
+// Brochuren = mailen efter mødet ("Tak for et godt møde – her er præsentationen") med link til tilbuddet
+const BROCHURE_RE = /præsentation/i;
+const TEST_RE = /\btest\b|oscarstest/i;
+const OFFER_STAGES = new Set(['Venter på', '2 kald', 'Forhandling', 'Lukket']);
+const LOST_STAGES = new Set(['Tabt', 'Ikke kvalificeret']);
+const MSG_TYPES = { TYPE_SMS: 'sms', TYPE_EMAIL: 'mail', TYPE_CALL: 'call', TYPE_FACEBOOK: 'dm', TYPE_INSTAGRAM: 'dm', TYPE_WHATSAPP: 'dm', TYPE_LIVE_CHAT: 'dm', TYPE_GMB: 'dm' };
+
+const kvGet = async (db, k, dflt) => { const r = await db.prepare('SELECT v FROM kv WHERE k = ?').bind(k).first().catch(() => null); try { return r ? JSON.parse(r.v) : dflt; } catch { return dflt; } };
+const kvPut = (db, k, v) => db.prepare('INSERT INTO kv (k, v, ts) VALUES (?, ?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v, ts = excluded.ts').bind(k, JSON.stringify(v), Date.now()).run();
+async function salesTables(db) {
+  await db.batch([
+    db.prepare('CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT NOT NULL, ts INTEGER NOT NULL)'),
+    db.prepare(`CREATE TABLE IF NOT EXISTS sales_deal (opp_id TEXT PRIMARY KEY, via TEXT NOT NULL DEFAULT '', cash INTEGER, updated_ts INTEGER NOT NULL)`),
+  ]);
+}
+
+// Én kørsel: pipeline, aftaler, ændrede samtaler (i bidder) og åbnings-status på brochurer
+async function salesSync(env) {
+  if (!env.GHL_TOKEN || !env.GHL_LOCATION_ID || !env.DB) return { error: 'GHL ikke sat op' };
+  const db = env.DB, L = env.GHL_LOCATION_ID, start = Date.now();
+  let calls = 0;
+  const call = (path, v = '2021-07-28') => { calls++; return ghl(env, 'GET', path, v); };
+  const left = () => FBM.maxCalls - calls;
+  await salesTables(db);
+  const core = await kvGet(db, 'sales_core', {}), conv = await kvGet(db, 'sales_conv', {});
+
+  const pipe = ((await call(`/opportunities/pipelines?locationId=${L}`)).pipelines || []).find(p => p.id === FBM.pipeline);
+  if (!pipe) return { error: 'Pipelinen "fuldt booket musiker" findes ikke længere i GHL' };
+  const stages = pipe.stages.map(s => ({ id: s.id, name: String(s.name || '').trim() }));
+
+  const opps = [];
+  for (let after = '', guard = 0; guard < 10; guard++) {
+    const d = await call(`/opportunities/search?location_id=${L}&pipeline_id=${FBM.pipeline}&limit=100${after}`);
+    const b = d.opportunities || [];
+    for (const o of b) {
+      const a = (o.attributions || []).find(x => x.isFirst) || (o.attributions || [])[0] || {};
+      opps.push({ id: o.id, cid: o.contactId, name: str(o.name || o.contact?.name, 80), email: str(o.contact?.email, 120), stage: o.pipelineStageId, status: o.status,
+        value: Number(o.monetaryValue) || 0, created: Date.parse(o.createdAt) || 0, statusAt: Date.parse(o.lastStatusChangeAt) || 0, source: str(o.source, 60),
+        campaign: str(a.utmCampaign, 80), content: str(a.utmContent, 120), viaCal: (o.attributions || []).some(x => x.medium === 'calendar') ? 1 : 0 });
+    }
+    if (b.length < 100 || !d.meta?.startAfterId) break;
+    after = `&startAfter=${d.meta.startAfter}&startAfterId=${d.meta.startAfterId}`;
+  }
+
+  const events = [];
+  for (const cal of FBM.calendars) {
+    const d = await call(`/calendars/events?locationId=${L}&calendarId=${cal}&startTime=${FBM.since}&endTime=${start + 120 * 86400000}`, '2021-04-15');
+    for (const e of d.events || []) if (!e.deleted) events.push({ id: e.id, cid: e.contactId, cal, start: Date.parse(e.startTime) || 0, added: Date.parse(e.dateAdded) || 0, status: e.appointmentStatus || e.appoinmentStatus || '' });
+  }
+
+  // samtaler ændret siden sidst (sorteret nyeste først) -> kun dem der hører til pipelinens kontakter
+  const cids = new Set(opps.map(o => o.cid));
+  const wm = core.wm || FBM.since, dirty = [];
+  for (let after = '', guard = 0; guard < 6 && left() > 5; guard++) {
+    const d = await call(`/conversations/search?locationId=${L}&limit=100&sortBy=last_message_date&sort=desc${after}`, '2021-04-15');
+    const cs = d.conversations || [];
+    for (const c of cs) if (cids.has(c.contactId) && (!conv[c.id] || conv[c.id].last < c.lastMessageDate)) dirty.push({ id: c.id, cid: c.contactId, last: c.lastMessageDate });
+    if (cs.length < 100 || cs[cs.length - 1].lastMessageDate < wm) break;
+    after = `&startAfterDate=${cs[cs.length - 1].lastMessageDate}`;
+  }
+  dirty.sort((a, b) => a.last - b.last);
+  let done = 0;
+  for (const c of dirty) {
+    if (left() < 3) break;
+    const d = await call(`/conversations/${c.id}/messages?limit=100`, '2021-04-15');
+    const raw = Array.isArray(d.messages) ? d.messages : (d.messages?.messages || []);
+    const old = new Map((conv[c.id]?.m || []).filter(m => m.mid).map(m => [m.mid, m]));
+    const m = [];
+    for (const x of raw) {
+      const t = MSG_TYPES[x.messageType]; if (!t) continue;
+      const subj = x.meta?.email?.subject || '';
+      const r = { t, d: x.direction === 'inbound' ? 'in' : 'out', ts: Date.parse(x.dateAdded) || 0 };
+      if (t === 'call') { r.st = x.meta?.call?.status || x.status || ''; r.dur = Number(x.meta?.call?.duration) || 0; }
+      if (t === 'mail' && r.d === 'out' && BROCHURE_RE.test(subj)) {
+        r.b = 1; r.mid = (x.meta?.email?.messageIds || [])[0] || x.id;
+        const prev = old.get(r.mid); if (prev) { r.op = prev.op; r.chk = prev.chk; }
+      }
+      if (r.d === 'out' && x.source === 'workflow') r.auto = 1;
+      m.push(r);
+    }
+    conv[c.id] = { cid: c.cid, last: c.last, m };
+    done++;
+  }
+  const allDone = done === dirty.length;
+
+  // åbnet? (brochurer op til 30 dage gamle, tjekkes højst hver time til de er åbnet)
+  const brochures = Object.values(conv).flatMap(c => c.m.filter(m => m.b && !m.op && start - m.ts < 30 * 86400000 && start - (m.chk || 0) > 3600000));
+  brochures.sort((a, b) => (a.chk || 0) - (b.chk || 0));
+  for (const b of brochures) {
+    if (left() < 1) break;
+    const e = await call(`/conversations/messages/email/${b.mid}`, '2021-04-15').catch(() => null);
+    const s = e?.emailMessage?.status || '';
+    if (['opened', 'clicked', 'replied'].includes(s)) b.op = 1;
+    b.chk = start;
+  }
+
+  await kvPut(db, 'sales_conv', conv);
+  await kvPut(db, 'sales_core', { stages, opps, events, wm: allDone ? start - 10 * 60000 : wm, synced: start, pending: dirty.length - done });
+  return { ok: true, calls, opps: opps.length, events: events.length, convUpdated: done, pending: dirty.length - done };
+}
+
+// ─── /admin/api/sales ───
+async function salesJSON(env, url) {
+  const db = env.DB, { from } = rangeOf(url);
+  await salesTables(db);
+  const core = await kvGet(db, 'sales_core', null);
+  if (!core) return { empty: true };
+  const conv = await kvGet(db, 'sales_conv', {});
+  const settings = await kvGet(db, 'sales_settings', {});
+  const costPerMeeting = Number(settings.costPerMeeting) >= 0 && settings.costPerMeeting !== undefined ? Number(settings.costPerMeeting) : 100;
+  const deals = new Map((await all(db, 'SELECT opp_id, via, cash FROM sales_deal')).map(r => [r.opp_id, r]));
+  const stageName = new Map(core.stages.map(s => [s.id, s.name]));
+  const now = Date.now();
+  const msgsOf = new Map();
+  for (const c of Object.values(conv)) { const a = msgsOf.get(c.cid) || []; a.push(...c.m); msgsOf.set(c.cid, a); }
+  const evOf = new Map();
+  for (const e of core.events) { const a = evOf.get(e.cid) || []; a.push(e); evOf.set(e.cid, a); }
+
+  const leads = core.opps.filter(o => o.created >= from && !TEST_RE.test(o.name) && !TEST_RE.test(o.email)).map(o => {
+    const stage = stageName.get(o.stage) || '?';
+    const ev = (evOf.get(o.cid) || []).sort((a, b) => a.start - b.start);
+    const msgs = (msgsOf.get(o.cid) || []).sort((a, b) => a.ts - b.ts);
+    // booket via kalenderen, også hvis aftalen siden er slettet/flyttet uden for kalenderne
+    const booked = ev.length > 0 || !!o.viaCal;
+    const showedEv = ev.filter(e => e.status === 'showed');
+    const showed = showedEv.length > 0;
+    const noshow = !showed && ev.some(e => e.status === 'noshow');
+    const upcoming = ev.some(e => e.start > now && e.status !== 'cancelled');
+    const cancelled = booked && ev.every(e => e.status === 'cancelled');
+    const br = msgs.filter(m => m.b), brTs = br.length ? br[0].ts : 0;
+    const opened = br.some(m => m.op);
+    const replied = !!brTs && msgs.some(m => m.d === 'in' && m.t !== 'call' && m.ts > brTs);
+    const won = o.status === 'won' || stage === 'Lukket';
+    const lost = !won && (o.status === 'lost' || LOST_STAGES.has(stage));
+    const positive = replied && !lost;
+    const outCalls = msgs.filter(m => m.t === 'call' && m.d === 'out');
+    const answered = outCalls.some(m => m.st === 'completed');
+    const talked = outCalls.some(m => m.st === 'completed' && m.dur >= 120);
+    const offer = br.length > 0 || OFFER_STAGES.has(stage) || won;
+    const deal = deals.get(o.id) || {};
+    // gæt: lukket inden for 2 døgn efter et afholdt møde = på kaldet, ellers på DM; kan rettes i tabellen
+    const guess = won ? (showedEv.some(e => o.statusAt >= e.start && o.statusAt - e.start < 2 * 86400000) ? 'call' : 'dm') : '';
+    return { id: o.id, name: o.name, created: o.created, stage, status: o.status, value: o.value, source: o.source, campaign: o.campaign, content: o.content,
+      meeting: ev.length ? ev[ev.length - 1].start : null, booked, showed, noshow, upcoming, cancelled, brochure: br.length > 0, opened, replied, positive,
+      called: outCalls.length > 0, answered, talked, offer, offerVia: offer ? (showed ? 'call' : 'dm') : '', won, lost,
+      via: won ? (deal.via || guess) : '', viaGuess: won && !deal.via, cash: deal.cash ?? null,
+      sms: msgs.filter(m => m.t === 'sms' && m.d === 'out' && !m.auto).length, inbound: msgs.filter(m => m.d === 'in' && m.t !== 'call').length };
+  });
+
+  const n = f => leads.filter(f).length;
+  const won = leads.filter(l => l.won);
+  const t = {
+    leads: leads.length, booked: n(l => l.booked), showed: n(l => l.showed), noshow: n(l => l.noshow), upcoming: n(l => l.upcoming && !l.showed),
+    cancelled: n(l => l.cancelled), notQualified: n(l => l.stage === 'Ikke kvalificeret'),
+    brochure: n(l => l.brochure), opened: n(l => l.opened), replied: n(l => l.replied), positive: n(l => l.positive),
+    called: n(l => l.called), answered: n(l => l.answered), talked: n(l => l.talked),
+    offer: n(l => l.offer), offerCall: n(l => l.offerVia === 'call'), offerDm: n(l => l.offerVia === 'dm'),
+    won: won.length, wonCall: won.filter(l => l.via === 'call').length, wonDm: won.filter(l => l.via === 'dm').length,
+    revenue: won.reduce((s, l) => s + l.value, 0), paidDeals: won.filter(l => l.value > 0).length,
+    cash: won.reduce((s, l) => s + (l.cash || 0), 0), cashKnown: won.filter(l => l.cash != null).length,
+  };
+  t.spend = t.booked * costPerMeeting;
+  const stages = core.stages.map(s => ({ name: s.name, n: leads.filter(l => l.stage === s.name).length }));
+  return { synced: core.synced, pending: core.pending || 0, costPerMeeting, totals: t, stages, leads: leads.sort((a, b) => b.created - a.created) };
+}
+
+async function salesPost(request, env, p) {
+  if ((request.headers.get('Origin') || '') !== new URL(request.url).origin) return json({ error: 'forkert oprindelse' }, 403);
+  const body = await request.json().catch(() => ({}));
+  await salesTables(env.DB);
+  if (p === '/admin/api/sales/sync') return json(await salesSync(env));
+  if (p === '/admin/api/sales/settings') {
+    const c = num(body.costPerMeeting, 0, 100000);
+    if (c == null) return json({ error: 'ugyldigt beløb' }, 400);
+    await kvPut(env.DB, 'sales_settings', { costPerMeeting: Math.round(c) });
+    return json({ ok: true });
+  }
+  if (p === '/admin/api/sales/deal') {
+    const id = str(body.id, 40), via = ['call', 'dm', ''].includes(body.via) ? body.via : null;
+    const cash = body.cash === null || body.cash === '' ? null : num(body.cash, 0, 10000000);
+    if (!/^[A-Za-z0-9]{10,40}$/.test(id) || via == null || (body.cash != null && body.cash !== '' && cash == null)) return json({ error: 'ugyldige felter' }, 400);
+    await env.DB.prepare(`INSERT INTO sales_deal (opp_id, via, cash, updated_ts) VALUES (?, ?, ?, ?) ON CONFLICT(opp_id) DO UPDATE SET via = excluded.via, cash = excluded.cash, updated_ts = excluded.updated_ts`)
+      .bind(id, via, cash == null ? null : Math.round(cash), Date.now()).run();
+    return json({ ok: true });
+  }
+  return json({ error: 'not found' }, 404);
+}
+
 // ───────── video m. byte-range ─────────
 async function serveVideo(request, env) {
   const res = await env.ASSETS.fetch(new Request(request.url, { method: 'GET', headers: { 'Accept-Encoding': 'identity' } }));
@@ -749,6 +950,9 @@ async function handleIcs(env, url) {
 
 // ───────── router ─────────
 export default {
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(salesSync(env).catch(err => console.log('salesSync', String(err))));
+  },
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const p = url.pathname;
@@ -800,6 +1004,8 @@ export default {
         if (p === '/admin/api/heat') return await adminApi(env, ctx, url, heatJSON, COST.heat);
         if (p === '/admin/api/visitors') return await adminApi(env, ctx, url, visitorsJSON, COST.visitors);
         if (p === '/admin/api/leads') return await adminApi(env, ctx, url, leadsJSON, COST.leads, 30);
+        if (p === '/admin/api/sales' && request.method === 'GET') return json(await salesJSON(env, url));
+        if (p.startsWith('/admin/api/sales/') && request.method === 'POST') return await salesPost(request, env, p);
         return json({ error: 'not found' }, 404);
       }
     } catch (e) {

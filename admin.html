@@ -42,6 +42,16 @@ table{width:100%;border-collapse:collapse;font-size:.85rem}th{font-family:var(--
 .lfun .funnel{grid-template-columns:repeat(4,minmax(0,1fr))}.lfun h3{margin:0 0 8px;font-size:.85rem}
 .ltab td a{color:var(--ink);text-decoration:underline;text-decoration-color:#555}.ltab .ans{color:var(--ink2);font-size:.8rem;max-width:380px}.ltab .ans b{color:var(--ink3);font-weight:600}
 @media(max-width:760px){.ltab thead{display:none}.ltab tr{display:block;background:var(--card2);border-radius:12px;padding:10px 12px;margin-bottom:10px}.ltab td{display:flex;gap:10px;border:0;padding:4px 0}.ltab td::before{content:attr(data-l);flex:none;width:68px;font-family:var(--mono);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);padding-top:2px}.ltab td.ans{max-width:none;display:block}.ltab td.ans::before{display:block;margin-bottom:2px}.ltab td a{display:inline-block;min-height:24px}}
+.shead{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin:0 0 4px}.shead h2{margin:0;font-size:.85rem;color:var(--ink);font-family:Manrope,system-ui,sans-serif;letter-spacing:0;text-transform:none;font-weight:800}
+.sgrp{margin-top:16px}.sgrp>h3{font-family:var(--mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);font-weight:500;margin:0 0 8px}
+.skpis{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}.skpi{background:var(--card2);border-radius:12px;padding:12px 14px;min-width:0}
+.skpi .l{font-size:.78rem;color:var(--ink2);font-weight:600}.skpi .v{font-size:1.5rem;font-weight:800;letter-spacing:-.02em;margin:2px 0}.skpi .s{font-size:.72rem;color:var(--ink3);line-height:1.35}.skpi.na .v{color:var(--ink3);font-size:1.05rem;padding:6px 0 3px}
+.sctl{display:inline-flex;gap:6px;align-items:center;font-size:.8rem;color:var(--ink2)}.sctl input{width:84px;background:#0f0f0f;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font:inherit;font-size:16px}
+.btn{background:var(--card2);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:7px 13px;font:inherit;font-weight:600;cursor:pointer}.btn:disabled{opacity:.5}
+.stages{display:flex;flex-wrap:wrap;gap:8px}.stages span{background:var(--card2);border-radius:999px;padding:5px 11px;font-size:.78rem;color:var(--ink2)}.stages b{color:var(--ink);margin-left:6px}
+.dtab input,.dtab select{background:#0f0f0f;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font:inherit;font-size:16px}.dtab input{width:120px}
+.flags{display:flex;flex-wrap:wrap;gap:4px}
+#sales .mono{white-space:nowrap}@media(max-width:600px){.skpis{grid-template-columns:1fr 1fr}.skpi .v{font-size:1.25rem}}
 </style>
 </head>
 <body>
@@ -58,7 +68,14 @@ table{width:100%;border-collapse:collapse;font-size:.85rem}th{font-family:var(--
   <a href="/admin/logout">Log ud</a>
 </header>
 <main>
-  <div class="grid kpis" id="kpis"></div>
+  <div class="card" id="sales">
+    <div class="shead"><h2>Salg · fuldt booket musiker</h2><span class="muted" id="sSync"></span><span style="flex:1"></span>
+      <label class="sctl" title="Ingen Meta-adgang endnu, så annoncekroner regnes som et fast beløb pr. booket møde">Annoncekr. pr. booket møde <input id="sCost" type="number" min="0" step="10" inputmode="numeric"> kr</label>
+      <button class="btn" id="sRefresh">Hent fra GHL nu</button></div>
+    <div id="salesBody"><div class="empty">Henter …</div></div>
+  </div>
+
+  <div class="grid kpis" id="kpis" style="margin-top:14px"></div>
 
   <div class="row c31">
     <div class="card"><h2>Funnel: forside → booking → tak</h2><div class="funnel" id="funnel"></div><p class="muted" style="margin:12px 0 0;font-size:.8rem">Tal er unikke sessioner (30 min uden aktivitet = ny session). "Formular rørt" = klik inde i bookingvinduet. "Booket" = landet på tak-siden.</p></div>
@@ -124,7 +141,7 @@ const pct = (a,b) => b ? (100*a/b).toLocaleString('da-DK',{maximumFractionDigits
 const dur = ms => { if(!ms) return '–'; const s=Math.round(ms/1000); return s<60? s+' s' : Math.floor(s/60)+' min '+(s%60)+' s'; };
 const esc = s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let range='7d', charts={}, map, mapLayer;
-document.getElementById('range').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;range=b.dataset.r;[...e.currentTarget.children].forEach(x=>x.classList.toggle('on',x===b));load();loadHeat();loadLeads();});
+document.getElementById('range').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;range=b.dataset.r;[...e.currentTarget.children].forEach(x=>x.classList.toggle('on',x===b));load();loadHeat();loadLeads();loadSales();});
 
 function table(el, rows, cols, opts={}){
   if(!rows||!rows.length){el.innerHTML='<div class="empty">Ingen data endnu</div>';return;}
@@ -197,6 +214,79 @@ async function loadLeads(){
       <td data-l="Mail">${r.email?`<a href="mailto:${esc(r.email)}">${esc(r.email)}</a>`:'<span class="muted">–</span>'}</td>
       <td data-l="Svar" class="ans">${ans}</td><td data-l="Status">${st}</td><td data-l="Kilde">${esc(src)}${r.city?' <span class="muted">'+esc(r.city)+'</span>':''}</td></tr>`;}).join('')+'</tbody></table>';
 }
+// ─── Salg (GHL-pipelinen "fuldt booket musiker") ───
+const kr = v => v==null||!isFinite(v) ? '–' : Math.round(v).toLocaleString('da-DK')+' kr';
+const rate = (a,b) => b ? pct(a,b) : '–';
+const xr = (a,b) => b ? (a/b).toLocaleString('da-DK',{maximumFractionDigits:1})+'x' : '–';
+const skpi = (l,v,s,na) => `<div class="skpi${na?' na':''}"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s||''}</div></div>`;
+const sgrp = (h,items) => `<div class="sgrp"><h3>${h}</h3><div class="skpis">${items.join('')}</div></div>`;
+async function salesPostJSON(path, body){const r=await fetch('/admin/api/sales/'+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));if(!r.ok||d.error)throw new Error(d.error||('HTTP '+r.status));return d;}
+async function loadSales(){
+  const el=document.getElementById('salesBody');
+  let d; try{d=await (await fetch('/admin/api/sales?range='+range)).json();}catch(e){el.innerHTML='<div class="empty">Kunne ikke hente salgstal</div>';return;}
+  if(d.error){el.innerHTML='<div class="empty">'+esc(d.error)+'</div>';return;}
+  if(d.empty){el.innerHTML='<div class="empty">Intet hentet fra GHL endnu. Tryk "Hent fra GHL nu".</div>';return;}
+  const cost=document.getElementById('sCost'); if(document.activeElement!==cost) cost.value=d.costPerMeeting;
+  document.getElementById('sSync').textContent='Hentet fra GHL '+new Date(d.synced).toLocaleString('da-DK',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+(d.pending?` · ${d.pending} samtaler mangler endnu`:'');
+  const t=d.totals, spend=t.spend;
+  el.innerHTML=
+    sgrp('Mødebooking',[
+      skpi('Leads',fmt(t.leads),'nye i pipelinen i perioden'),
+      skpi('Appointment booking rate',rate(t.booked,t.leads),fmt(t.booked)+' har booket møde'),
+      skpi('Show up rate',rate(t.showed,t.showed+t.noshow),fmt(t.showed)+' mødte op, '+fmt(t.noshow)+' no-show'+(t.upcoming?', '+fmt(t.upcoming)+' kommende':'')+(t.cancelled?', '+fmt(t.cancelled)+' aflyst':'')),
+      skpi('Leadkvalitet',rate(t.leads-t.notQualified,t.leads),fmt(t.notQualified)+' markeret "Ikke kvalificeret"'),
+    ])+
+    sgrp('Brochure (mailen "her er præsentationen" efter mødet)',[
+      skpi('Brochure sendt',fmt(t.brochure),rate(t.brochure,t.showed)+' af afholdte møder'),
+      skpi('Open rate',rate(t.opened,t.brochure),fmt(t.opened)+' har åbnet mailen'),
+      skpi('Reply rate',rate(t.replied,t.brochure),fmt(t.replied)+' skrev tilbage efter brochuren'),
+      skpi('Positive reply rate',rate(t.positive,t.brochure),fmt(t.positive)+' svarede og er ikke tabt'),
+    ])+
+    sgrp('Opkald (når vi ringer)',[
+      skpi('Ringet op',fmt(t.called),'leads vi har ringet til'),
+      skpi('Positive call response rate',rate(t.talked,t.called),fmt(t.talked)+' snakkede med os over 2 min'),
+      skpi('Tog telefonen',rate(t.answered,t.called),fmt(t.answered)+' tog den mindst én gang'),
+    ])+
+    sgrp('Tilbud og closing',[
+      skpi('Offer presented rate (kald)',rate(t.offerCall,t.showed),fmt(t.offerCall)+' fik tilbud efter afholdt møde'),
+      skpi('Offer presented (DM)',fmt(t.offerDm),'fik tilbud uden afholdt møde'),
+      skpi('Call closing rate',rate(t.wonCall,t.showed),fmt(t.wonCall)+' lukket på kaldet, af afholdte møder'),
+      skpi('DM closing rate',rate(t.wonDm,t.offer-t.wonCall),fmt(t.wonDm)+' lukket på DM, af tilbud der ikke lukkede på kaldet'),
+      skpi('Nye kunder',fmt(t.won),'Lukket/vundet i GHL'),
+    ])+
+    sgrp('Økonomi (annoncekr. = '+kr(d.costPerMeeting)+' pr. booket møde)',[
+      skpi('Annoncekroner',kr(spend),fmt(t.booked)+' møder × '+kr(d.costPerMeeting)),
+      skpi('CPM','Mangler Meta','kommer når vi får adgang til annoncekontoen',true),
+      skpi('Leadpris',kr(t.leads?spend/t.leads:null),kr(t.showed?spend/t.showed:null)+' pr. afholdt møde'),
+      skpi('CAC',kr(t.won?spend/t.won:null),'hvad en ny kunde koster i annoncer'),
+      skpi('AOV',kr(t.paidDeals?t.revenue/t.paidDeals:null),'gns. ordre, '+fmt(t.paidDeals)+' betalende (værdi fra GHL)'),
+      skpi('Cash collected',kr(t.cash),t.cashKnown<t.won?fmt(t.won-t.cashKnown)+' kunde(r) mangler beløb nedenfor':'indtastet pr. kunde nedenfor'),
+      skpi('ROAS',xr(t.revenue,spend),'omsætning '+kr(t.revenue)+' · på cash '+xr(t.cash,spend)),
+    ])+
+    `<div class="sgrp"><h3>Hvor står leads nu (stadie i GHL)</h3><div class="stages">${d.stages.map(s=>`<span>${esc(s.name)}<b>${fmt(s.n)}</b></span>`).join('')}</div></div>`+
+    `<div class="sgrp"><h3>Nye kunder: lukket hvordan, og hvor meget er betalt</h3><div id="sDeals"></div></div>`+
+    `<div class="sgrp"><h3>Alle leads i perioden</h3><div class="scroll" id="sLeads"></div></div>`+
+    `<p class="muted" style="margin:12px 0 0;font-size:.78rem">Hentes fra Oscars GHL hvert 10. minut: pipelinen "fuldt booket musiker", kalenderne Discovery Call og 2 Kald, samt samtaler. Testkontakter tælles ikke med. Perioden gælder hvornår leadet kom ind. "Lukket på kald/DM" er et gæt (lukket senest 2 døgn efter et afholdt møde = kald), indtil det rettes nedenfor.</p>`;
+  const won=d.leads.filter(l=>l.won), dEl=document.getElementById('sDeals');
+  dEl.innerHTML=won.length?'<table class="dtab"><thead><tr><th>Kunde</th><th class="n">Værdi (GHL)</th><th>Lukket på</th><th>Cash collected</th></tr></thead><tbody>'+won.map(l=>`<tr data-id="${esc(l.id)}"><td>${esc(l.name)}</td><td class="n">${kr(l.value)}</td>
+      <td><select data-f="via"><option value="call"${l.via==='call'?' selected':''}>Kald</option><option value="dm"${l.via==='dm'?' selected':''}>DM</option></select>${l.viaGuess?' <span class="pill y" title="Gættet ud fra mødetidspunktet. Vælg for at rette.">gæt</span>':''}</td>
+      <td><input data-f="cash" type="number" min="0" step="100" inputmode="numeric" placeholder="kr" value="${l.cash??''}"></td></tr>`).join('')+'</tbody></table>':'<div class="empty">Ingen nye kunder i perioden</div>';
+  dEl.querySelectorAll('tr[data-id]').forEach(tr=>tr.addEventListener('change',async()=>{
+    const via=tr.querySelector('[data-f=via]').value, cash=tr.querySelector('[data-f=cash]').value;
+    try{await salesPostJSON('deal',{id:tr.dataset.id,via,cash:cash===''?null:Number(cash)});loadSales();}catch(e){alert('Kunne ikke gemme: '+e.message);}
+  }));
+  const pill=(b,txt,cls='g')=>b?`<span class="pill ${cls}">${txt}</span>`:'';
+  const tf=ts=>ts?new Date(ts).toLocaleString('da-DK',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'–';
+  document.getElementById('sLeads').innerHTML=d.leads.length?'<table class="ltab"><thead><tr><th>Ind</th><th>Navn</th><th>Stadie</th><th>Møde</th><th>Forløb</th><th>Annonce</th></tr></thead><tbody>'+d.leads.map(l=>`<tr>
+      <td data-l="Ind" class="mono">${tf(l.created)}</td><td data-l="Navn">${esc(l.name)}</td><td data-l="Stadie">${esc(l.stage)}${l.won&&l.value?' <span class="muted">'+kr(l.value)+'</span>':''}</td>
+      <td data-l="Møde" class="mono">${l.meeting?tf(l.meeting):'–'}</td>
+      <td data-l="Forløb"><div class="flags">${pill(l.showed,'mødte op')}${pill(l.noshow,'no-show','y')}${pill(l.cancelled,'aflyst','y')}${pill(l.upcoming&&!l.showed,'kommende','')}${pill(l.called&&!l.answered,'ringet, intet svar','y')}${pill(l.talked,'snak 2+ min')}${pill(l.brochure,l.opened?'brochure åbnet':'brochure sendt',l.opened?'g':'')}${pill(l.replied,'svarede')}${pill(l.won,l.via==='dm'?'lukket på DM':'lukket på kald')}${pill(l.lost,'tabt','')}</div></td>
+      <td data-l="Annonce" class="ans">${esc(l.content||l.campaign||l.source||'–')}</td></tr>`).join('')+'</tbody></table>':'<div class="empty">Ingen leads i perioden</div>';
+}
+document.getElementById('sCost').addEventListener('change',async e=>{try{await salesPostJSON('settings',{costPerMeeting:Number(e.target.value)});loadSales();}catch(err){alert('Kunne ikke gemme: '+err.message);}});
+document.getElementById('sRefresh').addEventListener('click',async e=>{const b=e.currentTarget;b.disabled=true;b.textContent='Henter …';
+  try{const r=await salesPostJSON('sync',{});b.textContent=r.pending?`Hentet, ${r.pending} samtaler mangler (tryk igen)`:'Hentet';}catch(err){b.textContent='Fejl';alert('GHL fejlede: '+err.message);}
+  b.disabled=false;setTimeout(()=>b.textContent='Hent fra GHL nu',5000);loadSales();});
 async function loadVisitors(){
   const d=await (await fetch('/admin/api/visitors?range='+range+'&limit=200')).json();
   const el=document.getElementById('visitors');
@@ -261,7 +351,7 @@ function drawDepth(buckets,total){
   const reached=[];for(let b=0;b<=100;b+=10){reached.push(buckets.filter(x=>x.b>=b).reduce((s,x)=>s+x.n,0)/total);}
   el.innerHTML=reached.slice(0,10).map((r,i)=>`<i style="background:rgba(240,198,116,${.15+.85*r});height:10%" title="${i*10}-${i*10+10} %: ${Math.round(r*100)} % nåede hertil">${Math.round(r*100)}%</i>`).join('');
 }
-load();loadHeat();loadLeads();
+load();loadHeat();loadLeads();loadSales();
 </script>
 </body>
 </html>

@@ -42,3 +42,9 @@ CREATE INDEX IF NOT EXISTS idx_leads_ip ON leads(ip, created_ts);
 CREATE INDEX IF NOT EXISTS idx_leads_booked_ip ON leads(booked_ip, booked_start);
 -- 21/10: meet_url = Google Meet-link fra GHL-aftalen (vises på tak-siden og i kalenderfilen). Eksisterende DB fik den via:
 --   ALTER TABLE leads ADD COLUMN meet_url TEXT;
+
+-- 22/10: salgstal fra GHL (worker.js salesSync/salesJSON). Tabellerne oprettes også automatisk af koden.
+-- kv: sales_core (pipeline, aftaler, stadier), sales_conv (samtaler pr. GHL-samtale), sales_settings (kr. pr. booket møde)
+CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT NOT NULL, ts INTEGER NOT NULL);
+-- Pr. vunden kunde: lukket på kald/DM + kontant indbetalt (GHL har ingen betalinger)
+CREATE TABLE IF NOT EXISTS sales_deal (opp_id TEXT PRIMARY KEY, via TEXT NOT NULL DEFAULT '', cash INTEGER, updated_ts INTEGER NOT NULL);

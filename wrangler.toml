@@ -21,6 +21,10 @@ GHL_LOCATION_ID = "SPqCnUSSBeiJmWIf74nm"
 GHL_CALENDAR_FIRMAFEST = "QM0iD9QoOnEdnpRHkb2C"   # "Oscartjoensson - funnel - Firmafest", oprettet via API 21/10 som kopi af bryllup
 GHL_CALENDAR_BRYLLUP = "OrUzjog2RIXctk5UA7sF"     # "Oscartjoensson - funnel - Bryllup"
 
+# salgstal fra GHL (salesSync i worker.js)
+[triggers]
+crons = ["*/10 * * * *"]
+
 [[d1_databases]]
 binding = "DB"
 database_name = "fbm-analytics"
