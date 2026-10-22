@@ -693,6 +693,13 @@ async function oscarHost(request, env, url, gig) {
     const h = new Headers(r.headers); h.set('Cache-Control', 'public, max-age=60');
     return new Response(r.body, { status: r.status, headers: h });
   }
+  const cv = p.match(/^\/(v[2-9])\/?$/);   // tekstversioner (gen_events.py COPY): /v2, /v3 ... samme design, anden tekst
+  if (cv) {
+    const r = await env.ASSETS.fetch(new Request(`${url.origin}/ev/${gig}-tekst-${cv[1]}`, { method: request.method, headers: request.headers }));
+    if (r.status !== 200) return Response.redirect(`https://${url.hostname}/`, 302);
+    const h = new Headers(r.headers); h.set('Cache-Control', 'public, max-age=60');
+    return new Response(r.body, { status: 200, headers: h });
+  }
   const other = Object.entries(OSCAR_HOSTS).find(([, g]) => '/' + g === p);
   if (other) return Response.redirect(`https://${other[0]}/${url.search}`, 301);   // /bryllup og /firmafest -> rigtigt underdomæne
   if (p === '/admin' || p.startsWith('/admin/')) return Response.redirect('https://fuldtbooketmusiker.dk' + p, 302);

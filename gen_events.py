@@ -428,6 +428,12 @@ p{margin:0;text-wrap:pretty}
 .check li::before{content:"✓";flex:none;width:24px;height:24px;margin-top:2px;border-radius:50%;background:var(--accent);color:var(--onaccent);display:grid;place-items:center;font-size:13px;font-weight:700;line-height:1}
 .offer{background:var(--card);border:1px solid var(--line);border-radius:calc(var(--r) + 6px);padding:clamp(24px,4vw,44px);display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);gap:clamp(24px,4vw,48px);align-items:center}
 .offer .photo{aspect-ratio:1}
+.prices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0 4px}
+.price{border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;background:var(--bg)}
+.price span{display:block;font-size:.85rem;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
+.price b{display:block;font-family:var(--display);font-weight:var(--hw);font-size:clamp(1.5rem,2.6vw,1.9rem);line-height:1.15;margin:4px 0 6px;color:var(--accentT)}
+.price p{font-size:.95rem;color:var(--ink2);margin:0}
+@media (max-width:520px){.prices{grid-template-columns:minmax(0,1fr)}}
 /* gallery */
 .gal{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(220px,1fr);gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:8px;margin-top:28px;scrollbar-width:none}
 .gal::-webkit-scrollbar{display:none}
@@ -717,8 +723,10 @@ def pixel_tag():
     if not PIXEL_ID: return ''
     return f"<script>if(!/[?&]nt=1\\b/.test(location.search)){{!function(f,b,e,v,n,t,s){{if(f.fbq)return;n=f.fbq=function(){{n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)}};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','{PIXEL_ID}');fbq('track','PageView');}}</script>"
 
-def page(key, d, pal, v2=False):
+def page(key, d, pal, v2=False, cv=None):
     c = dict(P[key]); dd = D[d]; pn, pmode, pv = PAL[pal]; v = V2[key] if v2 else {}
+    if cv: c.update(cv.get('c', {})); v = {**v, **cv.get('v', {})}   # tekstversion (COPY): samme design, anden tekst
+    st = c.get('story', STORY)
     hero_cta = c['cta']
     if v2 and v.get('cta_short'): c['cta'] = v['cta_short']   # midt på siden: kort CTA på én linje; hero viser den fulde på desktop
     if v.get('hero_clip'): c['hero_clip'] = v['hero_clip']
@@ -798,8 +806,8 @@ def page(key, d, pal, v2=False):
 
     story = f'''<section class="sec alt" id="oscar"><div class="wrap"><div class="story">
       <div class="story-media rv">{yt(0, "big")}<figure class="then">{img("dengang", "Oscar som ung musiker med el-guitar på en scene", widths=(480,), sizes="200px", w=1123, h=1400)}<figcaption>Dengang</figcaption></figure></div>
-      <div class="stack rv"><span class="eyebrow">{STORY["eyebrow"]}</span><h2>{STORY["h"]}</h2>{ps(STORY["p"], "lead")}<p class="sign">{STORY["sign"]}</p>
-      <div class="facts"><div><b>10+ år</b>som guitarist, sanger og DJ</div><div><b>1.000+</b>shows til fester, bryllupper og firmaevents</div><div><b>4,5 / 5</b>på Trustpilot, 14 anmeldelser</div></div>
+      <div class="stack rv"><span class="eyebrow">{st["eyebrow"]}</span><h2>{st["h"]}</h2>{ps(st["p"], "lead")}{f'<p class="sign">{st["sign"]}</p>' if st["sign"] else ""}
+      <div class="facts"><div><b>10+ år</b>som guitarist, sanger og DJ</div><div><b>{st.get("n", "1.000+")}</b>{st.get("nl", "shows til fester, bryllupper og firmaevents")}</div><div><b>4,5 / 5</b>på Trustpilot, 14 anmeldelser</div></div>
       <div class="cta-row full">{cta(c["cta"], sec="oscar")}</div></div></div></div></section>'''
 
     music = f'''<section class="sec" id="musik"><div class="wrap"><div class="music">
@@ -865,7 +873,7 @@ def page(key, d, pal, v2=False):
 
     t, a, items, b = c['s10']
     s10 = f'''<section class="sec alt" id="tilbud"><div class="wrap"><div class="offer rv"><div class="stack"><h2>{t}</h2><p class="lead">{a}</p>
-      <ul class="check">{"".join(f"<li>{x}</li>" for x in items)}</ul><p class="big">{b}</p><div class="cta-row full">{cta(c["cta"], sec="tilbud")}</div></div>
+      <ul class="check">{"".join(f"<li>{x}</li>" for x in items)}</ul>{('<div class="prices">' + "".join(f'<div class="price"><span>{n}</span><b>{pr}</b><p>{tx}</p></div>' for n, pr, tx in c["price"]) + '</div>') if c.get("price") else ""}<p class="big">{b}</p><div class="cta-row full">{cta(c["cta"], sec="tilbud")}</div></div>
       <div class="photo">{simg(v["offer"], sizes="(max-width:820px) 92vw, 420px") if v.get("offer") else simg(STOCK[key]["offer"]) if (dd.get("ed") and STOCK[key]["offer"]) else img("studio-warm-sq", "Oscar med akustisk guitar", widths=(480, 960), w=1200, h=1200)}</div></div></div></section>'''
 
     t, lines, b, ctal, small = c['s11']
@@ -1077,6 +1085,112 @@ for key in P:
 for key, (d, _) in {'firmafest': ('a', ''), 'bryllup': ('b', '')}.items():
     for pal in PAL:   # v2 i ALLE farver (kundevalg på /ev/farver)
         (OUT / f'{key}-{d}-{pal}-v2.html').write_text(page(key, d, pal, v2=True))
+
+# ───────────────────────── tekstversioner (22/10 2026) ─────────────────────────
+# Charlies nye tekst: "Tilbudsside – Oscar Jønsson" (hele bryllupssiden) + "landingpage copy bryllup og firma" (headlines v1/v2).
+# Samme design som live (v2, champagne); kun teksten skifter. Vises på <gig>.oscartjoensson.dk/v2, /v3 ... (worker.js COPY_PATH)
+DOC_BRYLLUP = dict(   # alle sektioner fra "Tilbudsside – Oscar Jønsson"
+ s2=('I ønsker ikke bare nogen, der spiller musik. <em>I ønsker den helt rigtige stemning.</em>', ['I har måske allerede overvejet en guitarist til middagen, et liveband eller en DJ til festen.'],
+     ['At jeres gæster føler sig velkomne. At familien hygger sig under middagen. Og at vennerne ikke kan lade være med at synge med, når dansegulvet åbner.',
+      'Vi skaber en samlet musikoplevelse, hvor livemusik og DJ bliver planlagt omkring jeres bryllup, jeres musiksmag og de mennesker, I har inviteret.',
+      'Uden at I selv skal koordinere flere musikere, bekymre jer om overgangen fra middag til fest eller bruge jeres bryllupsdag på at styre musikken.']),
+ s3=('I mangler ikke <em>endnu en ting til brylluppet</em>', ['I har måske allerede fundet stedet. Valgt menuen. Booket fotografen. Sendt invitationerne.', 'Og brugt utallige timer på alle de små detaljer, der skal gøre dagen perfekt.', 'Men der er én ting, der kan være svær at planlægge.'],
+     'Stemningen.',
+     ['For selvom lokalet er smukt, maden er fantastisk, og alle de rigtige mennesker er samlet, betyder det ikke automatisk, at festen bliver, som I drømmer om.'],
+     'Måske kender I følelsen fra andre bryllupper. Gæsterne sidder ved deres borde. Nogen forsøger at få gang i festen. DJ’en spiller, men dansegulvet er næsten tomt. I ønsker ikke bare et flot bryllup. I ønsker et bryllup, hvor alle mærker, at de er en del af noget særligt.'),
+ s4=('I har allerede overvejet <em>de sædvanlige muligheder</em>', 'Måske har I allerede kigget på:',
+     ['En guitarist, der spiller under middagen.', 'Et coverband, der spiller kendte hits.', 'En DJ, der tager over, når festen begynder.', 'En kombination af flere forskellige musikere.', 'En playliste, I selv sammensætter.'],
+     ['Der er ikke noget galt med nogen af delene. Men der er forskel på at have musik til et bryllup og at skabe en sammenhængende musikoplevelse.',
+      'Den rolige sang under middagen skal skabe én stemning. Musikken efter talerne skal skabe en anden. Og når festen begynder, skal energien ændre sig igen.',
+      'Det handler ikke kun om, hvilke sange der bliver spillet. Det handler om, hvornår de bliver spillet, hvordan de bliver fremført, og hvordan gæsterne reagerer.']),
+ s5=('Derfor er god musik alene <em>ikke altid nok</em>', ['I ønsker ikke bare en dygtig musiker. I ønsker en fantastisk fest.', 'Måske har I allerede tænkt:'],
+     ['“Hvad nu, hvis ingen rigtig kommer ud på dansegulvet?”', '“Hvordan sørger vi for, at både vores venner og familie hygger sig?”', '“Skal vi vælge et band eller en DJ?”', '“Hvem sørger for musikken, når middagen slutter, og festen begynder?”', '“Hvordan sikrer vi, at festen bliver lige så god, som vi har forestillet os?”'],
+     ['I har brug for nogen, der ved, hvordan musikken skal bringe mennesker sammen.',
+      'I kan planlægge bordkort, blomster og menu ned til mindste detalje. Men I kan ikke på forhånd bestemme, hvordan gæsterne reagerer. Det kræver en musiker, der kan læse rummet, mærke energien og tilpasse musikken undervejs.']),
+ story=dict(eyebrow='Mød Oscar', h='I booker ikke bare en guitarist og en DJ', sign='', n='800+', nl='spillejobs til bryllupper, fester og firmaevents',
+   p=['Musik til bryllupper bliver ofte solgt på timer, lyd og lys og pris. Men det fortæller jer ikke, hvilken oplevelse I får.',
+      'Oscar Jønsson voksede op i en familie, hvor musik altid har været en del af hverdagen. Han fik sin første guitar som otteårig, og som teenager brugte han flere timer hver dag på sit guitarspil. Siden har han spillet over 800 jobs som guitarist, sanger og DJ.',
+      'Under middagen skaber han en varm, nærværende atmosfære med akustisk guitar, sang og live looping. Når festen begynder, skifter han til DJ og tager sin elektriske guitar med ud blandt gæsterne.',
+      'I booker ikke bare musik. I vælger den person, der skal være med til at skabe stemningen på en af de vigtigste dage i jeres liv.']),
+ s6=('Det handler om mere <em>end en playliste</em>', ['I har måske allerede en liste med sange, I elsker. En særlig sang fra dengang, I mødte hinanden. Og numre, I ved, jeres venner kommer til at synge med på.',
+      'Men det handler om, hvordan musikken bliver en del af dagen. Hvordan den skaber nærvær under middagen, samler gæsterne og bygger energien op, når festen begynder.', 'Derfor bygger vi musikoplevelsen omkring tre ting:'],
+     'Jeres musik. Jeres mennesker. Jeres fest.', 'Det er sammenhængen mellem de tre, der gør oplevelsen personlig.'),
+ s8=('Den her dag <em>kommer ikke igen</em>', ['I kan holde mange fester gennem livet. Men I får kun én første bryllupsfest sammen. Én aften, hvor jeres familier og venner er samlet for at fejre jer.',
+      'Når festen er slut, er det ikke borddekorationerne, I taler om. Det er øjeblikkene.',
+      'Da hele bordet sang med. Da jeres forældre kom ud på dansegulvet. Da vennerne råbte efter én sang mere. Og da I stod midt blandt alle dem, I holder af, og tænkte: “Det her er præcis den fest, vi drømte om.”'],
+     'Det er den slags øjeblikke, vi ønsker at skabe.'),
+ s9=('Det Uforglemmelige <em>Bryllup™</em>', 'Med Fra Middag til Dansegulv-Metoden™ skaber vi en sammenhængende musikoplevelse gennem fem enkle trin.', [
+     ('Den Perfekte Plan', 'Vi lærer jer at kende: jeres musik, jeres gæster, dagens program og stemningen, I ønsker. I behøver ikke selv sammensætte repertoiret. Det hjælper Oscar jer med.'),
+     ('Den Varme Velkomst', 'Akustisk guitar og sang, mens gæsterne samles. Musikken overdøver ikke samtalerne. Den understøtter stemningen.'),
+     ('Den Levende Middag', 'Sang, akustisk guitar og live looping, hvor musikken bygges op i lag. Med plads til samtaler, taler og fælles øjeblikke.'),
+     ('Energiløftet', 'Oscar går fra akustisk til DJ og spiller elektrisk guitar live hen over musikken, ude blandt gæsterne med sit trådløse guitarsystem.'),
+     ('Den Sidste Dans', 'Oscar mærker rummet og tilpasser musikken undervejs, så I kan danse, synge med og nyde festen med jeres nærmeste.')],
+     'Fra middagens første toner til aftenens sidste dans er musikken skabt omkring jer.'),
+ s10=('En samlet musikoplevelse, <em>skabt til jer</em>', 'Med Det Uforglemmelige Bryllup™ får I:',
+     ['En personlig samtale om jeres bryllup, musiksmag og ønsker.', 'En gennemgående professionel musiker med over 800 spillejobs bag sig.', 'Akustisk livemusik med guitar og sang under middagen.', 'Live looping, hvor musikken bygges op i flere lag.',
+      'DJ til aftenfesten med musik tilpasset jeres gæster.', 'Mulighed for elektrisk guitar og live guitarsoloer under DJ-sættet.', 'En planlagt overgang fra middagsmusik til fest.', 'Mulighed for at ønske særlige sange.',
+      'Lyd- og lysudstyr, transport, opsætning og nedtagning inkluderet i den aftalte pakke.', 'Én samlet musikalsk løsning, så I kan nyde dagen.'],
+     'Vi tilpasser den konkrete løsning til jeres ønsker og dagens program.'),
+ price=[('Middag og fest', 'fra 15.000 kr.', 'Livemusik under middagen og DJ om aftenen. Typisk 7 til 8 timers musik.'),
+        ('Hele dagen', 'fra 30.000 kr.', 'Vielse, reception, middag og aftenfest.')],
+ s11=('Fra endnu et bryllup til <em>en fest, I aldrig glemmer</em>', ['Forestil jer, at middagen er slut.', 'De sidste taler er holdt.', 'Jeres venner kommer ud på dansegulvet.', 'Oscar tager guitaren med ud blandt gæsterne.', 'Nogen begynder at synge med. Flere kommer til.', 'Og I står midt i et dansegulv fyldt med de mennesker, der betyder allermest for jer.'],
+     'I har allerede kærligheden. I har allerede menneskene. Nu skaber vi musikken, der bringer dem sammen.', 'Få et personligt bryllupstilbud', 'Jeres musik. Jeres mennesker. Jeres uforglemmelige fest.'),
+)
+DOC_V = dict(s5=None, cta_short='Få et personligt tilbud', final_short='Få et personligt tilbud')   # s5=None: spørgsmålene vises (ikke billedet)
+NOJES = 'Til brudeparret, der ikke vil nøjes'
+COPY = {
+ 'bryllup': {
+  'v2': dict(name='Tilbudssiden (hele dokumentet)', c=dict(DOC_BRYLLUP, cta='Få et personligt bryllupstilbud',
+     intro=['Fra vielsens første toner til aftenens sidste dans skaber vi musikken omkring jer og jeres nærmeste.',
+            'Med Det Uforglemmelige Bryllup™ kombinerer Oscar Jønsson nærværende livemusik, sang, guitar og DJ til én samlet musikoplevelse, der udvikler sig gennem dagen.',
+            'Med over 800 spillejobs bag sig ved Oscar, hvordan musikken kan skabe ro og nærvær under middagen og løfte energien, når festen begynder.',
+            'I nyder starten på resten af jeres liv sammen. Vi tager os af musikken.']), v=DOC_V),
+  'v3': dict(name='Tilbudssiden + headline version 2', c=dict(DOC_BRYLLUP, eyebrow=NOJES, cta='Ansøg om en bryllupssamtale',
+     intro=['Fra vielsens første toner til aftenens sidste dans designer vi musikken omkring jer og jeres nærmeste. Til øjeblikke, der giver gåsehud, et dansegulv, ingen vil forlade, og en fest, familien taler om i årtier.',
+            'Vi planlægger musikken til de personlige øjeblikke, skaber varme under middagen og løfter festen med livemusik og DJ, så jeres nærmeste danser og synger med.',
+            'Med mere end 10 års erfaring som guitarist, sanger og DJ læser Oscar stemningen i rummet og tilpasser musikken til øjeblikket.',
+            'I giver slip og nyder starten på resten af jeres liv sammen. Vi tager os af musikken.']), v=dict(DOC_V, cta_short='Ansøg om en bryllupssamtale', final_short='Ansøg om en bryllupssamtale')),
+  'v4': dict(name='Tilbudssiden + headline version 1', c=dict(DOC_BRYLLUP, eyebrow=NOJES, cta='Ansøg om en bryllupssamtale',
+     sub='Fra bekymringen om et tomt dansegulv til en fest, der bliver en del af familiens historie.',
+     intro=['Fra vielsens første toner til aftenens sidste dans designer vi musikken omkring jer og jeres nærmeste, så I får et bryllup, I aldrig glemmer, og en fest, familien taler om i årtier.',
+            'Vi planlægger musikken til de personlige øjeblikke, skaber en varm stemning under middagen og løfter energien med livemusik og DJ, når aftenen bliver til fest.',
+            'Med mere end 10 års erfaring som guitarist, sanger og DJ ved Oscar, hvordan musikken tilpasses både øjeblikket og stemningen i rummet.',
+            'I nyder starten på resten af jeres liv sammen. Vi tager os af musikken.']), v=dict(DOC_V, cta_short='Ansøg om en bryllupssamtale', final_short='Ansøg om en bryllupssamtale')),
+  'v5': dict(name='Tilbudssiden + ny headline: én artist hele dagen', c=dict(DOC_BRYLLUP, eyebrow=NOJES, cta='Få et personligt bryllupstilbud',
+     h1='Guitarist til middagen. DJ til festen. <em>Én og samme person.</em>',
+     sub='I behøver ikke koordinere flere musikere eller frygte overgangen fra middag til fest.',
+     intro=['Oscar spiller akustisk med sang og live looping under middagen, skifter til DJ, når festen begynder, og tager sin elektriske guitar med ud blandt gæsterne.',
+            'Fra vielsens første toner til aftenens sidste dans bliver musikken planlagt omkring jer, jeres musiksmag og de mennesker, I har inviteret.',
+            'Over 800 spillejobs. Én samlet musikoplevelse.',
+            'I giver slip. Vi tager os af musikken.']), v=DOC_V),
+ },
+ 'firmafest': {
+  'v2': dict(name='Headline version 1', c=dict(
+     sub='Fra en fest, folk prøver at undgå, til den aften, der samler teamet og bliver snakket om på kontoret resten af året.',
+     intro=['Fra velkomstmusikken til aftenens sidste dans planlægger vi musikken omkring jeres team.',
+            'Livemusik skaber en afslappet stemning under middagen. Live-sættet og DJ løfter energien og får kollegerne til at danse, synge med og komme tættere på hinanden.',
+            'Med mere end 10 års erfaring som guitarist, sanger og DJ tilpasser Oscar musikken til jeres team og mærker stemningen gennem hele aftenen.',
+            'I samler teamet. Vi skaber musikken, der bringer jer tættere sammen.'])),
+  'v3': dict(name='Ny headline: festudvalgets ansvar', c=dict(
+     h1='I har ansvaret for festen. <em>Vi har ansvaret for stemningen.</em>',
+     sub='Ingen akavet pause efter middagen. Intet tomt dansegulv. Ingen kolleger, der smutter hjem lige når festen begynder.',
+     intro=['Oscar spiller livemusik under middagen og skifter til DJ og live guitar, når festen skal i gang.',
+            'Han mærker stemningen hele aftenen, så I ikke skal tænke på, hvornår musikken skal op, eller hvordan flere kommer ud på dansegulvet.',
+            'Over 800 spillejobs og mere end 10 års erfaring som guitarist, sanger og DJ. Én person at koordinere med.',
+            'I får æren. Vi tager os af musikken.'])),
+  'v4': dict(name='Ny headline: ikke bare endnu en DJ', c=dict(
+     h1='Ikke bare endnu en DJ <em>i hjørnet</em>',
+     sub='Til jeres firmafest står musikken ikke bag en pult hele aftenen. Den kommer ud blandt gæsterne.',
+     intro=['Oscar starter med akustisk livemusik under middagen, så der er ro til god snak.',
+            'Når festen begynder, skifter han til DJ og spiller live elektrisk guitar hen over musikken, midt på dansegulvet.',
+            'Med over 800 spillejobs ved han, hvordan man får en hel virksomhed til at feste sammen.',
+            'Den fest, kollegerne taler om resten af året.'])),
+ },
+}
+for key, vs in COPY.items():
+    d = 'b' if key == 'bryllup' else 'a'
+    for vn, cv in vs.items():
+        (OUT / f'{key}-tekst-{vn}.html').write_text(page(key, d, 'champagne', v2=True, cv=cv))
 
 # ───────────────────────── live-valg + oversigtsside (/ev/) ─────────────────────────
 LIVE = {'firmafest': ('a', 'champagne'), 'bryllup': ('b', 'champagne')}   # ÉN kilde: build.sh kopierer ev/_live-*.html

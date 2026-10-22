@@ -143,6 +143,12 @@ p{margin:0;text-wrap:pretty}
 .check li::before{content:"✓";flex:none;width:24px;height:24px;margin-top:2px;border-radius:50%;background:var(--accent);color:var(--onaccent);display:grid;place-items:center;font-size:13px;font-weight:700;line-height:1}
 .offer{background:var(--card);border:1px solid var(--line);border-radius:calc(var(--r) + 6px);padding:clamp(24px,4vw,44px);display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);gap:clamp(24px,4vw,48px);align-items:center}
 .offer .photo{aspect-ratio:1}
+.prices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0 4px}
+.price{border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;background:var(--bg)}
+.price span{display:block;font-size:.85rem;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
+.price b{display:block;font-family:var(--display);font-weight:var(--hw);font-size:clamp(1.5rem,2.6vw,1.9rem);line-height:1.15;margin:4px 0 6px;color:var(--accentT)}
+.price p{font-size:.95rem;color:var(--ink2);margin:0}
+@media (max-width:520px){.prices{grid-template-columns:minmax(0,1fr)}}
 /* gallery */
 .gal{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(220px,1fr);gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:8px;margin-top:28px;scrollbar-width:none}
 .gal::-webkit-scrollbar{display:none}
