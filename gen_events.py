@@ -791,7 +791,7 @@ def page(key, d, pal, v2=False, cv=None):
 
     t, a, items, b = c['s4']
     s4 = f'''<section class="sec alt" id="playliste"><div class="wrap"><div class="two">
-      <div class="stack rv"><h2>{t}</h2><p class="lead">{a}</p>{(f'<ul class="plist">' + "".join(f'<li><i aria-hidden="true">✓</i><span>{x}</span></li>' for x in items) + '</ul>') if v2 else ('<div class="pcards">' + "".join(f'<div class="pc"><i>✕</i><span>{x}</span></div>' for x in items) + '</div>')}</div>
+      <div class="stack rv"><h2>{t}</h2><p class="lead">{a}</p>{(f'<ul class="plist">' + "".join(f'<li><i aria-hidden="true">{v.get("plist_icon", "✓")}</i><span>{x}</span></li>' for x in items) + '</ul>') if v2 else ('<div class="pcards">' + "".join(f'<div class="pc"><i>✕</i><span>{x}</span></div>' for x in items) + '</div>')}</div>
       <div class="stack rv">{ps(b[:1], "big")}{ps(b[1:], "lead")}<div class="cta-row full">{cta(c["cta"], sec="playliste")}</div></div></div></div></section>'''
 
     t, a, qs, b = c['s5']
@@ -920,7 +920,7 @@ def page(key, d, pal, v2=False, cv=None):
 {story}
 {music}
 {s6}
-{s7}
+{"" if v.get("no_flow") else s7}
 {"" if v2 else real}
 {"" if v2 else sv}
 {"" if v2 else reviews}
@@ -1136,7 +1136,7 @@ DOC_BRYLLUP = dict(   # alle sektioner fra "Tilbudsside – Oscar Jønsson"
  s11=('Fra endnu et bryllup til <em>en fest, I aldrig glemmer</em>', ['Forestil jer, at middagen er slut.', 'De sidste taler er holdt.', 'Jeres venner kommer ud på dansegulvet.', 'Oscar tager guitaren med ud blandt gæsterne.', 'Nogen begynder at synge med. Flere kommer til.', 'Og I står midt i et dansegulv fyldt med de mennesker, der betyder allermest for jer.'],
      'I har allerede kærligheden. I har allerede menneskene. Nu skaber vi musikken, der bringer dem sammen.', 'Få et personligt bryllupstilbud', 'Jeres musik. Jeres mennesker. Jeres uforglemmelige fest.'),
 )
-DOC_V = dict(s5=None, cta_short='Få et personligt tilbud', final_short='Få et personligt tilbud')   # s5=None: spørgsmålene vises (ikke billedet)
+DOC_V = dict(s5=None, plist_icon='•', no_flow=True, cta_short='Få et personligt tilbud', final_short='Få et personligt tilbud')   # s5=None: spørgsmålene vises (ikke billedet)
 NOJES = 'Til brudeparret, der ikke vil nøjes'
 COPY = {
  'bryllup': {
