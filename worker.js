@@ -93,6 +93,8 @@ async function handleTrack(request, env) {
   // Oscars underdomæner: "/" er gig-siden, så dashboardet viser /bryllup og /firmafest uanset domæne
   const gig = OSCAR_HOSTS[new URL(request.url).hostname];
   if (gig && (!b.path || b.path === '/')) b.path = '/' + gig;
+  else if (gig && (b.path === SPLIT_PATH || b.path === SPLIT_PATH + '/')) { const v = splitVer(request); b.path = '/' + gig + (v ? '/' + v : SPLIT_PATH); }   // split: tælles på versionen
+  else if (gig && /^\/v[0-9]\/?$/.test(b.path)) b.path = '/' + gig + '/direkte-' + b.path.replace(/\//g, '');   // /v2 åbnet direkte (deling/preview) tæller ikke med i testen
   await env.DB.prepare(`INSERT INTO events (ts,type,vid,sid,pv,path,ref,ref_host,utm_source,utm_medium,utm_campaign,utm_content,
       ip,country,region,city,postal,lat,lon,ua,device,browser,os,vw,vh,dw,dh,x,y,sec,secy,label,depth,dur)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
@@ -442,7 +444,7 @@ async function handleLead(request, env, ctx) {
   if (b.answers && typeof b.answers === 'object' && !Array.isArray(b.answers)) {
     for (const [k, v] of Object.entries(b.answers).slice(0, 12)) answers[str(k, 40)] = str(v, 500);
   }
-  const src = b.src && typeof b.src === 'object' ? Object.fromEntries(['ref_host', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'landing'].map(k => [k, str(b.src[k], k === 'landing' ? 300 : 150)]).filter(([, v]) => v)) : {};
+  const src = b.src && typeof b.src === 'object' ? Object.fromEntries(['ref_host', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'landing', 'ver'].map(k => [k, str(b.src[k], k === 'landing' ? 300 : 150)]).filter(([, v]) => v)) : {};
   const cf = request.cf || {}, now = Date.now();
   const ip = request.headers.get('CF-Connecting-IP') || '';
   const row = await env.DB.prepare(`INSERT INTO leads (id, page, created_ts, updated_ts, name, email, phone, answers_json, step, done, src_json, vid, sid, ip, city, country, writes, notified_flags)
@@ -657,8 +659,19 @@ async function leadsJSON(env, url) {
       ghl_contact_id, ghl_appt_id, src_json, ip, city, country, notified_flags FROM leads WHERE updated_ts >= ? ORDER BY updated_ts DESC LIMIT 300`, from);
   const funnel = await all(env.DB, `SELECT page, COUNT(*) AS started, SUM(instr(notified_flags, 'contact,') > 0) AS contact, SUM(done) AS done,
       SUM(booked_start IS NOT NULL) AS booked FROM leads WHERE created_ts >= ? GROUP BY page`, from);
+  // split-test: besøgende pr. version (unikke vid) + leads efter den version, formularen blev startet på
+  const splitPaths = Object.values(OSCAR_HOSTS).flatMap(g => SPLIT.map(v => `/${g}/${v}`));
+  const splitVisits = await all(env.DB, `SELECT path, COUNT(DISTINCT vid) AS visitors FROM events WHERE type='pageview' AND ts >= ?
+      AND path IN (${splitPaths.map(() => '?').join(',')}) GROUP BY path`, from, ...splitPaths);
+  const splitLeads = await all(env.DB, `SELECT page, json_extract(src_json, '$.ver') AS ver, COUNT(*) AS started, SUM(instr(notified_flags, 'contact,') > 0) AS contact,
+      SUM(done) AS done, SUM(booked_start IS NOT NULL) AS booked FROM leads WHERE created_ts >= ? AND json_extract(src_json, '$.ver') IS NOT NULL GROUP BY page, ver`, from);
+  const split = Object.values(OSCAR_HOSTS).map(g => ({ page: g, vers: SPLIT.map(v => {
+    const l = splitLeads.find(x => x.page === g && x.ver === v) || {};
+    return { ver: v, visitors: (splitVisits.find(x => x.path === `/${g}/${v}`) || {}).visitors || 0,
+      started: l.started || 0, contact: l.contact || 0, done: l.done || 0, booked: l.booked || 0 };
+  }) }));
   return {
-    funnel,
+    funnel, split,
     rows: rows.map(r => {
       let answers = {}, src = {}; try { answers = JSON.parse(r.answers_json || '{}'); } catch { } try { src = JSON.parse(r.src_json || '{}'); } catch { }
       const { answers_json, src_json, ...rest } = r;
@@ -894,6 +907,9 @@ async function serveVideo(request, env) {
 
 // Oscars egne underdomæner (Cloudflare for SaaS -> denne Worker): forsiden er gig-siden, resten af Bliv Booket vises ikke der
 const OSCAR_HOSTS = { 'bryllup.oscartjoensson.dk': 'bryllup', 'firmafest.oscartjoensson.dk': 'firmafest' };
+const SPLIT = ['v2', 'v4'];   // versionerne i split-testen (samme på begge sider)
+const SPLIT_PATH = '/book';    // adressen der splitter, fx bryllup.oscartjoensson.dk/book
+const splitVer = request => { const m = (request.headers.get('Cookie') || '').match(/(?:^|;\s*)oj_ab=(v[0-9])/); return m && SPLIT.includes(m[1]) ? m[1] : ''; };
 const OSCAR_PASS = /^\/(api\/(lead|slots|book|booking|ics|t)$|media\/|ev\.js$|track\.js$|privatliv$|favicon)/;
 async function oscarHost(request, env, url, gig) {
   const p = url.pathname;
@@ -901,6 +917,19 @@ async function oscarHost(request, env, url, gig) {
     const r = await env.ASSETS.fetch(new Request(url.origin + (p.startsWith('/tak') ? '/tak-' : '/') + gig, { method: request.method, headers: request.headers }));
     const h = new Headers(r.headers); h.set('Cache-Control', 'public, max-age=60');
     return new Response(r.body, { status: r.status, headers: h });
+  }
+  // split-test (31/10 2026, Charlie): /book viser selv v2 eller v4 på SAMME adresse (ingen viderestilling, så Meta ser samme
+  // URL som i annoncen). Ren tilfældighed + cookie (samme version igen); ingen særbehandling af bots/Metas crawler, ellers er det cloaking.
+  // Resultat pr. version: admin -> "Split-test" (besøg tælles som /<gig>/vN, leads med src.ver).
+  if (p === SPLIT_PATH || p === SPLIT_PATH + '/') {
+    const had = splitVer(request), v = had || SPLIT[crypto.getRandomValues(new Uint8Array(1))[0] & 1];
+    const r = await env.ASSETS.fetch(new Request(`${url.origin}/ev/${gig}-tekst-${v}`, { method: request.method, headers: request.headers }));
+    if (r.status !== 200) return Response.redirect(`https://${url.hostname}/`, 302);
+    const h = new Headers(r.headers);
+    h.set('Cache-Control', 'private, no-store'); h.set('Vary', 'Cookie');   // aldrig delt cache: hver besøgende sin version
+    if (!had) h.append('Set-Cookie', `oj_ab=${v}; Path=/; Max-Age=${90 * 86400}; Secure; SameSite=Lax`);
+    return new HTMLRewriter().on('head', { element: e => e.prepend(`<script>window.OJ_VER='${v}'</script>`, { html: true }) })
+      .transform(new Response(r.body, { status: 200, headers: h }));
   }
   const cv = p.match(/^\/(v[2-9])\/?$/);
   const vp = cv ? `/ev/${gig}-tekst-${cv[1]}` : (p === '/versioner' || p === '/versioner/') ? '/ev/versioner' : '';   // /versioner = oversigt; /v2, /v3 ... = tekstversioner (gen_events.py COPY)

@@ -86,6 +86,10 @@
     ls('ev_src', JSON.stringify(src));
   }
 
+  // tekstversion i split-testen sendes med leadet, så split-testen kan tælle bookinger pr. version
+  var ver = /^v\d$/.test(window.OJ_VER || '') ? window.OJ_VER : '';   // sat af Worker på split-adressen (/book)
+  var srcV = ver ? Object.assign({}, src, { ver: ver }) : src;
+
   // ── state ──
   var KEY = 'ev_state_' + EV.page;
   var uuid = function () { try { return crypto.randomUUID(); } catch (e) { return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12); } };
@@ -99,7 +103,7 @@
   var payload = function () {
     var a = {}; for (var k in S.answers) a[k] = S.answers[k];
     if (S.company) a.firma = S.company;
-    return { lid: S.lid, page: EV.page, answers: a, name: S.name, email: S.email, phone: S.phone, step: S.step, done: !!S.done, src: src, vid: ls('bk_vid') || '', sid: ls('bk_sid') || '' };
+    return { lid: S.lid, page: EV.page, answers: a, name: S.name, email: S.email, phone: S.phone, step: S.step, done: !!S.done, src: srcV, vid: ls('bk_vid') || '', sid: ls('bk_sid') || '' };
   };
   var hasData = function () { return S.name || S.email || S.phone || Object.keys(S.answers).length; };
   var saveNow = function (beacon) {

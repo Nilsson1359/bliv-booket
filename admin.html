@@ -125,6 +125,11 @@ table{width:100%;border-collapse:collapse;font-size:.85rem}th{font-family:var(--
   </div>
 
   <div class="row">
+    <div class="card"><h2>Split-test: v2 mod v4</h2><div class="lfun" id="split"></div>
+      <p class="muted" style="margin:12px 0 0;font-size:.8rem">Links til annoncer: <span class="mono">bryllup.oscartjoensson.dk/book</span> og <span class="mono">firmafest.oscartjoensson.dk/book</span>. Samme adresse for alle (ingen viderestilling); siden viser selv v2 eller v4 tilfældigt, og samme person ser den samme igen. Besøg direkte på /v2 og /v4 tæller ikke med. "Besøgende" = unikke personer på versionen. Leads tælles på den version, formularen blev startet på. Vent med at kåre en vinder til der er nogle bookinger på hver.</p></div>
+  </div>
+
+  <div class="row">
     <div class="card"><h2>Leads: /firmafest og /bryllup</h2><div class="lfun" id="leadFunnel"></div><div class="scroll" id="leads"></div>
       <p class="muted" style="margin:12px 0 0;font-size:.8rem">Formularen gemmer, mens der skrives. "Kontakt" = telefon eller mail er skrevet (også uden at trykke videre). "Udfyldt" = alle trin gennemført. "Booket" = tid valgt i kalenderen.</p></div>
   </div>
@@ -203,6 +208,11 @@ async function loadLeads(){
   fEl.innerHTML=['firmafest','bryllup'].map(p=>{const f=(d.funnel||[]).find(x=>x.page===p)||{started:0,contact:0,done:0,booked:0};
     const st=[['Startet',f.started],['Kontakt',f.contact],['Udfyldt',f.done],['Booket',f.booked]];
     return `<div><h3>${PAGE_NAME[p]}</h3><div class="funnel">${st.map(([l,v])=>`<div class="fstep"><div class="l">${l}</div><div class="v">${fmt(v)}</div><div class="p">${pct(v,f.started)}</div><div class="bar"><i style="width:${f.started?100*v/f.started:0}%"></i></div></div>`).join('')}</div></div>`;}).join('');
+  document.getElementById('split').innerHTML=(d.split||[]).map(g=>{
+    const best=Math.max(...g.vers.map(v=>v.visitors?v.booked/v.visitors:0));
+    return `<div><h3>${PAGE_NAME[g.page]||g.page}</h3><table class="ltab"><thead><tr><th>Version</th><th>Besøgende</th><th>Startet</th><th>Kontakt</th><th>Booket</th><th>Booket pr. besøg</th></tr></thead><tbody>${g.vers.map(v=>{
+      const r=v.visitors?v.booked/v.visitors:0, lead=best>0&&r===best&&g.vers.filter(x=>(x.visitors?x.booked/x.visitors:0)===best).length===1;
+      return `<tr><td data-l="Version"><a href="https://${g.page}.oscartjoensson.dk/${v.ver}?nt=1" target="_blank" rel="noopener">${v.ver}</a>${lead?' <span class="pill g">fører</span>':''}</td><td data-l="Besøgende">${fmt(v.visitors)}</td><td data-l="Startet">${fmt(v.started)}</td><td data-l="Kontakt">${fmt(v.contact)}</td><td data-l="Booket"><b>${fmt(v.booked)}</b></td><td data-l="Pr. besøg" class="mono">${v.visitors?pct(v.booked,v.visitors):'–'}</td></tr>`;}).join('')}</tbody></table></div>`;}).join('');
   if(!d.rows||!d.rows.length){el.innerHTML='<div class="empty">Ingen leads i perioden</div>';return;}
   const tf=ts=>new Date(ts).toLocaleString('da-DK',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
   el.innerHTML='<table class="ltab"><thead><tr><th>Tid</th><th>Side</th><th>Navn</th><th>Telefon</th><th>Mail</th><th>Svar</th><th>Status</th><th>Kilde</th></tr></thead><tbody>'+d.rows.map(r=>{
