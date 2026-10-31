@@ -219,7 +219,7 @@ async function loadLeads(){
     const ans=Object.entries(r.answers||{}).filter(([,v])=>v).map(([k,v])=>`<b>${esc(k)}:</b> ${esc(v)}`).join('<br>')||'<span class="muted">–</span>';
     const st=r.booked_start?`<span class="pill g">Booket ${esc(tf(r.booked_start))}</span>${r.ghl_appt_id?'':' <span class="pill y" title="Ikke oprettet i GHL">kun D1</span>'}`:r.done?'<span class="pill y">Udfyldt</span>':r.contact?'<span class="pill y">Kontakt, trin '+r.step+'</span>':'<span class="pill">Trin '+r.step+'</span>';
     const s=r.src||{}, src=[s.utm_source,s.utm_campaign,s.utm_content].filter(Boolean).join(' / ')||s.ref_host||'direkte';
-    return `<tr><td data-l="Tid" class="mono">${tf(r.updated_ts)}</td><td data-l="Side">${esc(PAGE_NAME[r.page]||r.page)}</td><td data-l="Navn">${esc(r.name)||'<span class="muted">–</span>'}</td>
+    return `<tr><td data-l="Tid" class="mono">${tf(r.updated_ts)}</td><td data-l="Side">${esc(PAGE_NAME[r.page]||r.page)}${r.src&&r.src.ver?' <span class="pill">'+esc(r.src.ver)+'</span>':''}</td><td data-l="Navn">${esc(r.name)||'<span class="muted">–</span>'}</td>
       <td data-l="Telefon">${r.phone?`<a href="tel:${esc(r.phone.replace(/[^\d+]/g,''))}">${esc(r.phone)}</a>`:'<span class="muted">–</span>'}</td>
       <td data-l="Mail">${r.email?`<a href="mailto:${esc(r.email)}">${esc(r.email)}</a>`:'<span class="muted">–</span>'}</td>
       <td data-l="Svar" class="ans">${ans}</td><td data-l="Status">${st}</td><td data-l="Kilde">${esc(src)}${r.city?' <span class="muted">'+esc(r.city)+'</span>':''}</td></tr>`;}).join('')+'</tbody></table>';

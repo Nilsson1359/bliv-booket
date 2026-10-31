@@ -421,6 +421,7 @@ function leadText(title, l) {
   let src = {}; try { src = JSON.parse(l.src_json || '{}'); } catch { }
   const s = [src.utm_source, src.utm_campaign, src.utm_content].filter(Boolean).join(' / ') || src.ref_host;
   if (s) lines.push('🔗 ' + tgEsc(s));
+  if (SPLIT.includes(src.ver)) lines.push('🧪 Split-test: ' + src.ver);
   if (l.city || l.country) lines.push('📍 ' + tgEsc([l.city, l.country].filter(Boolean).join(', ')));
   lines.push('https://fuldtbooketmusiker.dk/admin');
   return lines.join('\n');
@@ -581,16 +582,18 @@ async function handleSlots(request, env, ctx, url) {
 // ─── POST /api/book ───
 async function ghlBook(env, lead, startMs, endMs) {
   const calendarId = ghlCalendarId(env, lead.page), locationId = env.GHL_LOCATION_ID;
+  let ver = ''; try { ver = JSON.parse(lead.src_json || '{}').ver || ''; } catch { }
+  if (!SPLIT.includes(ver)) ver = '';   // split-test (/book): version på tag, titel og note, så GHL kan filtrere på den
   const parts = (lead.name || '').trim().split(/\s+/);
   const contact = { locationId, name: lead.name || undefined, firstName: parts[0] || undefined, lastName: parts.slice(1).join(' ') || undefined,
-    email: validEmail(lead.email) ? lead.email : undefined, phone: e164(lead.phone) || undefined, tags: ['lp-' + lead.page], source: 'fuldtbooketmusiker.dk/' + lead.page };
+    email: validEmail(lead.email) ? lead.email : undefined, phone: e164(lead.phone) || undefined, tags: ['lp-' + lead.page, ...(ver ? [`lp-${lead.page}-${ver}`] : [])], source: 'fuldtbooketmusiker.dk/' + lead.page };
   Object.keys(contact).forEach(k => contact[k] === undefined && delete contact[k]);
   const c = await ghl(env, 'POST', '/contacts/upsert', '2021-07-28', contact);
   const contactId = c.contact && c.contact.id;
   if (!contactId) throw new Error('GHL upsert gav intet contact.id');
   const appt = await ghl(env, 'POST', '/calendars/events/appointments', '2021-04-15', {
     calendarId, locationId, contactId, startTime: isoCph(startMs), endTime: isoCph(endMs),
-    title: `Samtale: ${LEAD_PAGES[lead.page]} · ${lead.name || lead.email || lead.phone}`, appointmentStatus: 'confirmed', toNotify: true,
+    title: `Samtale: ${LEAD_PAGES[lead.page]}${ver ? ' ' + ver : ''} · ${lead.name || lead.email || lead.phone}`, appointmentStatus: 'confirmed', toNotify: true,
   });
   const apptId = appt.id || (appt.appointment && appt.appointment.id) || '';
   // Google Meet-link: GHL lægger det i aftalens address (nogle gange først et øjeblik efter oprettelsen)
@@ -598,7 +601,7 @@ async function ghlBook(env, lead, startMs, endMs) {
   let meet = meetOf(appt);
   if (!meet && apptId) meet = meetOf(await ghl(env, 'GET', `/calendars/events/appointments/${apptId}`, '2021-04-15').catch(() => null));
   let ans = {}; try { ans = JSON.parse(lead.answers_json || '{}'); } catch { }
-  const note = [`Fra fuldtbooketmusiker.dk/${lead.page} (${LEAD_PAGES[lead.page]})`, ...Object.entries(ans).filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`)].join('\n');
+  const note = [`Fra fuldtbooketmusiker.dk/${lead.page} (${LEAD_PAGES[lead.page]})`, ...(ver ? [`Split-test: tekstversion ${ver}`] : []), ...Object.entries(ans).filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`)].join('\n');
   await ghl(env, 'POST', `/contacts/${contactId}/notes`, '2021-07-28', { body: note }).catch(e => console.log('ghl note fejl', e.message));
   return { contactId, apptId, meet };
 }
