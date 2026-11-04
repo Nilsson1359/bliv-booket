@@ -11,6 +11,8 @@ cp track.js _site/track.js
 # Live-version vælges i LIVE i gen_events.py (fra 21/10 2026: v2 i champagne, firmafest = A, bryllup = B). Oversigt: /ev/
 python3 gen_events.py >/dev/null && cp -r ev _site/ev && rm -f _site/ev/_live-*.html && cp ev/_live-firmafest.html _site/firmafest.html && cp ev/_live-bryllup.html _site/bryllup.html && cp ev/_tak-bryllup.html _site/tak-bryllup.html && cp ev/_tak-firmafest.html _site/tak-firmafest.html && rm -f _site/ev/_tak-*.html && cp ev.js _site/ev.js
 cp privatliv.html _site/privatliv.html   # linkes fra footeren på v2-siderne
+# ny ansøgningsform (4/11 2026): forhåndsvisning på /new-form-setup; forsiden er uændret indtil den sættes live (gen_newform.py --live)
+cp fbm-form.js _site/fbm-form.js && python3 gen_newform.py >/dev/null
 cp _headers _site/_headers
 # Kevin-HLS (ny version 9/10 2026, 17 min) er for stor til git; ligger lokalt i ~/bliv-booket-cf/public/media/kevin2 (ny sti = ingen gammel cache)
 K=~/bliv-booket-cf/public/media/kevin2; if [ -d "$K" ]; then cp -r "$K" _site/media/kevin2; else echo "ADVARSEL: $K mangler, Kevin-video bliver 404"; fi

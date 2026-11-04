@@ -40,6 +40,8 @@ table{width:100%;border-collapse:collapse;font-size:.85rem}th{font-family:var(--
 .empty{color:var(--ink3);padding:20px;text-align:center}
 .lfun{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:14px}@media(max-width:700px){.lfun{grid-template-columns:1fr}}
 .lfun .funnel{grid-template-columns:repeat(4,minmax(0,1fr))}.lfun h3{margin:0 0 8px;font-size:.85rem}
+.funnel.app{grid-template-columns:repeat(11,minmax(0,1fr))}@media(max-width:1100px){.funnel.app{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.appx{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.appx .pill b{margin-left:4px}
 .ltab td a{color:var(--ink);text-decoration:underline;text-decoration-color:#555}.ltab .ans{color:var(--ink2);font-size:.8rem;max-width:380px}.ltab .ans b{color:var(--ink3);font-weight:600}
 @media(max-width:760px){.ltab thead{display:none}.ltab tr{display:block;background:var(--card2);border-radius:12px;padding:10px 12px;margin-bottom:10px}.ltab td{display:flex;gap:10px;border:0;padding:4px 0}.ltab td::before{content:attr(data-l);flex:none;width:68px;font-family:var(--mono);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);padding-top:2px}.ltab td.ans{max-width:none;display:block}.ltab td.ans::before{display:block;margin-bottom:2px}.ltab td a{display:inline-block;min-height:24px}}
 .shead{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin:0 0 4px}.shead h2{margin:0;font-size:.85rem;color:var(--ink);font-family:Manrope,system-ui,sans-serif;letter-spacing:0;text-transform:none;font-weight:800}
@@ -130,6 +132,11 @@ table{width:100%;border-collapse:collapse;font-size:.85rem}th{font-family:var(--
   </div>
 
   <div class="row">
+    <div class="card"><h2>Ansøgningsform (musikere)</h2><div id="appFunnel"></div>
+      <p class="muted" style="margin:12px 0 0;font-size:.8rem">Den nye form på <a href="/new-form-setup" target="_blank" rel="noopener" class="mono">/new-form-setup</a>. Hvert trin viser, hvor mange der svarede på spørgsmålet. "Stoppet: eget materiale" = svarede, at de kun spiller eget materiale, og kunne ikke gå videre. Scoren regnes på serveren: A og B er kvalificerede og booker i Strategisamtale; C booker i Afklaringssamtale (Oscar tager dem ikke).</p></div>
+  </div>
+
+  <div class="row">
     <div class="card"><h2>Leads: /firmafest og /bryllup</h2><div class="lfun" id="leadFunnel"></div><div class="scroll" id="leads"></div>
       <p class="muted" style="margin:12px 0 0;font-size:.8rem">Formularen gemmer, mens der skrives. "Kontakt" = telefon eller mail er skrevet (også uden at trykke videre). "Udfyldt" = alle trin gennemført. "Booket" = tid valgt i kalenderen.</p></div>
   </div>
@@ -200,7 +207,7 @@ function drawMap(points){
 }
 (function(){const cb=document.getElementById('ignoreMe');let v=null;try{v=localStorage.getItem('bk_ignore');if(v===null){localStorage.setItem('bk_ignore','1');v='1';}}catch(_){}
 cb.checked=v!=='0';cb.addEventListener('change',()=>{try{localStorage.setItem('bk_ignore',cb.checked?'1':'0');}catch(_){}});})();
-const PAGE_NAME={firmafest:'Firmafest',bryllup:'Bryllup'};
+const PAGE_NAME={firmafest:'Firmafest',bryllup:'Bryllup',ansoegning:'Ansøgning'};
 async function loadLeads(){
   const d=await (await fetch('/admin/api/leads?range='+range)).json();
   const fEl=document.getElementById('leadFunnel'), el=document.getElementById('leads');
@@ -208,6 +215,12 @@ async function loadLeads(){
   fEl.innerHTML=['firmafest','bryllup'].map(p=>{const f=(d.funnel||[]).find(x=>x.page===p)||{started:0,contact:0,done:0,booked:0};
     const st=[['Startet',f.started],['Kontakt',f.contact],['Udfyldt',f.done],['Booket',f.booked]];
     return `<div><h3>${PAGE_NAME[p]}</h3><div class="funnel">${st.map(([l,v])=>`<div class="fstep"><div class="l">${l}</div><div class="v">${fmt(v)}</div><div class="p">${pct(v,f.started)}</div><div class="bar"><i style="width:${f.started?100*v/f.started:0}%"></i></div></div>`).join('')}</div></div>`;}).join('');
+  const A=d.ansoegning, aEl=document.getElementById('appFunnel');
+  if(A){const st=[['Startet',A.started],['Jobs i år',A.jobs],['Pris i dag',A.pris],['Ønsket pris',A.pris_maal],['Jobs ønsket',A.jobs_maal],['2–3x pris',A.x3],['Cover/eget',A.cover],['Kontakt',A.contact],['Omsætning',A.oms],['Investering',A.invest],['Booket',A.booked]];
+    const q=new Set(A.qualified||[]);
+    aEl.innerHTML=`<div class="funnel app">${st.map(([l,v])=>`<div class="fstep"><div class="l">${l}</div><div class="v">${fmt(v||0)}</div><div class="p">${pct(v||0,A.started)}</div><div class="bar"><i style="width:${A.started?100*(v||0)/A.started:0}%"></i></div></div>`).join('')}</div>
+      <div class="appx"><span class="pill">Stoppet: eget materiale <b>${fmt(A.stopped||0)}</b></span>${['a','b','c'].map(k=>`<span class="pill ${q.has(k.toUpperCase())?'g':''}">Booket ${k.toUpperCase()} <b>${fmt(A[k]||0)}</b></span>`).join('')}<span class="pill">Instagram/hjemmeside efter booking <b>${fmt(A.extra||0)}</b></span>${A.live?'':'<span class="pill y">Forhåndsvisning (ikke live)</span>'}</div>`;}
+  else aEl.innerHTML='<div class="empty">Ingen data</div>';
   document.getElementById('split').innerHTML=(d.split||[]).map(g=>{
     const best=Math.max(...g.vers.map(v=>v.visitors?v.booked/v.visitors:0));
     return `<div><h3>${PAGE_NAME[g.page]||g.page}</h3><table class="ltab"><thead><tr><th>Version</th><th>Besøgende</th><th>Startet</th><th>Kontakt</th><th>Booket</th><th>Booket pr. besøg</th></tr></thead><tbody>${g.vers.map(v=>{
