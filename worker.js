@@ -8,7 +8,7 @@
 import ADMIN_HTML from './admin.html';
 
 const ALLOWED_EVENTS = new Set(['Lead', 'PageView', 'Schedule', 'Contact']);
-const TRACK_TYPES = new Set(['pageview', 'booking_open', 'booking_interact', 'click', 'leave', 'view', 'cta', 'form_start', 'form_field', 'form_error', 'form_abandon', 'form_submit']);
+const TRACK_TYPES = new Set(['pageview', 'booking_open', 'booking_interact', 'click', 'leave', 'view', 'cta', 'form_start', 'form_field', 'form_error', 'form_abandon', 'form_submit', 'booked']);
 const RANGES = { today: 1, '7d': 7, '30d': 30, '90d': 90, '365d': 365 };
 
 const json = (o, status = 200, extra = {}) => new Response(JSON.stringify(o), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...extra } });
@@ -153,12 +153,12 @@ const one = async (db, sql, ...p) => (await db.prepare(sql).bind(...p).first()) 
 const CONF = {
   ctaType: 'booking_open', callsMails: false, sections: false,
   isOpened: e => e.type === 'booking_open', isInteracted: e => e.type === 'booking_interact',
-  isBooked: e => e.type === 'pageview' && e.path === '/tak', isSeriesOpened: e => e.type === 'booking_open',
+  isBooked: e => e.type === 'booked' || (e.type === 'pageview' && e.path === '/tak'), isSeriesOpened: e => e.type === 'booking_open',
   visitorFlags: (s, e) => {
     if (!s) return { opened: 0, interacted: 0, booked: 0 };
     if (e.type === 'booking_open') s.opened = 1;
     if (e.type === 'booking_interact') s.interacted = 1;
-    if (e.type === 'pageview' && e.path === '/tak') s.booked = 1;
+    if (e.type === 'booked' || (e.type === 'pageview' && e.path === '/tak')) s.booked = 1;
   },
 };
 
@@ -632,6 +632,7 @@ async function handleBook(request, env, ctx) {
     if (fbm.knockout) return json({ error: 'not eligible' }, 403);
     fbm.qualified = fbmQualified(rules).includes(fbm.score);
     fbm.fbp = str(b.fbp, 120); fbm.fbc = str(b.fbc, 300);
+    fbm.track = b.track === true;   // kun forsiden (window.FBM_LIVE); test-siden /new-form-setup tæller ikke i Meta
   }
   if (lead.booked_start) {
     if (lead.booked_start === startMs) return json({ ok: true, start: isoCph(lead.booked_start), end: isoCph(lead.booked_end), source: lead.ghl_appt_id ? 'ghl' : 'fallback', already: true });
@@ -675,7 +676,7 @@ async function handleBook(request, env, ctx) {
   const followUp = async ({ ghlErr }) => {
     const booked = { ...lead, booked_start: startMs, booked_end: endMs, score: fbm ? fbm.score : null };
     // kun kvalificerede bookinger lærer Meta, hvem der er gode (samme event_id som pixel'en i browseren = ingen dobbelttælling)
-    if (fbm && fbm.qualified && fbmLive(env)) await capiSend(env, { event_name: 'Schedule', event_id: 'fbm-' + lid, url: 'https://fuldtbooketmusiker.dk/',
+    if (fbm && fbm.qualified && fbmLive(env) && fbm.track) await capiSend(env, { event_name: 'Schedule', event_id: 'fbm-' + lid, url: 'https://fuldtbooketmusiker.dk/',
       ip, ua, fbp: fbm.fbp, fbc: fbm.fbc, name: lead.name, em: lead.email, ph: lead.phone, content_name: 'Ansøgning kvalificeret' });
     // GHL-fejl meldes altid (også i forhåndsvisning): kunden har fået en bekræftelse, så aftalen skal oprettes manuelt
     if (ghlErr) { await tgSend(env, `⚠️ GHL fejlede: ${tgEsc(ghlErr)}\nBookingen er gemt i D1, opret den manuelt i GHL.\n\n` + leadText('📅 Booket', booked)); await claimFlag(env, lid, 'booked'); return; }
@@ -860,7 +861,7 @@ async function capiSend(env, e) {
 // Har ansøgeren ikke udfyldt Instagram/hjemmeside/tekst efter bookingen, sender GHL (Oscars nummer) en SMS og beder om
 // et link til deres Instagram. Svaret læses i GHL-samtalen og lægges automatisk på kontakten (Instagram/hjemmeside + note).
 // Tekst og til/fra styres i /admin -> Ansøgningsform (D1 kv 'fbm_sms'). {fornavn} og {tid} udfyldes.
-const FBM_SMS_DEFAULT = { on: true, text: 'Hej {fornavn}! Vi fik ikke lige din Instagram eller hjemmeside med. Kan du sende den her? Så kigger Oscar på den inden jeres snak. Mvh. Oscar' };
+const FBM_SMS_DEFAULT = { on: true, text: 'Hej {fornavn}! Jeg fik ikke lige din Instagram eller hjemmeside med. Kan du sende den her? Så kigger jeg på den inden vores snak. Mvh. Oscar' };
 const FBM_SMS_AFTER = 15 * 60000;
 async function fbmSmsCfg(env) {
   const c = await kvGet(env.DB, 'fbm_sms', null).catch(() => null);

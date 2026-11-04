@@ -162,6 +162,7 @@
         b.addEventListener('click', function () {
           $$('.fo', B).forEach(function (x) { x.setAttribute('aria-checked', 'false'); }); b.setAttribute('aria-checked', 'true');
           S.a[st.id] = b.dataset.v;
+          try { dispatchEvent(new CustomEvent('bk:interact')); } catch (_) { }   // track.js: formular rørt
           if ((STOP[st.id] || []).indexOf(b.dataset.v) > -1) { S.stop = true; saveNow(); setTimeout(renderStop, 260); return; }
           saveSoon(); setTimeout(function () { go(i + 1); }, 240);
         });
@@ -231,7 +232,7 @@
     cErr('');
     var unlock = function () { $$('.fday,.ftime,#fBack', B).forEach(function (x) { x.disabled = false; }); var e1 = $('#cErr'); if (e1) e1.classList.remove('fwait'); };
     saveNow().then(function () {
-      return fetch('/api/book', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lid: S.lid, start: picked, fbp: cookie('_fbp'), fbc: cookie('_fbc') }) });
+      return fetch('/api/book', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lid: S.lid, start: picked, fbp: cookie('_fbp'), fbc: cookie('_fbc'), track: LIVE }) });
     }).then(function (r) { return r.json().then(function (x) { return { ok: r.ok, x: x }; }); }).then(function (res) {
       var e = res.x && res.x.error;
       if (e === 'already booked' && res.x.start) { S.booked = { start: res.x.start }; persist(); render(); return; }
@@ -247,6 +248,7 @@
         bb.disabled = false; bb.innerHTML = 'Prøv igen' + arrow; cErr('Det lykkedes ikke at booke. Prøv igen om et øjeblik.'); return;
       }
       S.booked = { start: res.x.start || picked, end: res.x.end || null }; S.step = N; persist();
+      try { dispatchEvent(new CustomEvent('bk:booked')); } catch (_) { }   // track.js: booket (alle scorer)
       if (res.x.cv === 1) fireConv();
       render();
     }).catch(function () { unlock(); bb.disabled = false; bb.innerHTML = 'Prøv igen' + arrow; cErr('Ingen forbindelse. Prøv igen om lidt.'); });

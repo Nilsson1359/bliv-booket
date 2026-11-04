@@ -24,7 +24,7 @@ GHL_CALENDAR_BRYLLUP = "OrUzjog2RIXctk5UA7sF"     # "Oscartjoensson - funnel - B
 GHL_CALENDAR_FBM_Q = "0vw3bys1juCaQmANeSK4"       # "Fuldt Booket Musiker - Strategisamtale" = kvalificerede (A/B), grøn
 GHL_CALENDAR_FBM_U = "NovNIgN6PbxoF7ZSXuHr"       # "Fuldt Booket Musiker - Afklaringssamtale" = ikke kvalificerede (C), rød
 # Score-regler og hvilke scorer der er kvalificerede styres i /admin -> Ansøgningsform (D1 kv fbm_rules)
-FBM_FORM_LIVE = "0"       # "1" = live: Meta-pixel/CAPI + Telegram. "0" = forhåndsvisning
+FBM_FORM_LIVE = "1"       # "1" = live (fra 4/11 2026): Meta CAPI + Telegram + SMS efter 15 min. "0" = forhåndsvisning
 
 # salgstal fra GHL (salesSync i worker.js)
 [triggers]

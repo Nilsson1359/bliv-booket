@@ -32,7 +32,7 @@
   send('pageview');
 
   // Sektion for et element: nærmeste forfader med id (section/div)
-  var secOf = function (el) { var s = el && el.closest ? el.closest('section[id],[id]') : null; while (s && /^(bkModal|bkBody|nav)$/.test(s.id)) s = s.parentElement && s.parentElement.closest ? s.parentElement.closest('section[id],[id]') : null; return s ? s.id : ''; };
+  var secOf = function (el) { var s = el && el.closest ? el.closest('section[id],[id]') : null; while (s && /^(bkModal|bkBody|fbmModal|fbmBody|nav)$/.test(s.id)) s = s.parentElement && s.parentElement.closest ? s.parentElement.closest('section[id],[id]') : null; return s ? s.id : ''; };
   var labelOf = function (el) { if (el && el.closest && el.closest('[data-notrack]')) return '[skjult]'; var t = el && el.closest ? el.closest('a,button,[role=button],summary,label') : null; var txt = (t || el).innerText || (t || el).textContent || ''; txt = txt.replace(/\s+/g, ' ').trim().replace(/\+?\d[\d\s-]{5,}\d/g, '[tal]'); if (!txt && el) txt = el.tagName.toLowerCase() + (el.id ? '#' + el.id : el.className && typeof el.className === 'string' ? '.' + el.className.split(' ')[0] : ''); return txt.slice(0, 60); };
 
   // Booking-popup åbnet (index.html dispatcher bk:open m. knappen)
@@ -42,6 +42,9 @@
   });
   // Bruger klikker ind i booking-iframen (fokus forlader siden mens popup er åben)
   var interacted = false;
+  // ansøgningsformen (fbm-form.js): første svar = formular rørt, booking gennemført = booket
+  addEventListener('bk:interact', function () { if (!interacted) { interacted = true; send('booking_interact'); } });
+  addEventListener('bk:booked', function () { send('booked'); });
   addEventListener('blur', function () {
     setTimeout(function () {
       var a = document.activeElement; if (interacted || !a || a.tagName !== 'IFRAME') return;
