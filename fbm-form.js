@@ -19,7 +19,7 @@
     { id: 'jobs_maal', q: 'Hvor mange jobs vil du gerne spille om året?', opts: ['Under 50', '50–99', '100+'] },
     { id: 'x3', q: 'Er du åben for at tage 2–3x mere for dine jobs, hvis vi finder kunderne, der vil betale det?', opts: ['Ja', 'Nej'] },
     { id: 'cover', q: 'Spiller du covermusik eller dit eget materiale?', help: 'Vi hjælper musikere, der spiller kendte numre til bryllupper, firmafester og private fester.', opts: ['Covermusik', 'Både covermusik og eget materiale', KNOCKOUT] },
-    { id: 'contact', type: 'contact', q: 'Hvor skal vi sende din invitation hen?', help: 'Vi bruger det kun til din samtale. Ingen nyhedsbreve.' },
+    { id: 'contact', type: 'contact', q: 'Hvor skal vi sende din ansøgning hen, hvis du bliver godkendt?', help: 'Vi bruger det kun til din ansøgning og samtale. Ingen nyhedsbreve.' },
     { id: 'oms', q: 'Hvad omsætter du for på musikken om måneden i dag?', help: 'Et cirka-tal er fint.', opts: ['Under 10.000 kr.', '10.000–24.999 kr.', '25.000–49.999 kr.', '50.000–99.999 kr.', '100.000+ kr.'] },
     { id: 'invest', q: null, opts: ['Ja', 'Ja, hvis tallene giver mening', 'Nej'] },
     { id: 'cal', type: 'cal', q: 'Vælg en tid til din strategisamtale', help: '1 time på Google Meet med Oscar. Du får en invitation på mail med det samme.' }
