@@ -25,6 +25,9 @@
     { id: 'cal', type: 'cal', q: 'Vælg en tid til din strategisamtale', help: '1 time på Google Meet med Oscar. Du får en invitation på mail med det samme.' }
   ];
   var N = STEPS.length;
+  // hvilke svar der stopper formen styres i /admin (Ansøgningsform); standard indtil svaret er hentet
+  var STOP = { cover: [KNOCKOUT] };
+  fetch('/api/form-config').then(function (r) { return r.ok ? r.json() : null; }).then(function (j) { if (j && j.stop) STOP = j.stop; }).catch(function () { });
   // investeringsspørgsmålet bygger på deres eget mål (som aftalt i kaldet 4/11)
   var investGoal = function () {
     var j = S.a.jobs_maal, p = S.a.pris_maal;
@@ -160,7 +163,7 @@
         b.addEventListener('click', function () {
           $$('.fo', B).forEach(function (x) { x.setAttribute('aria-checked', 'false'); }); b.setAttribute('aria-checked', 'true');
           S.a[st.id] = b.dataset.v;
-          if (st.id === 'cover' && b.dataset.v === KNOCKOUT) { S.stop = true; saveNow(); setTimeout(renderStop, 260); return; }
+          if ((STOP[st.id] || []).indexOf(b.dataset.v) > -1) { S.stop = true; saveNow(); setTimeout(renderStop, 260); return; }
           saveSoon(); setTimeout(function () { go(i + 1); }, 240);
         });
       });
@@ -187,7 +190,7 @@
   var DAYS = ['søn', 'man', 'tir', 'ons', 'tor', 'fre', 'lør'], MONTHS = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'], tz = 'Europe/Copenhagen';
   var fmtTime = function (iso) { return new Date(iso).toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit', timeZone: tz }).replace('.', ':'); };
   var fmtLong = function (iso) { return new Date(iso).toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'long', timeZone: tz }) + ' kl. ' + fmtTime(iso); };
-  var fmtShort = function (iso) { return new Date(iso).toLocaleDateString('da-DK', { weekday: 'short', day: 'numeric', month: 'short', timeZone: tz }) + ' kl. ' + fmtTime(iso); };   // "tor. 5. nov. kl. 20:00"
+  var fmtShort = function (iso) { return new Date(iso).toLocaleDateString('da-DK', { weekday: 'short', day: 'numeric', month: 'short', timeZone: tz }) + ' ' + fmtTime(iso); };   // "tor. 5. nov. 20:00" (kort, så knappen holder én linje på små mobiler)
   var cErr = function (m) { var e = $('#cErr'); if (e) e.textContent = m || ''; };
   var slots = null, picked = null;
   var loadSlots = function () {
@@ -261,6 +264,7 @@
   // ── stop: kun eget materiale ──
   var renderStop = function () {
     M.classList.add('end');
+    B.scrollTop = 0;
     setProg(N - 1, 'Tak for din interesse');
     B.innerHTML = '<div class="fstep fend"><p class="fk">Tak for din interesse</p><h3 class="fq">Vi hjælper desværre kun covermusikere</h3>' +
       '<p class="fh">Vores system er bygget til musikere, der spiller kendte numre til bryllupper, firmafester og private fester. Der kan vi skaffe kunderne. Med dit eget materiale er vi ikke de rigtige til at hjælpe dig, og det vil vi hellere sige ærligt nu end tage din tid.</p>' +
@@ -286,6 +290,7 @@
         '<label class="ff"><span>Hjemmeside</span><input class="fin" id="xWeb" type="url" inputmode="url" autocapitalize="off" spellcheck="false" value="' + esc(ex.hjemmeside || '') + '" placeholder="www.ditnavn.dk"></label></div>' +
         '<p class="ff"><span>Hvordan optræder du?</span></p><div class="fchips" role="group" aria-label="Hvordan optræder du?">' + ['Solo', 'Duo', 'Trio / band'].map(function (o) { return '<button type="button" class="fchip" data-v="' + o + '" aria-pressed="' + (crew.indexOf(o) > -1) + '">' + o + '</button>'; }).join('') + '</div>' +
         '<p class="ferr" id="xErr" role="alert"></p><div class="fnav"><button type="button" class="fbtn" id="xSend">Send til Oscar' + arrow + '</button></div></div>';
+    B.scrollTop = 0;
     B.innerHTML = '<div class="fstep fend"><div class="fok" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.5l4.5 4.5L19 7"/></svg></div>' +
       '<p class="fk">Samtalen er booket</p><h3 class="fq">Tak' + (f ? ', ' + esc(f) : '') + '. Vi ses ' + esc(fmtLong(b.start)) + '.</h3>' +
       '<p class="fh">Invitationen med link til Google Meet er på vej til ' + esc(S.email || 'din mail') + '. Læg tiden i kalenderen, så den ikke glipper.</p>' +

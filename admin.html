@@ -54,11 +54,34 @@ table{width:100%;border-collapse:collapse;font-size:.85rem}th{font-family:var(--
 .dtab input,.dtab select{background:#0f0f0f;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font:inherit;font-size:16px}.dtab input{width:120px}
 .flags{display:flex;flex-wrap:wrap;gap:4px}
 #sales .mono{white-space:nowrap}@media(max-width:600px){.skpis{grid-template-columns:1fr 1fr}.skpi .v{font-size:1.25rem}}
+.tabs button{padding:7px 15px}
+.btn.pri{background:var(--acc);color:#111;border-color:var(--acc)}.btn.pri:disabled{background:var(--card2);color:var(--ink2);border-color:var(--line)}
+.fhead{display:flex;flex-wrap:wrap;gap:10px 12px;align-items:center}.fstat{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:.85rem}.fstat a{color:var(--ink2)}
+.fhelp{font-size:.8rem;margin:0 0 12px;line-height:1.55}
+.lv{display:inline-block;min-width:34px;text-align:center;padding:1px 7px;border-radius:6px;font-size:.72rem;font-weight:800}
+.lv.ok,.lvs button.on[data-l=ok]{background:#2a2a2a;color:var(--ink)}
+.lv.B,.lvs button.on[data-l=B]{background:rgba(240,198,116,.2);color:var(--warn)}
+.lv.C,.lvs button.on[data-l=C]{background:rgba(242,139,130,.2);color:var(--bad)}
+.lv.stop,.lvs button.on[data-l=stop]{background:#5a1f1b;color:#ffd3cf}
+.lv.A{background:rgba(127,209,165,.18);color:var(--good)}
+.frules{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px}
+.fq{background:var(--card2);border-radius:12px;padding:12px 14px}.fq h3{margin:0 0 8px;font-size:.85rem}
+.fopt{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:5px 0;border-top:1px solid #2a2a2a}.fopt:first-of-type{border-top:0}
+.fopt span{font-size:.85rem;color:var(--ink2);min-width:0}.fopt.chg span::after{content:" •";color:var(--warn)}
+.lvs{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;flex:none}.lvs button{background:none;border:0;border-left:1px solid var(--line);color:var(--ink3);font:inherit;font-size:.72rem;font-weight:800;padding:6px 9px;cursor:pointer;min-width:38px}.lvs button:first-child{border-left:0}
+.lvs button:hover{color:var(--ink)}@media(pointer:coarse){.lvs button{min-height:38px}}
+.fside{display:flex;flex-direction:column;gap:14px;min-width:0}
+.fqual{display:flex;gap:8px}.fqual button{flex:1;background:var(--card2);border:1px solid var(--line);color:var(--ink3);border-radius:10px;padding:10px;font:inherit;font-weight:800;cursor:pointer}.fqual button.on{border-color:var(--good);color:var(--good);background:rgba(127,209,165,.1)}
+.fcombo{display:grid;grid-template-columns:auto minmax(0,1fr) minmax(0,1fr);gap:6px 8px;align-items:center;background:var(--card2);border-radius:10px;padding:10px;margin-bottom:8px;font-size:.8rem}.fcombo .ck{color:var(--ink3);font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase}.fcombo select{font-size:.8rem;padding:5px 6px;width:100%;min-width:0}.cthen{grid-column:2/4;display:flex;gap:8px;align-items:center}.cthen select{width:auto}.fcombo .x{margin-left:auto;background:none;border:0;color:var(--ink3);cursor:pointer;font:inherit;font-size:.75rem;text-decoration:underline}.fcombo .x:hover{color:var(--bad)}
+.fsim{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.fsim div{background:var(--card2);border-radius:10px;padding:10px;text-align:center}.fsim b{display:block;font-size:1.4rem}.fsim small{color:var(--ink3);font-size:.7rem}
+.frow{align-items:start}
+@media(max-width:600px){.fcombo{grid-template-columns:auto minmax(0,1fr)}.fcombo select[data-k=a]{grid-column:2}.cthen{grid-column:2}.fhead>span{display:none}.fhead .btn{flex:1;padding:8px 10px;font-size:.8rem}.fhead>div:first-child{flex-basis:100%}.funnel.app{grid-template-columns:repeat(3,minmax(0,1fr))}.frules{grid-template-columns:1fr}.lvs button{padding:7px 8px;min-width:34px}}
 </style>
 </head>
 <body>
 <header>
   <h1>Bliv Booket <span>· statistik</span></h1>
+  <div class="seg tabs" id="tabs"><button data-t="over" class="on">Oversigt</button><button data-t="form">Ansøgningsform</button></div>
   <div class="seg" id="range">
     <button data-r="today">I dag</button><button data-r="7d" class="on">7 dage</button><button data-r="30d">30 dage</button><button data-r="90d">90 dage</button><button data-r="365d">1 år</button>
   </div>
@@ -70,6 +93,7 @@ table{width:100%;border-collapse:collapse;font-size:.85rem}th{font-family:var(--
   <a href="/admin/logout">Log ud</a>
 </header>
 <main>
+<div id="tOver">
   <div class="card" id="sales">
     <div class="shead"><h2>Salg · fuldt booket musiker</h2><span class="muted" id="sSync"></span><span style="flex:1"></span>
       <label class="sctl" title="Ingen Meta-adgang endnu, så annoncekroner regnes som et fast beløb pr. booket møde">Annoncekr. pr. booket møde <input id="sCost" type="number" min="0" step="10" inputmode="numeric"> kr</label>
@@ -132,11 +156,6 @@ table{width:100%;border-collapse:collapse;font-size:.85rem}th{font-family:var(--
   </div>
 
   <div class="row">
-    <div class="card"><h2>Ansøgningsform (musikere)</h2><div id="appFunnel"></div>
-      <p class="muted" style="margin:12px 0 0;font-size:.8rem">Den nye form på <a href="/new-form-setup" target="_blank" rel="noopener" class="mono">/new-form-setup</a>. Hvert trin viser, hvor mange der svarede på spørgsmålet. "Stoppet: eget materiale" = svarede, at de kun spiller eget materiale, og kunne ikke gå videre. Scoren regnes på serveren: A og B er kvalificerede og booker i Strategisamtale; C booker i Afklaringssamtale (Oscar tager dem ikke).</p></div>
-  </div>
-
-  <div class="row">
     <div class="card"><h2>Leads: /firmafest og /bryllup</h2><div class="lfun" id="leadFunnel"></div><div class="scroll" id="leads"></div>
       <p class="muted" style="margin:12px 0 0;font-size:.8rem">Formularen gemmer, mens der skrives. "Kontakt" = telefon eller mail er skrevet (også uden at trykke videre). "Udfyldt" = alle trin gennemført. "Booket" = tid valgt i kalenderen.</p></div>
   </div>
@@ -144,6 +163,41 @@ table{width:100%;border-collapse:collapse;font-size:.85rem}th{font-family:var(--
   <div class="row">
     <div class="card"><h2>Seneste besøg</h2><div class="scroll" id="visitors"></div></div>
   </div>
+</div>
+<div id="tForm" hidden>
+  <div class="card fhead">
+    <div><h2 style="margin:0 0 6px">Ansøgningsform · musikere</h2>
+      <div class="fstat"><span class="pill" id="fLive">–</span><a href="/new-form-setup" target="_blank" rel="noopener" class="mono">/new-form-setup ↗</a><span class="muted" id="fSaved"></span></div></div>
+    <span style="flex:1"></span>
+    <button class="btn" id="fReset" title="Sæt alle regler tilbage til udgangspunktet fra kaldet 4/11">Standard</button>
+    <button class="btn" id="fUndo" disabled title="Fortryd ændringer, der ikke er gemt">Fortryd</button>
+    <button class="btn pri" id="fSave" disabled>Gem regler</button>
+  </div>
+
+  <div class="row">
+    <div class="card"><h2>Frafald pr. spørgsmål</h2><div id="appFunnel"></div>
+      <p class="muted" style="margin:12px 0 0;font-size:.8rem">Hvert trin viser, hvor mange der svarede på spørgsmålet i perioden. "Stoppet" = valgte et svar, der stopper formen (kunne ikke booke). Booket A/B/C = den score, de fik, da de bookede.</p></div>
+  </div>
+
+  <div class="row c31 frow">
+    <div class="card"><h2>Regler pr. svar</h2>
+      <p class="muted fhelp"><b class="lv ok">OK</b> trækker ikke ned · <b class="lv B">B</b> trækker ned til B · <b class="lv C">C</b> gør leadet til C · <b class="lv stop">Stop</b> stopper formen, så de ikke kan booke. Scoren er den laveste, et svar eller en kombination giver: Stop, så C, så B, ellers A.</p>
+      <div id="fRules" class="frules"></div>
+    </div>
+    <div class="fside">
+      <div class="card"><h2>Kvalificerede</h2><div id="fQual" class="fqual"></div>
+        <p class="muted fhelp" style="margin-top:10px">Kvalificerede booker i <b>Strategisamtale</b>, kommer på "Møde Booket" og tæller i Meta. De andre booker i <b>Afklaringssamtale</b> og kommer på "Ikke kvalificeret".</p></div>
+      <div class="card"><h2>Kombinationer</h2><p class="muted fhelp">Hvis alle svar i en linje passer, får leadet scoren. Fx 10–29 jobs + under 5.000 kr. = C.</p>
+        <div id="fCombos"></div><button class="btn" id="fAddCombo" style="margin-top:10px">+ Tilføj kombination</button></div>
+      <div class="card"><h2>Med disse regler</h2><div id="fSim"></div>
+        <p class="muted fhelp" style="margin-top:10px">Regnet på ansøgningerne i perioden med alle svar udfyldt. "Ændret" = ville få en anden score end de fik. Gemte regler gælder fra næste booking; allerede bookede ændres ikke.</p></div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="card"><h2>Ansøgninger</h2><div class="scroll" id="fRows"></div></div>
+  </div>
+</div>
 </main>
 <script>
 const SEC = {top:'Hero (øverst)',vslBox:'Video (VSL)',marq:'Kunde-citater',trow:'Trust-række',historie:'Oscars historie',kevin:'Kevin-case',overblik:'Overblik: 6 problemer',p1:'Problem 1: talent',p2:'Problem 2: telefonen',p3:'Problem 3: tilfældig kalender',fiks:'Konsekvensen',p4:'Problem 4: pris',p5:'Problem 5: hvorfor dig',p6:'Problem 6: fast vej',system:'Systemet (90 dage)',counter:'De rigtige jobs',ansoeg:'Ansøg (nederst)',nav:'Topbar'};
@@ -153,7 +207,7 @@ const pct = (a,b) => b ? (100*a/b).toLocaleString('da-DK',{maximumFractionDigits
 const dur = ms => { if(!ms) return '–'; const s=Math.round(ms/1000); return s<60? s+' s' : Math.floor(s/60)+' min '+(s%60)+' s'; };
 const esc = s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let range='7d', charts={}, map, mapLayer;
-document.getElementById('range').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;range=b.dataset.r;[...e.currentTarget.children].forEach(x=>x.classList.toggle('on',x===b));load();loadHeat();loadLeads();loadSales();});
+document.getElementById('range').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;range=b.dataset.r;[...e.currentTarget.children].forEach(x=>x.classList.toggle('on',x===b));load();loadHeat();loadLeads();loadSales();if(!document.getElementById('tForm').hidden)loadForm();});
 
 function table(el, rows, cols, opts={}){
   if(!rows||!rows.length){el.innerHTML='<div class="empty">Ingen data endnu</div>';return;}
@@ -219,7 +273,7 @@ async function loadLeads(){
   if(A){const st=[['Startet',A.started],['Jobs i år',A.jobs],['Pris i dag',A.pris],['Ønsket pris',A.pris_maal],['Jobs ønsket',A.jobs_maal],['2–3x pris',A.x3],['Cover/eget',A.cover],['Kontakt',A.contact],['Omsætning',A.oms],['Investering',A.invest],['Booket',A.booked]];
     const q=new Set(A.qualified||[]);
     aEl.innerHTML=`<div class="funnel app">${st.map(([l,v])=>`<div class="fstep"><div class="l">${l}</div><div class="v">${fmt(v||0)}</div><div class="p">${pct(v||0,A.started)}</div><div class="bar"><i style="width:${A.started?100*(v||0)/A.started:0}%"></i></div></div>`).join('')}</div>
-      <div class="appx"><span class="pill">Stoppet: eget materiale <b>${fmt(A.stopped||0)}</b></span>${['a','b','c'].map(k=>`<span class="pill ${q.has(k.toUpperCase())?'g':''}">Booket ${k.toUpperCase()} <b>${fmt(A[k]||0)}</b></span>`).join('')}<span class="pill">Instagram/hjemmeside efter booking <b>${fmt(A.extra||0)}</b></span>${A.live?'':'<span class="pill y">Forhåndsvisning (ikke live)</span>'}</div>`;}
+      <div class="appx"><span class="pill">Stoppet <b>${fmt(A.stopped||0)}</b></span>${['a','b','c'].map(k=>`<span class="pill ${q.has(k.toUpperCase())?'g':''}">Booket ${k.toUpperCase()} <b>${fmt(A[k]||0)}</b></span>`).join('')}<span class="pill">Instagram/hjemmeside efter booking <b>${fmt(A.extra||0)}</b></span>${A.live?'':'<span class="pill y">Forhåndsvisning (ikke live)</span>'}</div>`;}
   else aEl.innerHTML='<div class="empty">Ingen data</div>';
   document.getElementById('split').innerHTML=(d.split||[]).map(g=>{
     const best=Math.max(...g.vers.map(v=>v.visitors?v.booked/v.visitors:0));
@@ -374,6 +428,79 @@ function drawDepth(buckets,total){
   const reached=[];for(let b=0;b<=100;b+=10){reached.push(buckets.filter(x=>x.b>=b).reduce((s,x)=>s+x.n,0)/total);}
   el.innerHTML=reached.slice(0,10).map((r,i)=>`<i style="background:rgba(240,198,116,${.15+.85*r});height:10%" title="${i*10}-${i*10+10} %: ${Math.round(r*100)} % nåede hertil">${Math.round(r*100)}%</i>`).join('');
 }
+
+// ─── fanen Ansøgningsform: regler pr. svar, kombinationer, kvalificerede, simulering ───
+let F=null, draft=null;
+const LV=['ok','B','C','stop'], LVN={ok:'OK',A:'A',B:'B',C:'C',stop:'Stop'};
+const clone=o=>JSON.parse(JSON.stringify(o));
+function norm(r){const o={answers:{},combos:r.combos||[],qualified:[...(r.qualified||[])].sort()};for(const q of Object.keys(r.answers||{}).sort())for(const a of Object.keys(r.answers[q]).sort())if(r.answers[q][a]&&r.answers[q][a]!=='ok')(o.answers[q]||={})[a]=r.answers[q][a];return o;}
+const same=(a,b)=>JSON.stringify(norm(a))===JSON.stringify(norm(b));
+const lvOf=(r,q,a)=>(r.answers[q]&&r.answers[q][a])||'ok';
+const qLabel=id=>(F.questions.find(q=>q.id===id)||{}).label||id;
+// samme motor som fbmScore i worker.js
+function score(a,r){const Q=F.questions;
+  const stops=Q.filter(q=>a[q.id]&&lvOf(r,q.id,a[q.id])==='stop');
+  if(stops.length)return{s:'stop',why:stops.map(q=>q.label+': '+a[q.id]).join('; ')};
+  if(Q.some(q=>!q.opts.includes(a[q.id])))return{s:null};
+  const why={B:[],C:[]};
+  for(const q of Q){const l=lvOf(r,q.id,a[q.id]);if(l==='B'||l==='C')why[l].push(q.label+': '+a[q.id]);}
+  for(const c of r.combos)if(c.if.every(x=>a[x.q]===x.a))why[c.then].push(c.if.map(x=>qLabel(x.q)+': '+x.a).join(' + '));
+  if(why.C.length)return{s:'C',why:why.C.join('; ')};if(why.B.length)return{s:'B',why:why.B.join('; ')};return{s:'A',why:'Ingen svar trækker ned'};}
+async function loadForm(){
+  const el=document.getElementById('fRules');
+  let d;try{d=await (await fetch('/admin/api/form?range='+range)).json();}catch(e){el.innerHTML='<div class="empty">Kunne ikke hente reglerne</div>';return;}
+  if(d.error){el.innerHTML='<div class="empty">'+esc(d.error)+'</div>';return;}
+  const keep=F&&draft&&!same(draft,F.rules);F=d;if(!keep)draft=clone(F.rules);
+  renderForm();
+}
+function renderForm(){
+  const live=document.getElementById('fLive');live.className='pill '+(F.live?'g':'y');live.textContent=F.live?'Live på forsiden':'Forhåndsvisning (ikke live)';
+  document.getElementById('fSaved').textContent=F.custom?(F.updated?'Regler gemt '+new Date(F.updated).toLocaleString('da-DK',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'Egne regler'):'Standardregler fra kaldet 4/11';
+  const dirty=!same(draft,F.rules),sv=document.getElementById('fSave');
+  sv.disabled=!dirty;document.getElementById('fUndo').disabled=!dirty;sv.textContent=dirty?'Gem regler':'Gemt';
+  document.getElementById('fRules').innerHTML=F.questions.map(q=>`<div class="fq"><h3>${esc(q.label)}</h3>${q.opts.map(a=>{const l=lvOf(draft,q.id,a),chg=l!==lvOf(F.rules,q.id,a);
+    return `<div class="fopt${chg?' chg':''}"><span>${esc(a)}</span><div class="lvs" role="group" aria-label="${esc(a)}" data-q="${esc(q.id)}" data-a="${esc(a)}">${LV.map(x=>`<button type="button" data-l="${x}" class="${x===l?'on':''}" aria-pressed="${x===l}">${LVN[x]}</button>`).join('')}</div></div>`;}).join('')}</div>`).join('');
+  document.getElementById('fQual').innerHTML=['A','B','C'].map(x=>`<button type="button" data-s="${x}" class="${draft.qualified.includes(x)?'on':''}" aria-pressed="${draft.qualified.includes(x)}">${x}</button>`).join('');
+  const qSel=(v,i,j)=>`<select data-c="${i}" data-j="${j}" data-k="q">${F.questions.map(q=>`<option value="${esc(q.id)}"${q.id===v?' selected':''}>${esc(q.label)}</option>`).join('')}</select>`;
+  const aSel=(q,v,i,j)=>`<select data-c="${i}" data-j="${j}" data-k="a">${F.questions.find(x=>x.id===q).opts.map(a=>`<option${a===v?' selected':''}>${esc(a)}</option>`).join('')}</select>`;
+  document.getElementById('fCombos').innerHTML=draft.combos.length?draft.combos.map((c,i)=>`<div class="fcombo">${c.if.map((x,j)=>`<span class="ck">${j?'og':'Hvis'}</span>${qSel(x.q,i,j)}${aSel(x.q,x.a,i,j)}`).join('')}<span class="ck">så</span><div class="cthen"><select data-c="${i}" data-k="then"><option${c.then==='B'?' selected':''}>B</option><option${c.then==='C'?' selected':''}>C</option></select><button type="button" class="x" data-del="${i}" title="Slet kombination" aria-label="Slet kombination">Slet</button></div></div>`).join(''):'<div class="muted" style="font-size:.8rem">Ingen kombinationer</div>';
+  renderSim();
+}
+function renderSim(){
+  const rows=(F.rows||[]).map(r=>({...r,now:score(r.answers,draft),was:score(r.answers,F.rules)}));
+  const full=rows.filter(r=>r.now.s),n=k=>full.filter(r=>r.now.s===k).length,changed=full.filter(r=>r.now.s!==r.was.s).length,q=new Set(draft.qualified);
+  document.getElementById('fSim').innerHTML=`<div class="fsim">${['A','B','C','stop'].map(k=>`<div><b>${n(k)}</b><span class="lv ${k}">${LVN[k]}</span><br><small>${k==='stop'?'kan ikke booke':q.has(k)?'kvalificeret':'ikke kvalificeret'}</small></div>`).join('')}</div>
+    <p style="margin:10px 0 0;font-size:.85rem">${full.length} ansøgninger med svar${changed?` · <b style="color:var(--warn)">${changed} ville få en anden score</b>`:''}</p>`;
+  const tf=ts=>new Date(ts).toLocaleString('da-DK',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+  document.getElementById('fRows').innerHTML=rows.length?'<table class="ltab"><thead><tr><th>Tid</th><th>Navn</th><th>Kontakt</th><th>Score</th><th>Hvorfor</th><th>Status</th><th>Svar</th></tr></thead><tbody>'+rows.map(r=>{
+    const sc=r.now.s?`<span class="lv ${r.now.s}">${LVN[r.now.s]}</span>${r.was.s&&r.was.s!==r.now.s?' <span class="muted">før '+LVN[r.was.s]+'</span>':''}`:'<span class="muted">ikke færdig</span>';
+    const st=r.booked_start?`<span class="pill g">Booket ${esc(tf(r.booked_start))}</span>${r.score?' <span class="muted">fik '+esc(r.score)+'</span>':''}`:'<span class="pill">Trin '+(r.step+1)+'</span>';
+    const ans=F.questions.filter(q=>r.answers[q.id]).map(q=>`<b>${esc(q.label)}:</b> ${esc(r.answers[q.id])}`).join('<br>')||'<span class="muted">–</span>';
+    const kon=[r.phone?`<a href="tel:${esc(r.phone.replace(/[^\d+]/g,''))}">${esc(r.phone)}</a>`:'',r.email?`<a href="mailto:${esc(r.email)}">${esc(r.email)}</a>`:''].filter(Boolean).join('<br>')||'<span class="muted">–</span>';
+    return `<tr><td data-l="Tid" class="mono">${tf(r.updated_ts)}</td><td data-l="Navn">${esc(r.name)||'<span class="muted">–</span>'}</td><td data-l="Kontakt">${kon}</td>
+      <td data-l="Score">${sc}</td><td data-l="Hvorfor" class="ans">${esc(r.now.why||'')}</td><td data-l="Status">${st}</td><td data-l="Svar" class="ans">${ans}</td></tr>`;}).join('')+'</tbody></table>':'<div class="empty">Ingen ansøgninger i perioden</div>';
+}
+document.getElementById('fRules').addEventListener('click',e=>{const b=e.target.closest('.lvs button');if(!b)return;const g=b.parentElement;(draft.answers[g.dataset.q]||={})[g.dataset.a]=b.dataset.l;renderForm();});
+document.getElementById('fQual').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const s=b.dataset.s,i=draft.qualified.indexOf(s);if(i>-1){if(draft.qualified.length>1)draft.qualified.splice(i,1);}else draft.qualified.push(s);renderForm();});
+document.getElementById('fCombos').addEventListener('change',e=>{const t=e.target,c=draft.combos[+t.dataset.c];if(!c)return;
+  if(t.dataset.k==='then')c.then=t.value;else{const x=c.if[+t.dataset.j];if(t.dataset.k==='q'){x.q=t.value;x.a=F.questions.find(q=>q.id===t.value).opts[0];}else x.a=t.value;}renderForm();});
+document.getElementById('fCombos').addEventListener('click',e=>{const b=e.target.closest('[data-del]');if(!b)return;draft.combos.splice(+b.dataset.del,1);renderForm();});
+document.getElementById('fAddCombo').addEventListener('click',()=>{draft.combos.push({if:[{q:'jobs',a:'10–29'},{q:'pris',a:'Under 5.000 kr.'}],then:'C'});renderForm();});
+document.getElementById('fUndo').addEventListener('click',()=>{draft=clone(F.rules);renderForm();});
+document.getElementById('fReset').addEventListener('click',()=>{draft=clone(F.defaults);renderForm();});
+document.getElementById('fSave').addEventListener('click',async e=>{const b=e.currentTarget;
+  if(draft.combos.some(c=>new Set(c.if.map(x=>x.q)).size<c.if.length)){alert('En kombination bruger det samme spørgsmål to gange. Vælg to forskellige spørgsmål.');return;}
+  b.disabled=true;b.textContent='Gemmer …';
+  try{const r=await (await fetch('/admin/api/form',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rules:draft})})).json();if(!r.ok)throw 0;F.rules=r.rules;draft=clone(r.rules);await loadForm();loadLeads();}
+  catch(_){b.disabled=false;b.textContent='Gem regler';alert('Reglerne blev ikke gemt. Prøv igen.');}});
+// faner (huskes i adressen: #form)
+function showTab(t){document.getElementById('tOver').hidden=t!=='over';document.getElementById('tForm').hidden=t!=='form';
+  [...document.getElementById('tabs').children].forEach(x=>{x.classList.toggle('on',x.dataset.t===t);x.setAttribute('aria-pressed',String(x.dataset.t===t));});
+  try{history.replaceState(null,'',t==='form'?'#form':location.pathname);}catch(_){}
+  if(t==='form')loadForm();else if(map)setTimeout(()=>map.invalidateSize(),0);}
+document.getElementById('tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(b)showTab(b.dataset.t);});
+addEventListener('beforeunload',e=>{if(F&&draft&&!same(draft,F.rules)){e.preventDefault();e.returnValue='';}});
+if(location.hash==='#form')showTab('form');
 load();loadHeat();loadLeads();loadSales();
 </script>
 </body>

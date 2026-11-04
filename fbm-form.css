@@ -74,7 +74,7 @@
 @media (hover:hover){.ftime:hover{border-color:color-mix(in srgb,var(--accent) 60%,transparent)}}
 .ftime[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--bg)}
 
-.fend .fq{max-width:20ch}
+.fend .fq{max-width:26ch}
 .fok{width:52px;height:52px;border-radius:50%;border:1px solid var(--accent);display:grid;place-items:center;color:var(--accent)}
 .fok svg{width:24px;height:24px}
 .fadd{display:flex;gap:10px;flex-wrap:wrap}
@@ -106,3 +106,4 @@
 .fday:disabled,.ftime:disabled{opacity:.5;cursor:default}
 .fbm.end .fbm-foot{display:none}
 .fpre{margin:0 0 -6px;padding:10px 14px;border-left:2px solid var(--accent);background:color-mix(in srgb,var(--ink) 4%,transparent);color:var(--ink);font-size:.98rem;border-radius:0 10px 10px 0;width:fit-content;max-width:100%}
+@media (max-width:380px){.fnav{gap:10px}.fnav .fbtn{padding:14px 16px;font-size:.92rem;white-space:nowrap;gap:8px}.fback{font-size:.9rem}}

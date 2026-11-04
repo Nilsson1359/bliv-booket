@@ -626,10 +626,11 @@ async function handleBook(request, env, ctx) {
   let fbm = null;
   if (lead.page === 'ansoegning') {
     let ans = {}; try { ans = JSON.parse(lead.answers_json || '{}'); } catch { }
-    fbm = fbmScore(ans);
+    const rules = await fbmRules(env);
+    fbm = fbmScore(ans, rules);
     if (fbm.missing) return json({ error: 'missing answers' }, 400);
     if (fbm.knockout) return json({ error: 'not eligible' }, 403);
-    fbm.qualified = fbmQualified(env).includes(fbm.score);
+    fbm.qualified = fbmQualified(rules).includes(fbm.score);
     fbm.fbp = str(b.fbp, 120); fbm.fbc = str(b.fbc, 300);
   }
   if (lead.booked_start) {
@@ -680,7 +681,7 @@ async function handleBook(request, env, ctx) {
 // ───────── ansøgning: musikernes ansøgningsform på fuldtbooketmusiker.dk (4/11 2026) ─────────
 // Ét spørgsmål ad gangen (som Typeform), svar gemmes løbende via /api/lead (page=ansoegning).
 // Covermusik er et hårdt stop før kontaktinfo. Resten scores A/B/C her på serveren:
-// A/B (FBM_QUALIFIED) booker i "Strategisamtale", C i "Afklaringssamtale" (begge Oscars, neutrale navne kunden kan se).
+// Kvalificerede (valgt i admin, standard A/B) booker i "Strategisamtale", C i "Afklaringssamtale" (begge Oscars, neutrale navne kunden kan se).
 // Kontakt + svar i GHL-felter + tags + pipeline-trin + note. Meta får kun Schedule for kvalificerede.
 // Ingen SMS/mail herfra. FBM_FORM_LIVE != '1' = forhåndsvisning: ingen CAPI, ingen pixel, ingen Telegram.
 const FBM_APP = {
@@ -699,7 +700,6 @@ const FBM_APP = {
     oms: ['Under 10.000 kr.', '10.000–24.999 kr.', '25.000–49.999 kr.', '50.000–99.999 kr.', '100.000+ kr.'],
     invest: ['Ja', 'Ja, hvis tallene giver mening', 'Nej'],
   },
-  knockout: 'Kun mit eget materiale',
   // GHL custom field-id'er (contact). "Ansøgning: ..." er oprettet via API 4/11, resten fandtes i Oscars form
   fields: {
     jobs: 'TcJck5nWRgQPltUoGeLM', pris: 'fmgHuyzDBeUNKJgFbBEy', pris_maal: 'o6JaCOAikJSOPutRtvPB', jobs_maal: 'l9cVQ4UN5pCo9c9bW3Ad',
@@ -713,29 +713,60 @@ const FBM_APP = {
     x3: 'Åben for 2–3x pris', cover: 'Covermusik/eget', oms: 'Omsætning pr. md.', invest: 'Vil investere 3–5.000 kr./md.' },
 };
 const fbmLive = env => env.FBM_FORM_LIVE === '1';
-const fbmQualified = env => String(env.FBM_QUALIFIED || 'A,B').split(',').map(s => s.trim()).filter(Boolean);
 const tgOn = (env, page) => page !== 'ansoegning' || fbmLive(env);
 
-// -> { score: 'A'|'B'|'C', reason } | { knockout } | { missing }
-// Udgangspunkt fra kaldet 4/11: dem Oscar har lukket spiller 30-100 jobs om året; 10-20 jobs har ikke pengene.
-function fbmScore(a) {
-  const O = FBM_APP.opts, ix = k => O[k].indexOf(a[k]);
-  if (a.cover === FBM_APP.knockout) return { knockout: true };
-  const need = ['jobs', 'pris', 'pris_maal', 'jobs_maal', 'x3', 'cover', 'oms', 'invest'];
-  if (need.some(k => ix(k) < 0)) return { missing: true };
-  const jobs = ix('jobs'), pris = ix('pris'), oms = ix('oms'), invest = 2 - ix('invest');   // invest: 2 = ja, 1 = hvis tallene, 0 = nej
-  const c = [];
-  if (jobs === 0) c.push('under 10 betalte jobs det seneste år');
-  if (invest === 0) c.push('vil ikke investere i annoncer');
-  if (jobs === 1 && pris < 2) c.push('10-29 jobs til under 10.000 kr.');
-  if (jobs === 1 && oms === 0) c.push('10-29 jobs og under 10.000 kr. om måneden');
-  if (c.length) return { score: 'C', reason: 'C: ' + c.join(', ') };
-  const b = [];
-  if (jobs < 2) b.push('under 30 jobs');
-  if (pris === 0) b.push('under 5.000 kr. pr. job');
-  if (invest === 1) b.push('investerer kun hvis tallene giver mening');
-  if (a.x3 !== 'Ja') b.push('ikke åben for højere pris');
-  return b.length ? { score: 'B', reason: 'B: ' + b.join(', ') } : { score: 'A', reason: 'A: 30+ jobs, 5.000+ kr. pr. job, klar til at investere' };
+// ─── regler (styres fra /admin -> fanen Ansøgningsform, gemmes i D1 kv 'fbm_rules') ───
+// Hvert svar har et niveau: ok | B | C | stop. Kombinationsregler: "hvis X og Y, så B/C".
+// Score: stop (formen stopper, kan ikke booke) > C > B > A. Kvalificerede scorer vælges også i admin.
+// Standard = udgangspunktet fra kaldet 4/11: dem Oscar har lukket spiller 30-100 jobs; 10-20 jobs har ikke pengene.
+const FBM_LEVELS = ['ok', 'B', 'C', 'stop'];
+const FBM_Q = ['jobs', 'pris', 'pris_maal', 'jobs_maal', 'x3', 'cover', 'oms', 'invest'];
+const FBM_DEFAULT_RULES = {
+  answers: {
+    jobs: { '0–9': 'C', '10–29': 'B' }, pris: { 'Under 5.000 kr.': 'B' }, x3: { 'Nej': 'B' },
+    cover: { 'Kun mit eget materiale': 'stop' }, invest: { 'Ja, hvis tallene giver mening': 'B', 'Nej': 'C' },
+  },
+  combos: [
+    { if: [{ q: 'jobs', a: '10–29' }, { q: 'pris', a: 'Under 5.000 kr.' }], then: 'C' },
+    { if: [{ q: 'jobs', a: '10–29' }, { q: 'pris', a: '5.000–9.999 kr.' }], then: 'C' },
+    { if: [{ q: 'jobs', a: '10–29' }, { q: 'oms', a: 'Under 10.000 kr.' }], then: 'C' },
+  ],
+  qualified: ['A', 'B'],
+};
+// renser regler fra admin/D1: kun kendte spørgsmål, svar og niveauer
+function fbmCleanRules(r) {
+  const O = FBM_APP.opts, out = { answers: {}, combos: [], qualified: [] };
+  const src = r && typeof r === 'object' ? r : {};
+  for (const q of FBM_Q) for (const a of O[q]) {
+    const lv = src.answers && src.answers[q] && src.answers[q][a];
+    if (FBM_LEVELS.includes(lv) && lv !== 'ok') (out.answers[q] ||= {})[a] = lv;
+  }
+  for (const c of (Array.isArray(src.combos) ? src.combos : []).slice(0, 20)) {
+    const conds = (Array.isArray(c && c.if) ? c.if : []).filter(x => x && FBM_Q.includes(x.q) && O[x.q].includes(x.a)).slice(0, 3);
+    if (conds.length >= 2 && new Set(conds.map(x => x.q)).size === conds.length && ['B', 'C'].includes(c.then)) out.combos.push({ if: conds.map(x => ({ q: x.q, a: x.a })), then: c.then });
+  }
+  out.qualified = ['A', 'B', 'C'].filter(x => Array.isArray(src.qualified) && src.qualified.includes(x));
+  if (!out.qualified.length) out.qualified = ['A'];
+  return out;
+}
+async function fbmRules(env) {
+  if (!env.DB) return FBM_DEFAULT_RULES;
+  const r = await kvGet(env.DB, 'fbm_rules', null).catch(() => null);
+  return r ? fbmCleanRules(r) : FBM_DEFAULT_RULES;
+}
+const fbmQualified = rules => (rules && rules.qualified) || ['A', 'B'];
+// -> { score: 'A'|'B'|'C', reason } | { knockout } | { missing }   (samme regel-motor som i admin.html, simuleringen)
+function fbmScore(a, rules) {
+  const O = FBM_APP.opts, R = rules || FBM_DEFAULT_RULES, L = FBM_APP.labels;
+  const lv = q => (R.answers[q] && R.answers[q][a[q]]) || 'ok';
+  if (FBM_Q.some(q => a[q] && lv(q) === 'stop')) return { knockout: true };
+  if (FBM_Q.some(q => !O[q].includes(a[q]))) return { missing: true };
+  const why = { B: [], C: [] };
+  for (const q of FBM_Q) { const l = lv(q); if (l === 'B' || l === 'C') why[l].push(`${L[q]}: ${a[q]}`); }
+  for (const c of R.combos) if (c.if.every(x => a[x.q] === x.a)) why[c.then].push(c.if.map(x => `${L[x.q]}: ${x.a}`).join(' + '));
+  if (why.C.length) return { score: 'C', reason: 'C: ' + why.C.join('; ') };
+  if (why.B.length) return { score: 'B', reason: 'B: ' + why.B.join('; ') };
+  return { score: 'A', reason: 'A: ingen svar trækker ned' };
 }
 const fbmFieldList = (pairs) => pairs.filter(([, v]) => v !== '' && v != null && !(Array.isArray(v) && !v.length)).map(([k, v]) => ({ id: FBM_APP.fields[k], field_value: v }));
 const fbmOptraeder = v => String(v || '').split(', ').filter(x => FBM_APP.optraeder.includes(x));
@@ -813,6 +844,29 @@ async function capiSend(env, e) {
   if (!r.ok) console.log('capi fejl', r.status, str(await r.text().catch(() => ''), 300));
 }
 
+// ─── /admin/api/form: regler + spørgsmål + ansøgninger (til simulering i admin) ───
+async function fbmFormAdmin(env, url) {
+  const { from } = rangeOf(url);
+  const saved = await kvGet(env.DB, 'fbm_rules', null).catch(() => null);
+  const rows = await all(env.DB, `SELECT id, created_ts, updated_ts, name, email, phone, answers_json, step, booked_start, score, ghl_contact_id
+    FROM leads WHERE page = 'ansoegning' AND created_ts >= ? ORDER BY updated_ts DESC LIMIT 500`, from);
+  return {
+    rules: saved ? fbmCleanRules(saved) : FBM_DEFAULT_RULES, defaults: FBM_DEFAULT_RULES, custom: !!saved, updated: saved && saved.updated || null,
+    questions: FBM_Q.map(q => ({ id: q, label: FBM_APP.labels[q], opts: FBM_APP.opts[q] })), live: fbmLive(env),
+    rows: rows.map(({ answers_json, ...r }) => { let answers = {}; try { answers = JSON.parse(answers_json || '{}'); } catch { } return { ...r, answers }; }),
+  };
+}
+async function fbmFormSave(request, env) {
+  const { b, err } = await readJSON(request, 16384); if (err) return err;
+  await salesTables(env.DB);   // opretter kv-tabellen hvis den mangler
+  if (b.reset === true) { await env.DB.prepare('DELETE FROM kv WHERE k = ?').bind('fbm_rules').run(); return json({ ok: true, rules: FBM_DEFAULT_RULES }); }
+  const clean = fbmCleanRules(b.rules);
+  const prev = await kvGet(env.DB, 'fbm_rules', null).catch(() => null);
+  if (prev) await kvPut(env.DB, 'fbm_rules_prev', prev);   // én fortryd-version
+  await kvPut(env.DB, 'fbm_rules', { ...clean, updated: Date.now() });
+  return json({ ok: true, rules: clean });
+}
+
 // ─── /admin/api/leads ───
 async function leadsJSON(env, url) {
   const { from } = rangeOf(url);
@@ -831,15 +885,20 @@ async function leadsJSON(env, url) {
     return { ver: v, visitors: (splitVisits.find(x => x.path === `/${g}/${v}`) || {}).visitors || 0,
       started: l.started || 0, contact: l.contact || 0, done: l.done || 0, booked: l.booked || 0 };
   }) }));
-  // ansøgningsformen: hvor mange nåede hvert spørgsmål, stop på eget materiale, scorer
-  const j = k => `SUM(json_extract(answers_json, '$.${k}') IS NOT NULL)`;
-  const app = await env.DB.prepare(`SELECT COUNT(*) AS started, ${['jobs', 'pris', 'pris_maal', 'jobs_maal', 'x3', 'cover', 'oms', 'invest'].map(k => `${j(k)} AS ${k}`).join(', ')},
-      SUM(json_extract(answers_json, '$.cover') = ?2) AS stopped, SUM(email <> '' OR phone <> '') AS contact, SUM(booked_start IS NOT NULL) AS booked,
-      SUM(booked_start IS NOT NULL AND score = 'A') AS a, SUM(booked_start IS NOT NULL AND score = 'B') AS b, SUM(booked_start IS NOT NULL AND score = 'C') AS c,
-      SUM(json_extract(answers_json, '$.instagram') IS NOT NULL OR json_extract(answers_json, '$.hjemmeside') IS NOT NULL) AS extra
-    FROM leads WHERE page = 'ansoegning' AND created_ts >= ?1`).bind(from, FBM_APP.knockout).first().catch(() => null);
+  // ansøgningsformen: hvor mange nåede hvert spørgsmål, hvor mange stoppede, scorer (efter de gemte regler)
+  const rules = await fbmRules(env);
+  const appRows = await all(env.DB, `SELECT answers_json, email, phone, booked_start, score FROM leads WHERE page = 'ansoegning' AND created_ts >= ?`, from);
+  const app = { started: appRows.length, contact: 0, booked: 0, stopped: 0, a: 0, b: 0, c: 0, extra: 0, ...Object.fromEntries(FBM_Q.map(q => [q, 0])) };
+  for (const r of appRows) {
+    let ans = {}; try { ans = JSON.parse(r.answers_json || '{}'); } catch { }
+    for (const q of FBM_Q) if (ans[q]) app[q]++;
+    if (r.email || r.phone) app.contact++;
+    if (fbmScore(ans, rules).knockout) app.stopped++;
+    if (ans.instagram || ans.hjemmeside) app.extra++;
+    if (r.booked_start) { app.booked++; if (r.score === 'A') app.a++; else if (r.score === 'B') app.b++; else if (r.score === 'C') app.c++; }
+  }
   return {
-    funnel, split, ansoegning: app ? { ...app, qualified: fbmQualified(env), live: fbmLive(env) } : null,
+    funnel, split, ansoegning: { ...app, qualified: fbmQualified(rules), live: fbmLive(env) },
     rows: rows.map(r => {
       let answers = {}, src = {}; try { answers = JSON.parse(r.answers_json || '{}'); } catch { } try { src = JSON.parse(r.src_json || '{}'); } catch { }
       const { answers_json, src_json, ...rest } = r;
@@ -1179,6 +1238,12 @@ export default {
         if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
         return await handleConv(request, env);
       }
+      // formen henter kun hvilke svar der stopper den (scoren holdes på serveren)
+      if (p === '/api/form-config' && request.method === 'GET') {
+        const r = await fbmRules(env), stop = {};
+        for (const [q, m] of Object.entries(r.answers)) for (const [a, l] of Object.entries(m)) if (l === 'stop') (stop[q] ||= []).push(a);
+        return json({ stop });
+      }
       if (p === '/api/lead') {
         if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
         return await handleLead(request, env, ctx);
@@ -1215,6 +1280,8 @@ export default {
         if (p === '/admin/api/heat') return await adminApi(env, ctx, url, heatJSON, COST.heat);
         if (p === '/admin/api/visitors') return await adminApi(env, ctx, url, visitorsJSON, COST.visitors);
         if (p === '/admin/api/leads') return await adminApi(env, ctx, url, leadsJSON, COST.leads, 30);
+        if (p === '/admin/api/form' && request.method === 'GET') return json(await fbmFormAdmin(env, url));
+        if (p === '/admin/api/form' && request.method === 'POST') return await fbmFormSave(request, env);
         if (p === '/admin/api/sales' && request.method === 'GET') return json(await salesJSON(env, url));
         if (p.startsWith('/admin/api/sales/') && request.method === 'POST') return await salesPost(request, env, p);
         return json({ error: 'not found' }, 404);
