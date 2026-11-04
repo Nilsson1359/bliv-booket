@@ -82,6 +82,7 @@ table{width:100%;border-collapse:collapse;font-size:.85rem}th{font-family:var(--
 .smsmeta{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0 10px;font-size:.75rem;color:var(--ink3)}.tok{background:var(--card2);border:1px solid var(--line);color:var(--ink2);border-radius:6px;padding:2px 6px;font:inherit;font-size:.72rem;cursor:pointer}
 .smsprev{margin:0 0 12px;background:#2b4a3a;color:#eafff2;border-radius:16px 16px 16px 4px;padding:10px 12px;font-size:.85rem;line-height:1.45;white-space:pre-wrap}
 .smsfoot{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:.78rem}
+.smstest{display:flex;gap:8px;margin-top:12px}.smstest input{flex:1;min-width:0;background:#0f0f0f;color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:7px 12px;font:inherit;font-size:16px}
 </style>
 </head>
 <body>
@@ -200,7 +201,8 @@ table{width:100%;border-collapse:collapse;font-size:.85rem}th{font-family:var(--
         <textarea id="fSmsText" class="smsta" rows="5" maxlength="600"></textarea>
         <div class="smsmeta"><span>Indsæt: <button type="button" class="tok" data-tok="{fornavn}">{fornavn}</button> <button type="button" class="tok" data-tok="{tid}">{tid}</button></span><span id="fSmsLen" class="mono"></span></div>
         <p class="smsprev" id="fSmsPrev"></p>
-        <div class="smsfoot"><span class="muted" id="fSmsStat"></span><span style="flex:1"></span><button class="btn" id="fSmsDef">Standardtekst</button><button class="btn pri" id="fSmsSave" disabled>Gem SMS</button></div></div>
+        <div class="smsfoot"><span class="muted" id="fSmsStat"></span><span style="flex:1"></span><button class="btn" id="fSmsDef">Standardtekst</button><button class="btn pri" id="fSmsSave" disabled>Gem SMS</button></div>
+        <div class="smstest"><input id="fSmsTestNr" type="tel" inputmode="tel" placeholder="Dit nummer" autocomplete="tel"><button class="btn" id="fSmsTestBtn">Send test-SMS</button></div><p class="muted" id="fSmsTestRes" style="font-size:.75rem;margin:6px 0 0"></p></div>
       <div class="card"><h2>Med disse regler</h2><div id="fSim"></div>
         <p class="muted fhelp" style="margin-top:10px">Regnet på ansøgningerne i perioden med alle svar udfyldt. "Ændret" = ville få en anden score end de fik. Gemte regler gælder fra næste booking; allerede bookede ændres ikke.</p></div>
     </div>
@@ -531,6 +533,13 @@ document.getElementById('fSmsSave').addEventListener('click',async e=>{const b=e
   try{const r=await (await fetch('/admin/api/form',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sms:{on:on.checked,text:ta.value}})})).json();if(!r.ok)throw 0;
     smsSaved={on:r.sms.on,text:r.sms.text};F.sms={...F.sms,...r.sms};ta.dataset.dirty='';on.dataset.dirty='';b.textContent='Gem SMS';renderSms();}
   catch(_){b.disabled=false;b.textContent='Gem SMS';alert('SMS-teksten blev ikke gemt. Prøv igen.');}});
+document.getElementById('fSmsTestBtn').addEventListener('click',async e=>{const b=e.currentTarget,nr=document.getElementById('fSmsTestNr').value.trim(),out=document.getElementById('fSmsTestRes');
+  if(nr.replace(/\D/g,'').length<8){out.textContent='Skriv et telefonnummer.';return;}
+  if(!confirm('Send test-SMS til '+nr+' med den gemte tekst?'))return;
+  b.disabled=true;b.textContent='Sender …';out.textContent='';
+  try{const r=await (await fetch('/admin/api/form',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({smsTest:nr})})).json();
+    out.textContent=r.ok?'Sendt. Svar på SMS\'en med et Instagram-link; det lægges på kontakten inden for 5 min.':'Fejl: '+(r.error||'ukendt');}
+  catch(_){out.textContent='Fejl: ingen forbindelse';}b.disabled=false;b.textContent='Send test-SMS';});
 // faner (huskes i adressen: #form)
 function showTab(t){document.getElementById('tOver').hidden=t!=='over';document.getElementById('tForm').hidden=t!=='form';
   [...document.getElementById('tabs').children].forEach(x=>{x.classList.toggle('on',x.dataset.t===t);x.setAttribute('aria-pressed',String(x.dataset.t===t));});

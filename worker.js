@@ -884,10 +884,10 @@ function fbmParseReply(t) {
   return out;
 }
 async function fbmSmsJob(env) {
-  if (!env.DB || !env.GHL_TOKEN || !fbmLive(env)) return { skipped: true };
+  if (!env.DB || !env.GHL_TOKEN) return { skipped: true };
   const cfg = await fbmSmsCfg(env), now = Date.now(), res = { sent: 0, replies: 0 };
-  // 1) send
-  if (cfg.on) {
+  // 1) send (kun når formen er live)
+  if (cfg.on && fbmLive(env)) {
     const due = await all(env.DB, `SELECT * FROM leads WHERE page = 'ansoegning' AND booked_at IS NOT NULL AND booked_at <= ? AND booked_at >= ?
         AND booked_start > ? AND ghl_contact_id IS NOT NULL AND phone <> '' AND instr(notified_flags, 'sms15,') = 0 ORDER BY booked_at LIMIT 5`, now - FBM_SMS_AFTER, now - 86400000, now);
     for (const l of due) {
@@ -928,6 +928,25 @@ async function fbmSmsJob(env) {
   return res;
 }
 
+// Test-SMS fra admin: samme tekst som rigtige ansøgere får (med en tid om 2 dage). Svaret læses af fbmSmsJob som normalt.
+// Findes nummeret allerede i GHL, bruges den kontakt uændret; ellers oprettes en testkontakt.
+async function fbmSmsTest(env, phoneIn) {
+  const phone = e164(phoneIn);
+  if (phoneDigits(phone).length < 10) return { ok: false, error: 'Ugyldigt nummer' };
+  const L = env.GHL_LOCATION_ID, cfg = await fbmSmsCfg(env), now = Date.now();
+  const found = ((await ghl(env, 'GET', `/contacts/?locationId=${L}&query=${encodeURIComponent(phone)}`, '2021-07-28')).contacts || [])
+    .find(c => phoneDigits(c.phone).endsWith(phoneDigits(phone).slice(-8)));
+  const contactId = found ? found.id : ((await ghl(env, 'POST', '/contacts/', '2021-07-28', { locationId: L, firstName: 'Test', lastName: 'SMS ansøgningsform', phone, tags: ['fbm-sms-test'] })).contact || {}).id;
+  if (!contactId) return { ok: false, error: 'Kunne ikke finde/oprette kontakt i GHL' };
+  const d = new Date(now + 2 * 86400000), [y, m, dd] = ymdCph(d.getTime()).split('-').map(Number);
+  const message = fbmSmsText(cfg.text, { name: (found && found.firstName) || 'Test', booked_start: cphToUtc(y, m, dd, 14 * 60) });
+  await ghl(env, 'POST', '/conversations/messages', '2021-04-15', { type: 'SMS', contactId, message });
+  const id = 'smstest-' + crypto.randomUUID();
+  await env.DB.prepare(`INSERT INTO leads (id, page, created_ts, updated_ts, name, email, phone, answers_json, step, done, ghl_contact_id, notified_flags, writes)
+    VALUES (?, 'ansoegning', ?, ?, 'TEST SMS', 'sms-test', ?, ?, 0, 0, ?, 'sms15,', 1)`).bind(id, now, now, phone, JSON.stringify({ _sms_at: now, _test: 1 }), contactId).run();
+  return { ok: true, message, contactId, existing: !!found };
+}
+
 // ─── /admin/api/form: regler + spørgsmål + ansøgninger (til simulering i admin) ───
 async function fbmFormAdmin(env, url) {
   const { from } = rangeOf(url);
@@ -944,6 +963,7 @@ async function fbmFormAdmin(env, url) {
 async function fbmFormSave(request, env) {
   const { b, err } = await readJSON(request, 16384); if (err) return err;
   await salesTables(env.DB);   // opretter kv-tabellen hvis den mangler
+  if (b.smsTest) return json(await fbmSmsTest(env, str(b.smsTest, 30)).catch(e => ({ ok: false, error: str(e && e.message || e, 200) })));
   if (b.sms && typeof b.sms === 'object') {
     const text = str(b.sms.text, 600).trim();
     await kvPut(env.DB, 'fbm_sms', { on: b.sms.on !== false, text: text || FBM_SMS_DEFAULT.text, updated: Date.now() });
