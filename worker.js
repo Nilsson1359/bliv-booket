@@ -860,7 +860,7 @@ async function capiSend(env, e) {
 // Har ansøgeren ikke udfyldt Instagram/hjemmeside/tekst efter bookingen, sender GHL (Oscars nummer) en SMS og beder om
 // et link til deres Instagram. Svaret læses i GHL-samtalen og lægges automatisk på kontakten (Instagram/hjemmeside + note).
 // Tekst og til/fra styres i /admin -> Ansøgningsform (D1 kv 'fbm_sms'). {fornavn} og {tid} udfyldes.
-const FBM_SMS_DEFAULT = { on: true, text: 'Hej {fornavn}! Tak for din ansøgning til Fuldt Booket Musiker. Din samtale med Oscar er booket {tid}. Svar gerne på denne SMS med et link til din Instagram, så Oscar kan forberede sig. Mvh. Oscar' };
+const FBM_SMS_DEFAULT = { on: true, text: 'Hej {fornavn}! Vi fik ikke lige din Instagram eller hjemmeside med. Kan du sende den her? Så kigger Oscar på den inden jeres snak. Mvh. Oscar' };
 const FBM_SMS_AFTER = 15 * 60000;
 async function fbmSmsCfg(env) {
   const c = await kvGet(env.DB, 'fbm_sms', null).catch(() => null);
