@@ -72,26 +72,32 @@
   addEventListener('pagehide', function () { saveNow(true); });
 
   // ── modal ──
-  var M = $('#fbmModal'), B = $('#fbmBody'), bar = $('#fbmBar'), stepLbl = $('#fbmStep'), last = null;
+  // modal på forsiden (#fbmModal) eller inline på tak-siderne (#fbmTak: kun 'sidste trin' efter booking)
+  var M = $('#fbmModal'), INL = M ? null : $('#fbmTak');
+  if (!M && !INL) return;
+  var B = M ? $('#fbmBody') : INL, bar = $('#fbmBar') || { style: {} }, stepLbl = $('#fbmStep') || {}, last = null;
+  var MC = M ? M.classList : { add: function () { }, remove: function () { }, toggle: function () { } };
   var lockScroll = function (on) { document.documentElement.classList.toggle('fbm-lock', on); document.body.classList.toggle('bk-lock', on); };
   var open = function (e) {
     if (e) e.preventDefault();
     last = document.activeElement;
     try { dispatchEvent(new CustomEvent('bk:open', { detail: { el: e && e.currentTarget || null } })); } catch (_) { }
-    M.hidden = false; requestAnimationFrame(function () { M.classList.add('open'); });
+    M.hidden = false; requestAnimationFrame(function () { MC.add('open'); });
     lockScroll(true);
     try { history.replaceState(null, '', location.pathname + location.search + '#ansoeg'); } catch (_) { }
     render();
   };
   var close = function () {
-    saveNow(); M.classList.remove('open'); lockScroll(false);
+    saveNow(); MC.remove('open'); lockScroll(false);
     setTimeout(function () { M.hidden = true; }, 300); if (last && last.focus) last.focus({ preventScroll: true });
     try { history.replaceState(null, '', location.pathname + location.search); } catch (_) { }
   };
-  $$('a[href="#ansoeg"],#applyBtn,[data-book]').forEach(function (a) { a.addEventListener('click', open); });
-  $$('[data-fbm-close]', M).forEach(function (x) { x.addEventListener('click', close); });
-  addEventListener('keydown', function (e) { if (e.key === 'Escape' && !M.hidden) close(); });
-  if (location.hash === '#ansoeg' || location.hash === '#book') setTimeout(open, 60);
+  if (M) {
+    $$('a[href="#ansoeg"],#applyBtn,[data-book]').forEach(function (a) { a.addEventListener('click', open); });
+    $$('[data-fbm-close]', M).forEach(function (x) { x.addEventListener('click', close); });
+    addEventListener('keydown', function (e) { if (e.key === 'Escape' && !M.hidden) close(); });
+    if (location.hash === '#ansoeg' || location.hash === '#book') setTimeout(open, 60);
+  }
 
   var setProg = function (i, label) {
     bar.style.transform = 'scaleX(' + Math.max(0.03, Math.min(1, i / (N - 1))) + ')';
@@ -124,7 +130,7 @@
   var go = function (i) { S.step = Math.max(0, Math.min(i, firstMissing())); saveNow(); render(); };
 
   var render = function () {
-    M.classList.remove('wide'); M.classList.toggle('end', !!(S.booked || S.stop));
+    MC.remove('wide'); MC.toggle('end', !!(S.booked || S.stop));
     if (S.booked) return renderDone();
     if (S.stop) return renderStop();
     var i = Math.min(S.step, firstMissing()), st = STEPS[i];
@@ -137,7 +143,7 @@
         '<label class="ff"><span>Telefon</span><input class="fin" id="cTel" type="tel" inputmode="tel" autocomplete="tel" value="' + esc(S.phone) + '" placeholder="12 34 56 78"></label></div>' +
         nav(i, 'Fortsæt');
     } else if (st.type === 'cal') {
-      M.classList.add('wide');
+      MC.add('wide');
       html = head(i, st.q, st.help) + '<div class="fcal"><div class="fdays" id="cDays" role="group" aria-label="Dag"><div class="fskel"></div><div class="fskel"></div><div class="fskel"></div><div class="fskel"></div></div>' +
         '<div class="ftimes" id="cTimes" role="group" aria-label="Tidspunkt"></div></div>' +
         '<p class="ferr" id="cErr" role="alert"></p><div class="fnav"><button type="button" class="fbtn" id="cBook" disabled>Vælg et tidspunkt' + arrow + '</button><button type="button" class="fback" id="fBack">Tilbage</button></div>';
@@ -250,6 +256,11 @@
       S.booked = { start: res.x.start || picked, end: res.x.end || null }; S.step = N; persist();
       try { dispatchEvent(new CustomEvent('bk:booked')); } catch (_) { }   // track.js: booket (alle scorer)
       if (res.x.cv === 1) fireConv();
+      if (LIVE) {
+        var qs = '?first_name=' + encodeURIComponent((S.name || '').trim().split(/\s+/)[0] || '') + '&start=' + encodeURIComponent(S.booked.start);
+        setTimeout(function () { location.assign((res.x.cv === 1 ? '/tak' : '/bekraeftet') + qs); }, res.x.cv === 1 ? 400 : 150);   // pixel'en når at sende
+        return;
+      }
       render();
     }).catch(function () { unlock(); bb.disabled = false; bb.innerHTML = 'Prøv igen' + arrow; cErr('Ingen forbindelse. Prøv igen om lidt.'); });
   };
@@ -263,7 +274,7 @@
 
   // ── stop: kun eget materiale ──
   var renderStop = function () {
-    M.classList.add('end');
+    MC.add('end');
     B.scrollTop = 0;
     setProg(N - 1, 'Tak for din interesse');
     B.innerHTML = '<div class="fstep fend"><p class="fk">Tak for din interesse</p><h3 class="fq">Vi hjælper desværre kun covermusikere</h3>' +
@@ -285,6 +296,10 @@
     var cal = '<div class="fadd"><a class="fbtn sm ghost" href="' + gcal + '" target="_blank" rel="noopener">Google Kalender</a><a class="fbtn sm ghost" href="' + ics + '" download="strategisamtale.ics">Apple / Outlook</a></div>';
     var when = esc(fmtLong(b.start));
     B.scrollTop = 0;
+    if (S.extraSent && INL) {
+      B.innerHTML = '<div class="fstep fend"><p class="fbooked">' + check + '<span><b>Din ansøgning er komplet.</b> Oscar kigger den igennem før jeres samtale.</span></p></div>';
+      return;
+    }
     if (S.extraSent) {
       // færdig: ansøgningen er komplet
       setProg(N - 1, 'Ansøgning komplet');
@@ -326,4 +341,5 @@
       });
     });
   };
+  if (INL) { if (S.booked) { INL.hidden = false; renderDone(); } else INL.hidden = true; }
 })();
