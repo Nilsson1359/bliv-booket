@@ -28,7 +28,7 @@ FBM_FORM_LIVE = "0"       # "1" = live: Meta-pixel/CAPI + Telegram. "0" = forhå
 
 # salgstal fra GHL (salesSync i worker.js)
 [triggers]
-crons = ["*/10 * * * *"]
+crons = ["*/10 * * * *", "*/5 * * * *"]   # */10 salgstal, */5 SMS til ansøgere 15 min efter booking (fbmSmsJob, kun live)
 
 [[d1_databases]]
 binding = "DB"

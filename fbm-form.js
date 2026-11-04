@@ -21,7 +21,7 @@
     { id: 'cover', q: 'Spiller du covermusik eller dit eget materiale?', help: 'Vi hjælper musikere, der spiller kendte numre til bryllupper, firmafester og private fester.', opts: ['Covermusik', 'Både covermusik og eget materiale', KNOCKOUT] },
     { id: 'contact', type: 'contact', q: 'Hvor skal vi sende din ansøgning hen, hvis du bliver godkendt?', help: 'Vi bruger det kun til din ansøgning og samtale. Ingen nyhedsbreve.' },
     { id: 'oms', q: 'Hvad omsætter du for på musikken om måneden i dag?', help: 'Et cirka-tal er fint.', opts: ['Under 10.000 kr.', '10.000–24.999 kr.', '25.000–49.999 kr.', '50.000–99.999 kr.', '100.000+ kr.'] },
-    { id: 'invest', q: null, opts: ['Ja', 'Ja, hvis tallene giver mening', 'Nej'] },
+    { id: 'invest', q: 'Hvor meget er du villig til at investere om måneden for at nå dit mål?', opts: ['0–5.000 kr.', '5.000–10.000 kr.', '10.000–20.000 kr.', '20.000–50.000 kr.', '50.000–100.000 kr.'] },
     { id: 'cal', type: 'cal', q: 'Vælg en tid til din strategisamtale', help: '1 time på Google Meet med Oscar. Du får en invitation på mail med det samme.' }
   ];
   var N = STEPS.length;
@@ -35,7 +35,6 @@
     if (j === '50–99' || j === '100+') return 'Dit mål: ' + j + ' jobs om året' + pTxt + '.';
     return 'Dit mål: flere jobs' + (pTxt || ' til bedre priser') + '.';
   };
-  var INVEST_Q = 'Vil du investere 3.000–5.000 kr. om måneden i annoncer for at nå det, ud over vores honorar?';
 
   // ── kilde (første besøg) ──
   var q = new URLSearchParams(location.search), src = null;
@@ -144,7 +143,7 @@
         '<p class="ferr" id="cErr" role="alert"></p><div class="fnav"><button type="button" class="fbtn" id="cBook" disabled>Vælg et tidspunkt' + arrow + '</button><button type="button" class="fback" id="fBack">Tilbage</button></div>';
     } else {
       var v = S.a[st.id] || '';
-      html = (st.id === 'invest' ? head(i, INVEST_Q, '', investGoal()) : head(i, st.q, st.help)) + '<div class="fopts" role="radiogroup" aria-labelledby="fbmQ">' + st.opts.map(function (o, k) {
+      html = (st.id === 'invest' ? head(i, st.q, '', investGoal()) : head(i, st.q, st.help)) + '<div class="fopts" role="radiogroup" aria-labelledby="fbmQ">' + st.opts.map(function (o, k) {
         return '<button type="button" class="fo" role="radio" data-v="' + esc(o) + '" aria-checked="' + (v === o) + '"><kbd>' + String.fromCharCode(65 + k) + '</kbd><span>' + esc(o) + '</span></button>';
       }).join('') + '</div>' + nav(i, null);
     }
@@ -227,10 +226,9 @@
   var cookie = function (n) { var m = document.cookie.match('(?:^|; )' + n + '=([^;]*)'); return m ? decodeURIComponent(m[1]) : ''; };
   var book = function () {
     if (!picked) return; var bb = $('#cBook');
-    // GHL opretter Google Meet-mødet, det tager typisk 4-6 sekunder
     bb.disabled = true; bb.innerHTML = '<i class="fspin" aria-hidden="true"></i>Booker din tid';
     $$('.fday,.ftime,#fBack', B).forEach(function (x) { x.disabled = true; });
-    cErr(''); var e0 = $('#cErr'); if (e0) { e0.classList.add('fwait'); e0.textContent = 'Opretter dit møde og Google Meet-link. Det tager et par sekunder.'; }
+    cErr('');
     var unlock = function () { $$('.fday,.ftime,#fBack', B).forEach(function (x) { x.disabled = false; }); var e1 = $('#cErr'); if (e1) e1.classList.remove('fwait'); };
     saveNow().then(function () {
       return fetch('/api/book', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lid: S.lid, start: picked, fbp: cookie('_fbp'), fbc: cookie('_fbc') }) });
@@ -274,7 +272,6 @@
 
   // ── tak + valgfri forberedelse ──
   var renderDone = function () {
-    setProg(N - 1, 'Samtalen er booket');
     var b = S.booked, f = (S.name || '').trim().split(/\s+/)[0] || '';
     var st = new Date(b.start), en = b.end ? new Date(b.end) : new Date(st.getTime() + 60 * 60000);
     var z = function (d) { return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, ''); };
@@ -282,32 +279,44 @@
     var gcal = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent(title) + '&dates=' + z(st) + '/' + z(en) + '&details=' + encodeURIComponent(det);
     var ics = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Fuldt Booket Musiker//DA', 'BEGIN:VEVENT', 'UID:' + S.lid + '@fuldtbooketmusiker.dk', 'DTSTAMP:' + z(new Date()), 'DTSTART:' + z(st), 'DTEND:' + z(en), 'SUMMARY:' + title, 'DESCRIPTION:' + det, 'END:VEVENT', 'END:VCALENDAR'].join('\r\n'));
     var ex = S.extra || {}, crew = (ex.optraeder || '').split(', ').filter(Boolean);
-    var prep = S.extraSent
-      ? '<div class="fprep sent"><p class="fk">Tak</p><p class="fh">Oscar har det nu og kigger det igennem før samtalen.</p></div>'
-      : '<div class="fprep"><p class="fk">Valgfrit · 30 sekunder</p><h4>Hjælp Oscar med at forberede sig</h4><p class="fh">Så bruger I tiden på din plan i stedet for at gennemgå det grundlæggende.</p>' +
-        '<div class="fgrid two">' +
-        '<label class="ff"><span>Instagram</span><input class="fin" id="xIg" autocomplete="off" autocapitalize="off" spellcheck="false" value="' + esc(ex.instagram || '') + '" placeholder="@ditnavn"></label>' +
-        '<label class="ff"><span>Hjemmeside</span><input class="fin" id="xWeb" type="url" inputmode="url" autocapitalize="off" spellcheck="false" value="' + esc(ex.hjemmeside || '') + '" placeholder="www.ditnavn.dk"></label></div>' +
-        '<p class="ff"><span>Hvordan optræder du?</span></p><div class="fchips" role="group" aria-label="Hvordan optræder du?">' + ['Solo', 'Duo', 'Trio / band'].map(function (o) { return '<button type="button" class="fchip" data-v="' + o + '" aria-pressed="' + (crew.indexOf(o) > -1) + '">' + o + '</button>'; }).join('') + '</div>' +
-        '<p class="ferr" id="xErr" role="alert"></p><div class="fnav"><button type="button" class="fbtn" id="xSend">Send til Oscar' + arrow + '</button></div></div>';
+    var check = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';
+    var cal = '<div class="fadd"><a class="fbtn sm ghost" href="' + gcal + '" target="_blank" rel="noopener">Google Kalender</a><a class="fbtn sm ghost" href="' + ics + '" download="strategisamtale.ics">Apple / Outlook</a></div>';
+    var when = esc(fmtLong(b.start));
     B.scrollTop = 0;
-    B.innerHTML = '<div class="fstep fend"><div class="fok" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.5l4.5 4.5L19 7"/></svg></div>' +
-      '<p class="fk">Samtalen er booket</p><h3 class="fq">Tak' + (f ? ', ' + esc(f) : '') + '. Vi ses ' + esc(fmtLong(b.start)) + '.</h3>' +
-      '<p class="fh">Invitationen med link til Google Meet er på vej til ' + esc(S.email || 'din mail') + '. Læg tiden i kalenderen, så den ikke glipper.</p>' +
-      '<div class="fadd"><a class="fbtn sm ghost" href="' + gcal + '" target="_blank" rel="noopener">Google Kalender</a><a class="fbtn sm ghost" href="' + ics + '" download="strategisamtale.ics">Apple / Outlook</a></div>' + prep + '</div>';
+    if (S.extraSent) {
+      // færdig: ansøgningen er komplet
+      setProg(N - 1, 'Ansøgning komplet');
+      B.innerHTML = '<div class="fstep fend"><div class="fok" aria-hidden="true">' + check + '</div>' +
+        '<p class="fk">Ansøgning komplet</p><h3 class="fq">Tak' + (f ? ', ' + esc(f) : '') + '. Vi ses ' + when + '.</h3>' +
+        '<p class="fh">Oscar kigger din ansøgning igennem før samtalen. Om et øjeblik får du en invitation med link til Google Meet på ' + esc(S.email || 'din mail') + '. Læg tiden i kalenderen, så den ikke glipper.</p>' + cal + '</div>';
+      return;
+    }
+    // næsten færdig: det sidste trin står øverst, så de ikke lukker vinduet før de har udfyldt det
+    bar.style.transform = 'scaleX(.94)'; stepLbl.textContent = 'Næsten færdig · sidste trin';
+    B.innerHTML = '<div class="fstep fend">' +
+      '<p class="fbooked">' + check + '<span>Din tid er reserveret: <b>' + when + '</b></span></p>' +
+      '<p class="fk">Sidste trin · under 1 minut</p>' +
+      '<h3 class="fq">Du er der næsten' + (f ? ', ' + esc(f) : '') + '. Udfyld det sidste, så er din ansøgning komplet.</h3>' +
+      '<p class="fh">Oscar bruger det til at forberede sig, så I kan bruge samtalen på din plan i stedet for det grundlæggende.</p>' +
+      '<div class="fgrid two">' +
+      '<label class="ff"><span>Instagram</span><input class="fin" id="xIg" autocomplete="off" autocapitalize="off" spellcheck="false" value="' + esc(ex.instagram || '') + '" placeholder="@ditnavn"></label>' +
+      '<label class="ff"><span>Hjemmeside</span><input class="fin" id="xWeb" type="url" inputmode="url" autocapitalize="off" spellcheck="false" value="' + esc(ex.hjemmeside || '') + '" placeholder="www.ditnavn.dk"></label></div>' +
+      '<label class="ff"><span>Om dig, og hvorfor du gerne vil have flere jobs</span><textarea class="fin fta" id="xOm" rows="4" maxlength="2000" placeholder="Fx hvad du spiller, hvor længe du har spillet, og hvad du gerne vil nå det næste år">' + esc(ex.om || '') + '</textarea></label>' +
+      '<p class="ff"><span>Hvordan optræder du?</span></p><div class="fchips" role="group" aria-label="Hvordan optræder du?">' + ['Solo', 'Duo', 'Trio / band'].map(function (o) { return '<button type="button" class="fchip" data-v="' + o + '" aria-pressed="' + (crew.indexOf(o) > -1) + '">' + o + '</button>'; }).join('') + '</div>' +
+      '<p class="ferr" id="xErr" role="alert"></p><div class="fnav"><button type="button" class="fbtn" id="xSend">Færdiggør min ansøgning' + arrow + '</button></div></div>';
     if (!S.extraSent) wireExtra();
   };
   var wireExtra = function () {
     S.extra = S.extra || {};
-    var ig = $('#xIg'), web = $('#xWeb');
-    var sync = function () { S.extra.instagram = ig.value.trim(); S.extra.hjemmeside = web.value.trim(); S.extra.optraeder = $$('.fchip[aria-pressed=true]', B).map(function (x) { return x.dataset.v; }).join(', '); persist(); };
-    [ig, web].forEach(function (el) { el.addEventListener('input', sync); });
+    var ig = $('#xIg'), web = $('#xWeb'), om = $('#xOm');
+    var sync = function () { S.extra.instagram = ig.value.trim(); S.extra.hjemmeside = web.value.trim(); S.extra.om = om.value.trim(); S.extra.optraeder = $$('.fchip[aria-pressed=true]', B).map(function (x) { return x.dataset.v; }).join(', '); persist(); };
+    [ig, web, om].forEach(function (el) { el.addEventListener('input', sync); });
     $$('.fchip', B).forEach(function (c) { c.addEventListener('click', function () { c.setAttribute('aria-pressed', c.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'); sync(); }); });
     $('#xSend').addEventListener('click', function () {
       sync();
       var e = S.extra, x = $('#xErr');
-      if (!e.instagram && !e.hjemmeside && !e.optraeder) { x.textContent = 'Udfyld mindst ét felt, eller luk bare vinduet.'; return; }
-      ['instagram', 'hjemmeside', 'optraeder'].forEach(function (k) { if (e[k]) S.a[k] = e[k]; });
+      if (!e.instagram && !e.hjemmeside && !e.optraeder && !e.om) { x.textContent = 'Udfyld mindst ét felt, så Oscar kan forberede sig.'; return; }
+      ['instagram', 'hjemmeside', 'optraeder', 'om'].forEach(function (k) { if (e[k]) S.a[k] = e[k]; });
       var btn = $('#xSend'); btn.disabled = true; btn.textContent = 'Sender...';
       saveNow(false, true).then(function (ok) {
         if (!ok) { btn.disabled = false; btn.innerHTML = 'Prøv igen' + arrow; x.textContent = 'Det blev ikke sendt. Prøv igen.'; return; }

@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS leads (
   name TEXT NOT NULL DEFAULT '', email TEXT NOT NULL DEFAULT '', phone TEXT NOT NULL DEFAULT '',
   answers_json TEXT NOT NULL DEFAULT '{}',
   step INTEGER NOT NULL DEFAULT 0, done INTEGER NOT NULL DEFAULT 0,
-  booked_start INTEGER, booked_end INTEGER, booked_ip TEXT, meet_url TEXT, score TEXT,
+  booked_start INTEGER, booked_end INTEGER, booked_ip TEXT, meet_url TEXT, score TEXT, booked_at INTEGER,
   ghl_contact_id TEXT, ghl_appt_id TEXT,
   src_json TEXT NOT NULL DEFAULT '{}', vid TEXT, sid TEXT,
   ip TEXT, city TEXT, country TEXT,
@@ -50,3 +50,5 @@ CREATE INDEX IF NOT EXISTS idx_leads_booked_ip ON leads(booked_ip, booked_start)
 CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT NOT NULL, ts INTEGER NOT NULL);
 -- Pr. vunden kunde: lukket på kald/DM + kontant indbetalt (GHL har ingen betalinger)
 CREATE TABLE IF NOT EXISTS sales_deal (opp_id TEXT PRIMARY KEY, via TEXT NOT NULL DEFAULT '', cash INTEGER, updated_ts INTEGER NOT NULL);
+-- 4/11: booked_at = hvornår ansøgningen blev booket (SMS 15 min efter). Tilføjet i prod via:
+--   ALTER TABLE leads ADD COLUMN booked_at INTEGER;
