@@ -584,6 +584,7 @@ PRIVACY = [
     ('<li>Vores kundesystem (GoHighLevel): kontaktoplysninger og din booking</li>', '<li>Our CRM (GoHighLevel): contact details and your booking</li>'),
     ('<li>Telegram: intern besked til os om, at der er kommet en ny forespørgsel</li>', '<li>Telegram: an internal notification to us that a new request has come in</li>'),
     ('<li>Meta (Facebook og Instagram): måling af annoncer, hvis du er kommet ind via en annonce</li>', '<li>Meta (Facebook and Instagram): ad measurement, if you arrived via an ad</li>'),
+    ('<li>Google: videomødet på Google Meet, når du har booket et møde</li>', '<li>Google: the video call on Google Meet, once you have booked a call</li>'),
     ('<p>Vi sælger aldrig dine oplysninger og bruger dem ikke til andet end ovenstående.</p>', '<p>We never sell your information and don\'t use it for anything other than the above.</p>'),
     ('<h2>Hvor længe</h2>', '<h2>How long</h2>'),
     ('<p>Vi gemmer oplysningerne, så længe de er nødvendige for at give dig et tilbud og holde kontakten om jeres fest. Bliver det til en aftale, gemmer vi dem, så længe bogføringsloven kræver det. Du kan til enhver tid bede os slette dem.</p>',
