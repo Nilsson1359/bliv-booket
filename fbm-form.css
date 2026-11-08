@@ -112,3 +112,5 @@
 .fend .fq{max-width:28ch}
 .fbooked{display:flex;align-items:center;gap:10px;margin:0;padding:10px 14px;border:1px solid var(--line2);border-radius:12px;font-size:.92rem;color:var(--ink2);width:fit-content;max-width:100%}.fbooked svg{width:18px;height:18px;flex:none;color:var(--accent)}.fbooked b{color:var(--ink);font-weight:600}
 .fend .fq{max-width:28ch}
+/* engelsk (/international): tidszone-note under tiderne og efter tidspunktet */
+.ftz{margin:10px 0 0;font-size:13px;opacity:.75}.ftzs{font-weight:400;opacity:.7;font-size:.85em}

@@ -275,7 +275,7 @@ function drawMap(points){
 }
 (function(){const cb=document.getElementById('ignoreMe');let v=null;try{v=localStorage.getItem('bk_ignore');if(v===null){localStorage.setItem('bk_ignore','1');v='1';}}catch(_){}
 cb.checked=v!=='0';cb.addEventListener('change',()=>{try{localStorage.setItem('bk_ignore',cb.checked?'1':'0');}catch(_){}});})();
-const PAGE_NAME={firmafest:'Firmafest',bryllup:'Bryllup',ansoegning:'Ansøgning'};
+const PAGE_NAME={firmafest:'Firmafest',bryllup:'Bryllup',ansoegning:'Ansøgning',international:'Ansøgning (EN)'};
 async function loadLeads(){
   const d=await (await fetch('/admin/api/leads?range='+range)).json();
   const fEl=document.getElementById('leadFunnel'), el=document.getElementById('leads');

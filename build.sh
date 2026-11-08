@@ -15,6 +15,8 @@ cp privatliv.html _site/privatliv.html   # linkes fra footeren på v2-siderne
 cp fbm-form.js _site/fbm-form.js && python3 gen_newform.py >/dev/null
 # LIVE fra 4/11 2026 (Oskars ordre): forsiden bruger ansøgningsformen i stedet for GHL-kalender-pop-up'en. Slå fra ved at fjerne linjen.
 python3 gen_newform.py --live >/dev/null
+# ENGELSK version (8/11 2026): /international (+ /international/thanks og /confirmed). Kilde: international.html + tak-international.html
+mkdir -p _site/international && cp international.html _site/international/index.html && cp tak-international.html _site/international/thanks.html && perl -pi -e 's#(["\x27(])media/#$1/media/#g' _site/international/index.html _site/international/thanks.html && python3 gen_newform.py --intl >/dev/null
 cp _headers _site/_headers
 # Kevin-HLS (ny version 9/10 2026, 17 min) er for stor til git; ligger lokalt i ~/bliv-booket-cf/public/media/kevin2 (ny sti = ingen gammel cache)
 K=~/bliv-booket-cf/public/media/kevin2; if [ -d "$K" ]; then cp -r "$K" _site/media/kevin2; else echo "ADVARSEL: $K mangler, Kevin-video bliver 404"; fi

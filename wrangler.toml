@@ -23,6 +23,9 @@ GHL_CALENDAR_BRYLLUP = "OrUzjog2RIXctk5UA7sF"     # "Oscartjoensson - funnel - B
 # Ansøgningsformen (/new-form-setup, 4/11 2026). Begge kalendere oprettet via API som kopi af Discovery Call; neutrale navne fordi kunden ser dem.
 GHL_CALENDAR_FBM_Q = "0vw3bys1juCaQmANeSK4"       # "Fuldt Booket Musiker - Strategisamtale" = kvalificerede (A/B), grøn
 GHL_CALENDAR_FBM_U = "NovNIgN6PbxoF7ZSXuHr"       # "Fuldt Booket Musiker - Afklaringssamtale" = ikke kvalificerede (C), rød
+# /international (engelsk, 8/11 2026): egne kalendere med engelske navne, oprettet via API som kopi af de danske
+GHL_CALENDAR_FBM_EN_Q = "YXKZp0OpnKG6InfnVBMY"    # "Fully Booked Musician - Strategy Call" = kvalificerede (A/B), grøn
+GHL_CALENDAR_FBM_EN_U = "bxYE0BpN1xnH2rmrg9FS"    # "Fully Booked Musician - Intro Call" = ikke kvalificerede (C), rød
 # Score-regler og hvilke scorer der er kvalificerede styres i /admin -> Ansøgningsform (D1 kv fbm_rules)
 FBM_FORM_LIVE = "1"       # "1" = live (fra 4/11 2026): Meta CAPI + Telegram + SMS efter 15 min. "0" = forhåndsvisning
 
