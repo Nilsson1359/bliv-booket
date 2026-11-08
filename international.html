@@ -46,7 +46,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <meta name="color-scheme" content="dark">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://link.zency.dk">
-<link rel="preconnect" href="https://www.tella.tv">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Manrope:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap">
 <style>
@@ -862,7 +862,7 @@ h1{font-weight:600;font-size:clamp(2.4rem,4.4vw,4rem);line-height:1.02}h1 em{fon
       <div class="hero-visual fade" style="animation-delay:.5s">
         <div class="vsl" id="vslBox">
           <img class="vsl-poster" src="media/web/vsl-poster.jpg" alt="Oscar Jønsson: Why visibility matters more than talent for musicians" decoding="async">
-          <a class="vsl-fb" id="vslPlay" href="https://www.tella.tv/video/vid_cmsuhy4a0022m04l7evs1ayuk/view" target="_blank" rel="noopener" aria-label="Play the video"><span class="play"><svg viewBox="0 0 24 24" width="26" height="26"><path fill="currentColor" d="M8 5v14l11-7z"/></svg></span><span class="vsl-lbl">Watch the video · 2 min</span></a>
+          <a class="vsl-fb" id="vslPlay" href="#vslBox" aria-label="Play the video"><span class="play"><svg viewBox="0 0 24 24" width="26" height="26"><path fill="currentColor" d="M8 5v14l11-7z"/></svg></span><span class="vsl-lbl">Watch the video · 2 min</span></a>
         </div>
         <div class="hero-meta fade under" style="animation-delay:1.3s">
           <div><b>90 days</b>from kickoff to a full calendar</div>
@@ -1394,12 +1394,22 @@ Happy to book Oscar again :-)</p><div class="who"><div class="av">M</div><div cl
     setTimeout(()=>{const t0=performance.now(),dur=1400;const tick=now=>{const p=Math.min(1,Math.max(0,(now-t0)/dur));const e=1-Math.pow(1-p,3);el.textContent=fmt(Math.round(e*to));if(p<1)requestAnimationFrame(tick);};requestAnimationFrame(tick);},1500);
   });
 
-  /* VSL: load YouTube only on click; open in new tab where frames are blocked */
+  /* VSL (engelsk side, 8/11 2026): selvhostet HLS med engelske undertekster i stedet for Tella; indlæses først ved klik */
+  const enTrack=(v,src)=>{ const tr=document.createElement('track'); tr.kind='subtitles'; tr.srclang='en'; tr.label='English'; tr.src=src; tr.default=true; v.appendChild(tr);
+    v.addEventListener('loadedmetadata',()=>{ for(const t of v.textTracks) t.mode=t.language==='en'?'showing':'disabled'; },{once:true}); };
+  const hlsInto=(v,src,t)=>{
+    const go=()=>{ if(t)v.currentTime=t; v.play().catch(()=>{}); };
+    if(v.canPlayType('application/vnd.apple.mpegurl')){ v.src=src; v.addEventListener('loadedmetadata',go,{once:true}); v.load(); return; }
+    const run=()=>{ const h=new Hls({startPosition:t||-1}); h.loadSource(src); h.attachMedia(v); h.on(Hls.Events.MANIFEST_PARSED,()=>v.play().catch(()=>{})); };
+    if(window.Hls) return run();
+    const sc=document.createElement('script'); sc.src='https://cdn.jsdelivr.net/npm/hls.js@1.7.3/dist/hls.min.js'; sc.integrity='sha384-cciJ0zi8d1uMKC2zJd7jvPY4HQt7W4ByUI/FlMkltvBi31aW61rcpVBhpmW8/NwX'; sc.crossOrigin='anonymous'; sc.onload=run; document.head.appendChild(sc);
+  };
   const vp=document.getElementById('vslPlay'),vb=document.getElementById('vslBox');
   if(vp&&vb){vp.addEventListener('click',e=>{
-        e.preventDefault();
-    const f=document.createElement('iframe');f.src='https://www.tella.tv/video/vid_cmsuhy4a0022m04l7evs1ayuk/embed?b=0&title=0&a=1&loop=0&t=0&muted=0&wt=0&o=1';f.title='Fully Booked Musician: watch the video';f.allow='autoplay; fullscreen';f.setAttribute('allowtransparency','');f.allowFullscreen=true;f.setAttribute('referrerpolicy','strict-origin-when-cross-origin');
-    vb.appendChild(f);vp.remove();
+    e.preventDefault();
+    const v=document.createElement('video'); v.controls=true; v.playsInline=true; v.preload='auto'; v.poster='/media/web/vsl-poster.jpg';
+    v.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000;z-index:2';
+    enTrack(v,'/media/vsl1/en.vtt'); vb.appendChild(v); vp.remove(); hlsInto(v,'/media/vsl1/master.m3u8',0);
   });}
 
   /* Kevin-interview: HLS, indlæses først ved klik */
@@ -1409,7 +1419,7 @@ Happy to book Oscar again :-)</p><div class="who"><div class="av">M</div><div cl
     let kvv=null;
     function kStart(t){
       if(kvv){ if(t!=null)kvv.currentTime=t; kvv.play().catch(()=>{}); return; }
-      kvv=document.createElement('video'); kvv.controls=true; kvv.playsInline=true; kvv.preload='auto'; kvv.poster='media/web/kevin-poster.jpg';
+      kvv=document.createElement('video'); kvv.controls=true; kvv.playsInline=true; kvv.preload='auto'; kvv.poster='media/web/kevin-poster.jpg'; enTrack(kvv,'/media/kevin2/en.vtt');
       kv.appendChild(kvv); const pb=document.getElementById('kvidPlay'); if(pb)pb.remove(); const nm=kv.querySelector('.kvid-name'); if(nm)nm.remove();
       const go=()=>{ if(t)kvv.currentTime=t; kvv.play().catch(()=>{}); };
       if(kvv.canPlayType('application/vnd.apple.mpegurl')){ kvv.src=KSRC; kvv.addEventListener('loadedmetadata',go,{once:true}); kvv.load(); }

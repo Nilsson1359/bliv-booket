@@ -20,4 +20,6 @@ mkdir -p _site/international && cp international.html _site/international/index.
 cp _headers _site/_headers
 # Kevin-HLS (ny version 9/10 2026, 17 min) er for stor til git; ligger lokalt i ~/bliv-booket-cf/public/media/kevin2 (ny sti = ingen gammel cache)
 K=~/bliv-booket-cf/public/media/kevin2; if [ -d "$K" ]; then cp -r "$K" _site/media/kevin2; else echo "ADVARSEL: $K mangler, Kevin-video bliver 404"; fi
+# VSL selvhostet til den engelske side (8/11 2026, før lå den kun på Tella): HLS + en.vtt i ~/bliv-booket-cf/public/media/vsl1 (ikke i git)
+V=~/bliv-booket-cf/public/media/vsl1; if [ -d "$V" ]; then cp -r "$V" _site/media/vsl1; else echo "ADVARSEL: $V mangler, engelsk VSL bliver 404"; fi
 echo "_site bygget: $(ls _site | tr '\n' ' ')"
