@@ -14,4 +14,6 @@ cp privatliv.html _site/privatliv.html   # linkes fra footeren på v2-siderne
 cp _headers _site/_headers
 # Kevin-HLS (ny version 9/10 2026, 17 min) er for stor til git; ligger lokalt i ~/bliv-booket-cf/public/media/kevin2 (ny sti = ingen gammel cache)
 K=~/bliv-booket-cf/public/media/kevin2; if [ -d "$K" ]; then cp -r "$K" _site/media/kevin2; else echo "ADVARSEL: $K mangler, Kevin-video bliver 404"; fi
+# Engelsk version under /en (gen_en.py): oversætter de færdige danske sider ovenfor + tilføjer DA/EN-skifter og hreflang på begge
+python3 gen_en.py
 echo "_site bygget: $(ls _site | tr '\n' ' ')"
