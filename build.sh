@@ -22,4 +22,5 @@ cp _headers _site/_headers
 K=~/bliv-booket-cf/public/media/kevin2; if [ -d "$K" ]; then cp -r "$K" _site/media/kevin2; else echo "ADVARSEL: $K mangler, Kevin-video bliver 404"; fi
 # VSL selvhostet til den engelske side (8/11 2026, før lå den kun på Tella): HLS + en.vtt i ~/bliv-booket-cf/public/media/vsl1 (ikke i git)
 V=~/bliv-booket-cf/public/media/vsl1; if [ -d "$V" ]; then cp -r "$V" _site/media/vsl1; else echo "ADVARSEL: $V mangler, engelsk VSL bliver 404"; fi
+# /en (gen_en.py, anden session 8/11) er erstattet af /international (engelsk ansøgningsform + GHL); Workeren sender /en/* videre dertil. gen_en.py køres ikke.
 echo "_site bygget: $(ls _site | tr '\n' ' ')"

@@ -149,16 +149,18 @@ function tzOffsetMinutes() {
 const all = async (db, sql, ...p) => (await db.prepare(sql).bind(...p).all()).results || [];
 const one = async (db, sql, ...p) => (await db.prepare(sql).bind(...p).first()) || {};
 
-// Hvad tæller som hvad på fuldtbooketmusiker.dk
+// Hvad tæller som hvad på fuldtbooketmusiker.dk (engelsk version under /international/ tæller med i samme funnel; skelnes via path)
+const isFront = p => p === '/' || p === '/international/';
+const isTak = p => p === '/tak' || p === '/international/thanks';
 const CONF = {
   ctaType: 'booking_open', callsMails: false, sections: false,
   isOpened: e => e.type === 'booking_open', isInteracted: e => e.type === 'booking_interact',
-  isBooked: e => e.type === 'booked' || (e.type === 'pageview' && e.path === '/tak'), isSeriesOpened: e => e.type === 'booking_open',
+  isBooked: e => e.type === 'booked' || (e.type === 'pageview' && isTak(e.path)), isSeriesOpened: e => e.type === 'booking_open',
   visitorFlags: (s, e) => {
     if (!s) return { opened: 0, interacted: 0, booked: 0 };
     if (e.type === 'booking_open') s.opened = 1;
     if (e.type === 'booking_interact') s.interacted = 1;
-    if (e.type === 'booked' || (e.type === 'pageview' && e.path === '/tak')) s.booked = 1;
+    if (e.type === 'booked' || (e.type === 'pageview' && isTak(e.path))) s.booked = 1;
   },
 };
 
@@ -214,13 +216,13 @@ async function statsJSON(env, url) {
       pageviews++;
       if (e.vid != null) { T.visitors.add(e.vid); S.visitors.add(e.vid); }
       if (sid != null) { T.sessions.add(sid); S.sessions.add(sid); }
-      if (e.path === '/' && sid != null) T.front.add(sid);
+      if (isFront(e.path) && sid != null) T.front.add(sid);
       for (const n in TOPS) { const k = TOPS[n](e); if (k !== undefined && sid != null) setOf(tops[n], k).add(sid); else if (k !== undefined) setOf(tops[n], k); }
       if (e.lat != null) { const pk = e.lat + '|' + e.lon + '|' + e.city; const p = points.get(pk) || points.set(pk, { lat: e.lat, lon: e.lon, city: e.city, sids: new Set() }).get(pk); if (sid != null) p.sids.add(sid); }
       if (sid != null) setOf(hours, Number(stampOf(e.ts, off).slice(11, 13))).add(sid);
     }
     if (t === 'leave') addLeave(leaves, e);
-    if (t === 'click' && e.path === '/') addClick(clicks, e.sec, sid);
+    if (t === 'click' && isFront(e.path)) addClick(clicks, e.sec, sid);
     if (t === CONF.ctaType) {
       addClick(ctaSec, e.sec, sid);
       addClick(ctaBtn, e.sec == null || e.label == null ? null : e.sec + ' | ' + e.label, sid);
@@ -238,7 +240,7 @@ async function statsJSON(env, url) {
   const booked = T.booked;
   // sidevisninger tælles efter starttidspunkt: dem, der startede før perioden, springes over
   const early = new Set((await all(db, `SELECT DISTINCT pv FROM events WHERE type='leave' AND ts >= ? AND ts < ?`, from - 3600000, from)).map(r => r.pv));
-  const front = [...leaves].filter(([pv, x]) => x.path === '/' && !early.has(pv)).map(([, x]) => x);
+  const front = [...leaves].filter(([pv, x]) => isFront(x.path) && !early.has(pv)).map(([, x]) => x);
   const avg = k => { const v = front.map(x => x[k]).filter(x => x != null); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
   const ret = await one(db, `SELECT COUNT(*) AS n FROM (SELECT vid FROM events WHERE type='pageview' AND ts BETWEEN ? AND ? AND vid IS NOT NULL GROUP BY vid) r WHERE EXISTS (SELECT 1 FROM events o INDEXED BY idx_events_vid WHERE o.vid = r.vid AND o.type='pageview' AND o.ts < ?)`, from, to, from);
   const live = await one(db, `SELECT COUNT(DISTINCT sid) AS n FROM events INDEXED BY idx_events_ts WHERE ts > ?`, Date.now() - 5 * 60000);
@@ -1410,6 +1412,8 @@ export default {
     } catch (e) {
       return json({ error: 'server error', detail: String(e && e.message || e).slice(0, 200) }, 500);
     }
+    // /en (kortvarig engelsk version 8/11) -> /international
+    if (!gig && (p === '/en' || p.startsWith('/en/'))) return Response.redirect(url.origin + '/international/' + url.search, 301);
     // ny ansøgningsform til forhåndsvisning (ikke linket fra forsiden, ikke i søgemaskiner). "steup" = stavefejl der også skal virke
     if (!gig && /^\/new-form-(setup|steup)\/?$/.test(p)) {
       const r = await env.ASSETS.fetch(new Request(new URL('/new-form-setup', url), request));
