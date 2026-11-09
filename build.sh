@@ -22,5 +22,9 @@ cp _headers _site/_headers
 K=~/bliv-booket-cf/public/media/kevin2; if [ -d "$K" ]; then cp -r "$K" _site/media/kevin2; else echo "ADVARSEL: $K mangler, Kevin-video bliver 404"; fi
 # VSL selvhostet til den engelske side (8/11 2026, før lå den kun på Tella): HLS + en.vtt i ~/bliv-booket-cf/public/media/vsl1 (ikke i git)
 V=~/bliv-booket-cf/public/media/vsl1; if [ -d "$V" ]; then cp -r "$V" _site/media/vsl1; else echo "ADVARSEL: $V mangler, engelsk VSL bliver 404"; fi
+# Engelsk VSL med HeyGen-stemme + engelske slides (9/11 2026): HLS + en.vtt i ~/bliv-booket-cf/public/media/vsl2 (ikke i git). international.html bruger vsl2; vsl1 beholdes som fallback
+V2=~/bliv-booket-cf/public/media/vsl2; if [ -d "$V2" ]; then cp -r "$V2" _site/media/vsl2; else echo "ADVARSEL: $V2 mangler, engelsk VSL bliver 404"; fi
+# Kevin-interview på engelsk (HeyGen, 9/11 2026) til /international: ~/bliv-booket-cf/public/media/kevin-en (ikke i git). Den danske side bruger stadig kevin2
+KE=~/bliv-booket-cf/public/media/kevin-en; if [ -d "$KE" ]; then cp -r "$KE" _site/media/kevin-en; else echo "ADVARSEL: $KE mangler, engelsk Kevin-video bliver 404"; fi
 # /en (gen_en.py, anden session 8/11) er erstattet af /international (engelsk ansøgningsform + GHL); Workeren sender /en/* videre dertil. gen_en.py køres ikke.
 echo "_site bygget: $(ls _site | tr '\n' ' ')"

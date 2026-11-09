@@ -1409,17 +1409,17 @@ Happy to book Oscar again :-)</p><div class="who"><div class="av">M</div><div cl
     e.preventDefault();
     const v=document.createElement('video'); v.controls=true; v.playsInline=true; v.preload='auto'; v.poster='/media/web/vsl-poster.jpg';
     v.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000;z-index:2';
-    enTrack(v,'/media/vsl1/en.vtt'); vb.appendChild(v); vp.remove(); hlsInto(v,'/media/vsl1/master.m3u8',0);
+    enTrack(v,'/media/vsl2/en.vtt'); vb.appendChild(v); vp.remove(); hlsInto(v,'/media/vsl2/master.m3u8',0);
   });}
 
   /* Kevin-interview: HLS, indlæses først ved klik */
   const kv=document.getElementById('kvid');
   if(kv){
-    const KSRC='https://fuldtbooketmusiker.dk/media/kevin2/master.m3u8';
+    const KSRC='https://fuldtbooketmusiker.dk/media/kevin-en/master.m3u8';
     let kvv=null;
     function kStart(t){
       if(kvv){ if(t!=null)kvv.currentTime=t; kvv.play().catch(()=>{}); return; }
-      kvv=document.createElement('video'); kvv.controls=true; kvv.playsInline=true; kvv.preload='auto'; kvv.poster='media/web/kevin-poster.jpg'; enTrack(kvv,'/media/kevin2/en.vtt');
+      kvv=document.createElement('video'); kvv.controls=true; kvv.playsInline=true; kvv.preload='auto'; kvv.poster='media/web/kevin-poster.jpg'; enTrack(kvv,'/media/kevin-en/en.vtt');
       kv.appendChild(kvv); const pb=document.getElementById('kvidPlay'); if(pb)pb.remove(); const nm=kv.querySelector('.kvid-name'); if(nm)nm.remove();
       const go=()=>{ if(t)kvv.currentTime=t; kvv.play().catch(()=>{}); };
       if(kvv.canPlayType('application/vnd.apple.mpegurl')){ kvv.src=KSRC; kvv.addEventListener('loadedmetadata',go,{once:true}); kvv.load(); }
