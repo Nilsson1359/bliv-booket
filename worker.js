@@ -512,13 +512,20 @@ async function handleInquiry(request, env, ctx) {
   if ((lead.name || '').trim().length < 2 || !validEmail(lead.email) || (lead.phone || '').replace(/\D/g, '').length < 8
     || !OJ_ARR.includes(ans.arrangement) || (ans.sted || '').trim().length < 2 || !OJ_KILDE.includes(ans.kilde)) return json({ error: 'missing fields' }, 400);
   if (lead.ghl_contact_id) return json({ ok: true });
-  // misbrugs-værn (som /api/book): højst MAX_INQUIRIES_PER_IP_DAY forespørgsler til GHL pr. IP pr. døgn
+  // misbrugs-værn: samme IP som oprettede leadet, og højst MAX_INQUIRIES_PER_IP_DAY forespørgsler til GHL pr. IP pr. døgn.
+  // Tjek og 'ghl'-flag sættes i ÉN sætning (atomisk i D1), så parallelle kald ikke kan smutte forbi loftet.
   const ip = request.headers.get('CF-Connecting-IP') || '';
-  if (ip) {
-    const c = await env.DB.prepare(`SELECT COUNT(*) AS n FROM leads INDEXED BY idx_leads_ip WHERE ip = ? AND created_ts > ? AND instr(notified_flags, 'ghl,') > 0`).bind(ip, Date.now() - 86400000).first();
-    if (c && c.n >= MAX_INQUIRIES_PER_IP_DAY) return json({ error: 'too many inquiries' }, 429);
+  if (!ip || ip !== lead.ip) {   // fx mobil der skiftede fra wifi til 4G: kunden får tak, men GHL-oprettelsen sker manuelt
+    if (await claimFlag(env, lid, 'ipskift')) ctx.waitUntil(tgSend(env, '⚠️ Forespørgslen er IKKE lagt i GHL (afsenderen skiftede IP-adresse undervejs). Opret kontakten manuelt.\n\n' + leadText('💌 Ny forespørgsel', lead)).catch(() => {}));
+    return json({ ok: true });
   }
-  if (!(await claimFlag(env, lid, 'ghl'))) return json({ ok: true });   // dobbeltklik: kun ét upsert
+  const r = await env.DB.prepare(`UPDATE leads SET notified_flags = notified_flags || 'ghl,' WHERE id = ?1 AND instr(notified_flags, 'ghl,') = 0
+      AND (SELECT COUNT(*) FROM leads o INDEXED BY idx_leads_ip WHERE o.ip = ?2 AND o.created_ts > ?3 AND instr(o.notified_flags, 'ghl,') > 0) < ${MAX_INQUIRIES_PER_IP_DAY}`)
+    .bind(lid, ip, Date.now() - 86400000).run();
+  if ((r.meta && r.meta.changes) !== 1) {
+    const again = await env.DB.prepare('SELECT notified_flags FROM leads WHERE id = ?').bind(lid).first();
+    return again && String(again.notified_flags).includes('ghl,') ? json({ ok: true }) : json({ error: 'too many inquiries' }, 429);   // dobbeltklik = ok
+  }
   ctx.waitUntil(ojInquiryToGhl(env, lead, ans, src).catch(async e => {
     console.log('inquiry ghl', e.message);
     await tgSend(env, `⚠️ Forespørgslen kom ikke ind i GHL: ${tgEsc(e.message)}\nOpret kontakten manuelt.\n\n` + leadText('💌 Ny forespørgsel', lead)).catch(() => {});
