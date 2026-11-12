@@ -492,6 +492,7 @@ async function handleLead(request, env, ctx) {
 // lander i Oscars GHL præcis som fra hjemmesiden. Formularen kører Turnstile, så vi kan ikke indsende den server-side;
 // i stedet upsert'er vi kontakten med de samme custom fields. Svarene ligger allerede i D1 (gemt via /api/lead).
 const INQUIRY_PAGES = { bryllup: true };
+const MAX_INQUIRIES_PER_IP_DAY = 3;
 const OJ_FORM = {
   arrangement: 'wsM0DzdX0ApDMvBb4EEB', dato: 'F9B3kbZpOZMVnCGnGQcD', andet: 'DDKec4GEpuFCcOMeaBcB', kilde: 'ndbCjhG3HVH9h1fKP9M3',
   utm_source: 'sDG3v7y2wkZeum3eBDTv', utm_medium: 'A5Jqj9BQwv4hSuKJU3Ob', utm_campaign: 'VVmGBZbPjFKMsAYs1yof', utm_content: 'GjM7mpL0t4S0IFtV5HzH',
@@ -511,6 +512,12 @@ async function handleInquiry(request, env, ctx) {
   if ((lead.name || '').trim().length < 2 || !validEmail(lead.email) || (lead.phone || '').replace(/\D/g, '').length < 8
     || !OJ_ARR.includes(ans.arrangement) || (ans.sted || '').trim().length < 2 || !OJ_KILDE.includes(ans.kilde)) return json({ error: 'missing fields' }, 400);
   if (lead.ghl_contact_id) return json({ ok: true });
+  // misbrugs-værn (som /api/book): højst MAX_INQUIRIES_PER_IP_DAY forespørgsler til GHL pr. IP pr. døgn
+  const ip = request.headers.get('CF-Connecting-IP') || '';
+  if (ip) {
+    const c = await env.DB.prepare(`SELECT COUNT(*) AS n FROM leads INDEXED BY idx_leads_ip WHERE ip = ? AND created_ts > ? AND instr(notified_flags, 'ghl,') > 0`).bind(ip, Date.now() - 86400000).first();
+    if (c && c.n >= MAX_INQUIRIES_PER_IP_DAY) return json({ error: 'too many inquiries' }, 429);
+  }
   if (!(await claimFlag(env, lid, 'ghl'))) return json({ ok: true });   // dobbeltklik: kun ét upsert
   ctx.waitUntil(ojInquiryToGhl(env, lead, ans, src).catch(async e => {
     console.log('inquiry ghl', e.message);
@@ -530,14 +537,23 @@ async function ojInquiryToGhl(env, lead, ans, src) {
     email: lead.email.trim(), phone: e164(lead.phone) || undefined, city: str(ans.sted, 200).trim(),
     tags: ['lp-' + lead.page, `lp-${lead.page}-forespoergsel`, ...(ver ? [`lp-${lead.page}-${ver}`] : [])], source: 'fuldtbooketmusiker.dk/' + lead.page, customFields: cf };
   Object.keys(contact).forEach(k => contact[k] === undefined && delete contact[k]);
-  // afviser GHL et felt (fx en ændret valgliste), prøver vi igen uden custom fields; noten nedenfor har alle svar
-  const c = await ghl(env, 'POST', '/contacts/upsert', '2021-07-28', contact)
-    .catch(e => { console.log('inquiry upsert m. felter', e.message); delete contact.customFields; return ghl(env, 'POST', '/contacts/upsert', '2021-07-28', contact); });
-  const contactId = c.contact && c.contact.id;
+  // findes kontakten allerede (samme email eller telefon), overskriver vi INTET: kun tags + note. Ellers kunne enhver
+  // med en andens email ændre navn/telefon på en eksisterende kunde i Oscars GHL (formularen er åben og uden login)
+  const dup = async q => ((await ghl(env, 'GET', `/contacts/search/duplicate?locationId=${env.GHL_LOCATION_ID}&${q}`, '2021-07-28').catch(() => ({}))).contact || {}).id || '';
+  let contactId = await dup('email=' + encodeURIComponent(contact.email)) || (contact.phone ? await dup('number=' + encodeURIComponent(contact.phone)) : '');
+  const existed = !!contactId;
+  if (existed) {
+    await ghl(env, 'POST', `/contacts/${contactId}/tags`, '2021-07-28', { tags: contact.tags }).catch(e => console.log('inquiry tags', e.message));
+  } else {
+    // afviser GHL et felt (fx en ændret valgliste), prøver vi igen uden custom fields; noten nedenfor har alle svar
+    const c = await ghl(env, 'POST', '/contacts/', '2021-07-28', contact)
+      .catch(e => { console.log('inquiry create m. felter', e.message); delete contact.customFields; return ghl(env, 'POST', '/contacts/', '2021-07-28', contact); });
+    contactId = c.contact && c.contact.id;
+  }
   if (!contactId) throw new Error('GHL upsert gav intet contact.id');
   await env.DB.prepare('UPDATE leads SET ghl_contact_id = ? WHERE id = ?').bind(contactId, lead.id).run();
   const L = { arrangement: 'Arrangement', sted: 'Hvor', dato: 'Dato', andet: 'Andet', kilde: 'Fandt Oscar via' };
-  const note = [`Forespørgsel fra ${lead.page}.oscartjoensson.dk (formular på siden, ingen mødebooking)`, ...(ver ? [`Split-test: tekstversion ${ver}`] : []),
+  const note = [`Forespørgsel fra ${lead.page}.oscartjoensson.dk (formular på siden, ingen mødebooking)`, ...(existed ? [`Kontakten fandtes i forvejen, så felterne er IKKE ændret. Oplyst i formularen: ${lead.name} · ${lead.email} · ${lead.phone}`] : []), ...(ver ? [`Split-test: tekstversion ${ver}`] : []),
     ...Object.entries(L).filter(([k]) => ans[k]).map(([k, l]) => `${l}: ${ans[k]}`)].join('\n');
   await ghl(env, 'POST', `/contacts/${contactId}/notes`, '2021-07-28', { body: note }).catch(e => console.log('inquiry note', e.message));
 }
