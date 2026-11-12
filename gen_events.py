@@ -228,6 +228,7 @@ P['bryllup'] = dict(
  gallery=[('kirke', 'Vielsen'), ('beach', 'Guitar og sang'), ('acoustic', 'Reception'), ('warm', 'Middag'), ('gigblue', 'Dansefest')],
  form=dict(
    title='Fortæl om jeres bryllup',
+   inquiry=True,   # 12/11 2026 (Oskar): forespørgselsformular som på oscartjoensson.dk i stedet for mødebooking; trinene nedenfor bruges så ikke
    steps=[
      dict(id='dato', type='date', q='Hvornår skal I giftes?', help='Vælg datoen, eller sig til hvis den ikke ligger fast endnu.', alt='Datoen ligger ikke fast endnu'),
      dict(id='sted', type='text', q='Hvor skal festen holdes?', help='By, festsal eller adresse.', ph='Fx Hindsgavl Slot eller en lade på Fyn', ac='off'),
@@ -557,6 +558,25 @@ input[type=date].fin{color-scheme:var(--scheme)}
 .calfoot{display:flex;flex-direction:column;gap:12px;margin-top:6px}
 .skel{height:48px;border-radius:12px;background:linear-gradient(90deg,var(--card),var(--bg2),var(--card));background-size:200% 100%;animation:sk 1.2s infinite}
 @keyframes sk{to{background-position:-200% 0}}
+/* forespørgsel (én side, EV.inquiry) */
+.iq{gap:22px}
+.iq-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px 20px}
+.iq-f{display:flex;flex-direction:column;gap:6px;min-width:0}
+.iq-f.wide{grid-column:1/-1}
+.iq-l{font-size:.9rem;font-weight:600;color:var(--ink2)}
+.iq-l i{font-style:normal;color:var(--accentT)}
+.iq-l label{cursor:pointer}
+.iq .fin{font-size:1.05rem;min-height:48px;padding:10px 2px}
+.iq-ta{resize:none;line-height:1.5;min-height:52px;font:500 1.05rem/1.5 var(--body)}
+.iq-chips{display:flex;flex-wrap:wrap;gap:8px;padding-top:4px}
+.iq-chip{min-height:44px;padding:10px 16px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--ink);font:500 .98rem var(--body);cursor:pointer;transition:border-color .15s,background .15s}
+.iq-chip:hover{border-color:color-mix(in srgb,var(--accent) 50%,var(--line))}
+.iq-chip[aria-checked=true]{background:var(--accent);color:var(--onaccent);border-color:var(--accent)}
+.iq .fnav .btn{min-width:min(100%,260px)}
+.iq-note{font-size:.85rem;color:var(--mute);margin-top:-8px}
+.iq-note a{color:inherit}
+@media (max-width:560px){.iq-grid{grid-template-columns:1fr}.iq .fnav .btn{width:100%}}
+.ed .iq-chip{border-radius:0}
 .done-ic{width:64px;height:64px;border-radius:50%;background:var(--accent);color:var(--onaccent);display:grid;place-items:center}
 .done-ic svg{width:30px;height:30px}
 .cal-add{display:flex;flex-wrap:wrap;gap:10px}
@@ -882,6 +902,7 @@ def page(key, d, pal, v2=False, cv=None):
       <div class="cta-row" style="justify-content:center;margin-top:26px">{cta(ctal, sec="slut", short=v.get("final_short", ""))}</div><p class="lead" style="margin-top:16px">{small}</p></div></section>'''
 
     cfg = dict(page=key, label=c['label'], title=c['form']['title'], steps=c['form']['steps'])
+    if c['form'].get('inquiry'): cfg['inquiry'] = True
     pixel = pixel_tag()
     og = f'https://fuldtbooketmusiker.dk/media/ev/{c["hero_img"][0]}-1600.webp'
     return f'''<!doctype html>

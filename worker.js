@@ -451,7 +451,7 @@ async function handleLead(request, env, ctx) {
   if (b.answers && typeof b.answers === 'object' && !Array.isArray(b.answers)) {
     for (const [k, v] of Object.entries(b.answers).slice(0, 16)) answers[str(k, 40)] = str(v, k === 'om' ? 2000 : 500);
   }
-  const src = b.src && typeof b.src === 'object' ? Object.fromEntries(['ref_host', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'landing', 'ver'].map(k => [k, str(b.src[k], k === 'landing' ? 300 : 150)]).filter(([, v]) => v)) : {};
+  const src = b.src && typeof b.src === 'object' ? Object.fromEntries(['ref_host', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'fbclid', 'landing', 'ver'].map(k => [k, str(b.src[k], k === 'landing' ? 300 : 150)]).filter(([, v]) => v)) : {};
   const cf = request.cf || {}, now = Date.now();
   const ip = request.headers.get('CF-Connecting-IP') || '';
   const row = await env.DB.prepare(`INSERT INTO leads (id, page, created_ts, updated_ts, name, email, phone, answers_json, step, done, src_json, vid, sid, ip, city, country, writes, notified_flags)
@@ -482,9 +482,64 @@ async function handleLead(request, env, ctx) {
     if (isApp(b.page) && b.extra === true && row.ghl_contact_id) await fbmContactExtra(env, row);
     if (!tgOn(env, b.page)) return;
     if (hasContact(row) && await claimFlag(env, lid, 'contact')) await tgSend(env, leadText('📝 Delvist lead', row));
-    if (row.done && await claimFlag(env, lid, 'done')) await tgSend(env, leadText('✅ Formular udfyldt', row));
+    if (row.done && await claimFlag(env, lid, 'done')) await tgSend(env, leadText(INQUIRY_PAGES[b.page] ? '💌 Ny forespørgsel' : '✅ Formular udfyldt', row));
   })().catch(e => console.log('lead efterarbejde', String(e && e.message || e))));
   return json({ ok: true });
+}
+
+// ─── POST /api/inquiry  forespørgsel uden mødebooking (12/11 2026: /bryllup) ───
+// Samme felter som "Oscartjoensson - Website Form" (GHL-formular ewqv1LWCcJiuWxV790Ch på oscartjoensson.dk), så kontakten
+// lander i Oscars GHL præcis som fra hjemmesiden. Formularen kører Turnstile, så vi kan ikke indsende den server-side;
+// i stedet upsert'er vi kontakten med de samme custom fields. Svarene ligger allerede i D1 (gemt via /api/lead).
+const INQUIRY_PAGES = { bryllup: true };
+const OJ_FORM = {
+  arrangement: 'wsM0DzdX0ApDMvBb4EEB', dato: 'F9B3kbZpOZMVnCGnGQcD', andet: 'DDKec4GEpuFCcOMeaBcB', kilde: 'ndbCjhG3HVH9h1fKP9M3',
+  utm_source: 'sDG3v7y2wkZeum3eBDTv', utm_medium: 'A5Jqj9BQwv4hSuKJU3Ob', utm_campaign: 'VVmGBZbPjFKMsAYs1yof', utm_content: 'GjM7mpL0t4S0IFtV5HzH',
+  fbclid: 'egZmamWHl5GKQgbIYulF', event_id: 'EZdwrewrRSIHeCOsy1UW',
+};
+const OJ_ARR = ['Bryllup', 'Firmafest', 'Privatarrangement'];
+const OJ_KILDE = ['Facebook', 'Instagram', 'Youtube', 'Google', 'Ven/anbefaling', 'Live optræden'];   // picklist-værdierne i GHL
+async function handleInquiry(request, env, ctx) {
+  if (!env.DB) return json({ error: 'no db' }, 503);
+  if (!sameOrigin(request)) return json({ error: 'bad origin' }, 403);
+  const { b, err } = await readJSON(request, 1024); if (err) return err;
+  const lid = String(b.lid || '');
+  if (!LID_RE.test(lid)) return json({ error: 'bad lid' }, 400);
+  const lead = await env.DB.prepare('SELECT * FROM leads WHERE id = ?').bind(lid).first();
+  if (!lead || !INQUIRY_PAGES[lead.page]) return json({ error: 'unknown lead' }, 404);
+  let ans = {}, src = {}; try { ans = JSON.parse(lead.answers_json || '{}'); } catch { } try { src = JSON.parse(lead.src_json || '{}'); } catch { }
+  if ((lead.name || '').trim().length < 2 || !validEmail(lead.email) || (lead.phone || '').replace(/\D/g, '').length < 8
+    || !OJ_ARR.includes(ans.arrangement) || (ans.sted || '').trim().length < 2 || !OJ_KILDE.includes(ans.kilde)) return json({ error: 'missing fields' }, 400);
+  if (lead.ghl_contact_id) return json({ ok: true });
+  if (!(await claimFlag(env, lid, 'ghl'))) return json({ ok: true });   // dobbeltklik: kun ét upsert
+  ctx.waitUntil(ojInquiryToGhl(env, lead, ans, src).catch(async e => {
+    console.log('inquiry ghl', e.message);
+    await tgSend(env, `⚠️ Forespørgslen kom ikke ind i GHL: ${tgEsc(e.message)}\nOpret kontakten manuelt.\n\n` + leadText('💌 Ny forespørgsel', lead)).catch(() => {});
+  }));
+  return json({ ok: true });
+}
+async function ojInquiryToGhl(env, lead, ans, src) {
+  if (!env.GHL_TOKEN || !env.GHL_LOCATION_ID) throw new Error('GHL ikke sat op');
+  const ver = SPLIT.includes(src.ver) ? src.ver : '';
+  const parts = lead.name.trim().split(/\s+/);
+  const dato = /^\d{4}-\d{2}-\d{2}$/.test(ans.dato || '') ? ans.dato : '';
+  const cf = [['arrangement', ans.arrangement], ['dato', dato], ['andet', str(ans.andet, 2000)], ['kilde', ans.kilde],
+    ['utm_source', src.utm_source], ['utm_medium', src.utm_medium], ['utm_campaign', src.utm_campaign], ['utm_content', src.utm_content],
+    ['fbclid', src.fbclid], ['event_id', lead.id]].filter(([, v]) => v).map(([k, v]) => ({ id: OJ_FORM[k], field_value: v }));
+  const contact = { locationId: env.GHL_LOCATION_ID, name: lead.name.trim(), firstName: parts[0], lastName: parts.slice(1).join(' ') || undefined,
+    email: lead.email.trim(), phone: e164(lead.phone) || undefined, city: str(ans.sted, 200).trim(),
+    tags: ['lp-' + lead.page, `lp-${lead.page}-forespoergsel`, ...(ver ? [`lp-${lead.page}-${ver}`] : [])], source: 'fuldtbooketmusiker.dk/' + lead.page, customFields: cf };
+  Object.keys(contact).forEach(k => contact[k] === undefined && delete contact[k]);
+  // afviser GHL et felt (fx en ændret valgliste), prøver vi igen uden custom fields; noten nedenfor har alle svar
+  const c = await ghl(env, 'POST', '/contacts/upsert', '2021-07-28', contact)
+    .catch(e => { console.log('inquiry upsert m. felter', e.message); delete contact.customFields; return ghl(env, 'POST', '/contacts/upsert', '2021-07-28', contact); });
+  const contactId = c.contact && c.contact.id;
+  if (!contactId) throw new Error('GHL upsert gav intet contact.id');
+  await env.DB.prepare('UPDATE leads SET ghl_contact_id = ? WHERE id = ?').bind(contactId, lead.id).run();
+  const L = { arrangement: 'Arrangement', sted: 'Hvor', dato: 'Dato', andet: 'Andet', kilde: 'Fandt Oscar via' };
+  const note = [`Forespørgsel fra ${lead.page}.oscartjoensson.dk (formular på siden, ingen mødebooking)`, ...(ver ? [`Split-test: tekstversion ${ver}`] : []),
+    ...Object.entries(L).filter(([k]) => ans[k]).map(([k, l]) => `${l}: ${ans[k]}`)].join('\n');
+  await ghl(env, 'POST', `/contacts/${contactId}/notes`, '2021-07-28', { body: note }).catch(e => console.log('inquiry note', e.message));
 }
 
 // ─── ledige tider ───
@@ -1258,7 +1313,7 @@ const OSCAR_HOSTS = { 'bryllup.oscartjoensson.dk': 'bryllup', 'firmafest.oscartj
 const SPLIT = ['v2', 'v4'];   // versionerne i split-testen (samme på begge sider)
 const SPLIT_PATH = '/book';    // adressen der splitter, fx bryllup.oscartjoensson.dk/book
 const splitVer = request => { const m = (request.headers.get('Cookie') || '').match(/(?:^|;\s*)oj_ab=(v[0-9])/); return m && SPLIT.includes(m[1]) ? m[1] : ''; };
-const OSCAR_PASS = /^\/(api\/(lead|slots|book|booking|ics|t)$|media\/|ev\.js$|track\.js$|privatliv$|favicon)/;
+const OSCAR_PASS = /^\/(api\/(lead|inquiry|slots|book|booking|ics|t)$|media\/|ev\.js$|track\.js$|privatliv$|favicon)/;
 async function oscarHost(request, env, url, gig) {
   const p = url.pathname;
   if (p === '/' || p === '/index.html' || p === '/tak' || p === '/tak/') {
@@ -1370,6 +1425,10 @@ export default {
       if (p === '/api/lead') {
         if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
         return await handleLead(request, env, ctx);
+      }
+      if (p === '/api/inquiry') {
+        if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
+        return await handleInquiry(request, env, ctx);
       }
       if (p === '/api/slots') {
         if (request.method !== 'GET') return json({ error: 'GET only' }, 405);

@@ -82,7 +82,7 @@
   var src = null; try { src = JSON.parse(ls('ev_src') || 'null'); } catch (e) { }
   if (!src) {
     var rh = ''; try { rh = document.referrer ? new URL(document.referrer).hostname : ''; } catch (e) { }
-    src = { ref_host: rh, utm_source: q.get('utm_source') || (q.get('fbclid') ? 'facebook' : q.get('gclid') ? 'google' : ''), utm_medium: q.get('utm_medium') || '', utm_campaign: q.get('utm_campaign') || '', utm_content: q.get('utm_content') || '', landing: location.pathname, ts: Date.now() };
+    src = { ref_host: rh, utm_source: q.get('utm_source') || (q.get('fbclid') ? 'facebook' : q.get('gclid') ? 'google' : ''), utm_medium: q.get('utm_medium') || '', utm_campaign: q.get('utm_campaign') || '', utm_content: q.get('utm_content') || '', fbclid: q.get('fbclid') || '', landing: location.pathname, ts: Date.now() };
     ls('ev_src', JSON.stringify(src));
   }
 
@@ -149,6 +149,7 @@
   // ── trin ──
   var render = function () {
     if (S.booked || S.callback) return renderDone();
+    if (EV.inquiry) return S.sent ? renderDone() : renderInquiry();
     var i = S.done ? steps.length - 1 : Math.min(S.step, steps.length - 1), st = steps[i];
     setProg(i);
     var head = '<div class="fq"><span class="k">' + (i + 1) + ' / ' + steps.length + '</span><h3>' + esc(st.q) + '</h3>' + (st.help ? '<p class="h">' + esc(st.help) + '</p>' : '');
@@ -189,6 +190,67 @@
     B.scrollTop = 0;
     wire(st, i);
     focusFirst();
+  };
+
+  // ── forespørgsel: én side med de samme felter som Oscars hjemmeside-formular (EV.inquiry, 12/11 2026) ──
+  var IQ_ARR = ['Bryllup', 'Firmafest', 'Privatarrangement'];
+  var IQ_KILDE = [['Facebook', 'Facebook'], ['Instagram', 'Instagram'], ['Youtube', 'YouTube'], ['Google', 'Google'], ['Ven/anbefaling', 'Anbefaling'], ['Live optræden', 'Har hørt Oscar spille']];
+  var renderInquiry = function () {
+    var a = S.answers;
+    if (!a.arrangement) a.arrangement = EV.page === 'bryllup' ? 'Bryllup' : EV.page === 'firmafest' ? 'Firmafest' : '';
+    var chips = function (id, opts) {
+      return '<div class="iq-chips" role="radiogroup" data-f="' + id + '">' + opts.map(function (o) {
+        var v = o.push ? o[0] : o, l = o.push ? o[1] : o;
+        return '<button type="button" class="iq-chip" role="radio" data-v="' + esc(v) + '" aria-checked="' + (a[id] === v) + '">' + esc(l) + '</button>';
+      }).join('') + '</div>';
+    };
+    var fld = function (lab, req, inner, wide) { return '<div class="iq-f' + (wide ? ' wide' : '') + '"><span class="iq-l">' + lab + (req ? ' <i>*</i>' : '') + '</span>' + inner + '</div>'; };
+    var min = new Date().toISOString().slice(0, 10);
+    setProg(0); $('.fm-card', M).classList.remove('wide');
+    B.innerHTML = '<form class="fq iq" id="iqForm" novalidate>' +
+      '<div><h3>' + esc(EV.title) + '</h3><p class="h" style="margin-top:10px">Udfyld formularen, så vender Oscar tilbage med et tilbud på musikken.</p></div>' +
+      '<div class="iq-grid">' +
+      fld('<label for="iqName">Navn</label>', 1, '<input class="fin" id="iqName" autocomplete="name" value="' + esc(S.name) + '" placeholder="' + (EV.page === 'bryllup' ? 'Fx Sofie og Mads' : 'Fornavn og efternavn') + '">', 1) +
+      fld('Hvilket arrangement skal du holde?', 1, chips('arrangement', IQ_ARR), 1) +
+      fld('<label for="iqTel">Telefon</label>', 1, '<input class="fin" id="iqTel" type="tel" inputmode="tel" autocomplete="tel" value="' + esc(S.phone) + '" placeholder="12 34 56 78">') +
+      fld('<label for="iqMail">Email</label>', 1, '<input class="fin" id="iqMail" type="email" inputmode="email" autocomplete="email" value="' + esc(S.email) + '" placeholder="navn@mail.dk">') +
+      fld('<label for="iqSted">Hvor skal arrangementet holdes?</label>', 1, '<input class="fin" id="iqSted" autocomplete="off" value="' + esc(a.sted || '') + '" placeholder="Adresse, festsal eller by">') +
+      fld('<label for="iqDato">Dato for arrangementet</label>', 0, '<input class="fin" id="iqDato" type="date" min="' + min + '" value="' + esc(/^\d{4}-\d{2}-\d{2}$/.test(a.dato || '') ? a.dato : '') + '">') +
+      fld('<label for="iqAndet">Andet jeg skal vide?</label>', 0, '<textarea class="fin iq-ta" id="iqAndet" rows="3" placeholder="Fx antal gæster, ønsker til musikken eller programmet">' + esc(a.andet || '') + '</textarea>', 1) +
+      fld('Hvordan fandt du mig?', 1, chips('kilde', IQ_KILDE), 1) +
+      '</div><p class="ferr" id="fErr" role="alert"></p>' +
+      '<div class="fnav"><button type="submit" class="btn" id="iqSend">Send forespørgsel<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></div>' +
+      '<p class="iq-note">Vi bruger kun oplysningerne til at give jer et tilbud. <a href="/privatliv" target="_blank" rel="noopener">Privatlivspolitik</a></p></form>';
+    B.scrollTop = 0;
+    [['iqName', 'name'], ['iqTel', 'phone'], ['iqMail', 'email']].forEach(function (x) {
+      var el = $('#' + x[0]); el.addEventListener('input', function () { S[x[1]] = el.value; err(''); saveSoon(); });
+    });
+    [['iqSted', 'sted'], ['iqDato', 'dato'], ['iqAndet', 'andet']].forEach(function (x) {
+      var el = $('#' + x[0]); var f = function () { a[x[1]] = el.value; err(''); saveSoon(); }; el.addEventListener('input', f); el.addEventListener('change', f);
+    });
+    var ta = $('#iqAndet'), grow = function () { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight + 2, 260) + 'px'; }; ta.addEventListener('input', grow);
+    $$('.iq-chips', B).forEach(function (g) {
+      $$('.iq-chip', g).forEach(function (c) {
+        c.addEventListener('click', function () { $$('.iq-chip', g).forEach(function (x) { x.setAttribute('aria-checked', String(x === c)); }); a[g.dataset.f] = c.dataset.v; err(''); saveSoon(); });
+      });
+    });
+    var bad = function (m, id) { err(m); var el = id && $('#' + id); if (el) { el.focus(); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } return true; };
+    $('#iqForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (S.name.trim().length < 2 && bad('Skriv dit navn.', 'iqName')) return;
+      if (IQ_ARR.indexOf(a.arrangement) < 0 && bad('Vælg hvilket arrangement du skal holde.')) return;
+      if (digits(S.phone).length < 8 && bad('Skriv et telefonnummer med mindst 8 cifre.', 'iqTel')) return;
+      if (!okMail(S.email) && bad('Tjek e-mailen, den ser ikke helt rigtig ud.', 'iqMail')) return;
+      if ((a.sted || '').trim().length < 2 && bad('Skriv hvor arrangementet skal holdes.', 'iqSted')) return;
+      if (!IQ_KILDE.some(function (k) { return k[0] === a.kilde; }) && bad('Vælg hvordan du fandt Oscar.')) return;
+      var btn = $('#iqSend'); btn.disabled = true; btn.firstChild.nodeValue = 'Sender...';
+      S.done = true; clearTimeout(tSave); persist();
+      var post = function (u, d) { return fetch(u, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) }).then(function (r) { if (!r.ok) throw r.status; return r; }); };
+      post('/api/lead', payload()).then(function () { return post('/api/inquiry', { lid: S.lid }); }).then(function () {
+        S.sent = true; persist(); renderDone(true);
+      }).catch(function () { btn.disabled = false; btn.firstChild.nodeValue = 'Prøv igen'; err('Forespørgslen blev ikke sendt. Tjek forbindelsen og prøv igen.'); });
+    });
+    var f0 = $('#iqName'); if (f0 && !S.name && matchMedia('(hover:hover)').matches) f0.focus({ preventScroll: true });
   };
 
   var err = function (m) { var e = $('#fErr'); if (e) e.textContent = m || ''; };
@@ -334,12 +396,13 @@
       ics = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Oscar Jonsson Musik//DA', 'BEGIN:VEVENT', 'UID:' + S.lid + '@fuldtbooketmusiker.dk', 'DTSTAMP:' + z(new Date()), 'DTSTART:' + z(st), 'DTEND:' + z(en), 'SUMMARY:' + title, 'DESCRIPTION:' + det, 'END:VEVENT', 'END:VCALENDAR'].join('\r\n'));
     }
     B.innerHTML = '<div class="fq"><div class="done-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12.5l4.5 4.5L19 7"/></svg></div>' +
-      '<h3>' + (b ? 'Tak' + (f ? ', ' + esc(f) : '') + '. Mødet er booket.' : 'Tak' + (f ? ', ' + esc(f) : '') + '. Vi ringer jer op.') + '</h3>' +
+      '<h3>' + (b ? 'Tak' + (f ? ', ' + esc(f) : '') + '. Mødet er booket.' : 'Tak' + (f ? ', ' + esc(f) : '') + (S.sent ? '. Forespørgslen er sendt.' : '. Vi ringer jer op.')) + '</h3>' +
       (b ? '<p class="big" style="font-size:1.35rem">' + esc(fmtLong(b.start)) + '</p><p class="h">Vi ser frem til mødet. Linket til Google Meet står i jeres bekræftelsesmail. Læg tiden i kalenderen, så den ikke glipper.</p>' +
         '<div class="cal-add"><a class="btn sm" href="' + gcal + '" target="_blank" rel="noopener">Google Kalender</a><a class="btn sm ghost" href="' + ics + '" download="snak-med-oscar.ics">Apple / Outlook</a></div>'
+        : S.sent ? '<p class="h">Oscar har fået jeres forespørgsel og vender tilbage på ' + esc(S.phone || 'telefon') + ' eller ' + esc(S.email || 'mail') + ' inden for én hverdag.</p>'
         : '<p class="h">Vi har jeres oplysninger og ringer på ' + esc(S.phone || 'jeres nummer') + ' inden for én hverdag.</p>') +
       '<p class="k" style="margin-top:8px">Det sker nu</p><div class="next3">' +
-      '<div>' + (b ? 'I mødes med Oscar på Google Meet på tidspunktet. Mødet tager cirka en halv time.' : 'Vi ringer jer op og hører om aftenen. Det tager cirka en halv time.') + '</div>' +
+      '<div>' + (b ? 'I mødes med Oscar på Google Meet på tidspunktet. Mødet tager cirka en halv time.' : S.sent ? 'Oscar kigger på jeres ønsker og kontakter jer.' : 'Vi ringer jer op og hører om aftenen. Det tager cirka en halv time.') + '</div>' +
       '<div>Vi taler om gæsterne, programmet og den stemning, I ønsker.</div>' +
       '<div>I får et tilbud på musikken, tilpasset ' + (EV.page === 'bryllup' ? 'jeres bryllup' : 'jeres firmafest') + '.</div></div>' +
       '<button type="button" class="btn ghost" id="dClose" style="align-self:flex-start;margin-top:6px">Tilbage til siden</button></div>';
