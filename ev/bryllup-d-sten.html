@@ -272,6 +272,25 @@ input[type=date].fin{color-scheme:var(--scheme)}
 .calfoot{display:flex;flex-direction:column;gap:12px;margin-top:6px}
 .skel{height:48px;border-radius:12px;background:linear-gradient(90deg,var(--card),var(--bg2),var(--card));background-size:200% 100%;animation:sk 1.2s infinite}
 @keyframes sk{to{background-position:-200% 0}}
+/* forespørgsel (én side, EV.inquiry) */
+.iq{gap:22px}
+.iq-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px 20px}
+.iq-f{display:flex;flex-direction:column;gap:6px;min-width:0}
+.iq-f.wide{grid-column:1/-1}
+.iq-l{font-size:.9rem;font-weight:600;color:var(--ink2)}
+.iq-l i{font-style:normal;color:var(--accentT)}
+.iq-l label{cursor:pointer}
+.iq .fin{font-size:1.05rem;min-height:48px;padding:10px 2px}
+.iq-ta{resize:none;line-height:1.5;min-height:52px;font:500 1.05rem/1.5 var(--body)}
+.iq-chips{display:flex;flex-wrap:wrap;gap:8px;padding-top:4px}
+.iq-chip{min-height:44px;padding:10px 16px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--ink);font:500 .98rem var(--body);cursor:pointer;transition:border-color .15s,background .15s}
+.iq-chip:hover{border-color:color-mix(in srgb,var(--accent) 50%,var(--line))}
+.iq-chip[aria-checked=true]{background:var(--accent);color:var(--onaccent);border-color:var(--accent)}
+.iq .fnav .btn{min-width:min(100%,260px)}
+.iq-note{font-size:.85rem;color:var(--mute);margin-top:-8px}
+.iq-note a{color:inherit}
+@media (max-width:560px){.iq-grid{grid-template-columns:1fr}.iq .fnav .btn{width:100%}}
+.ed .iq-chip{border-radius:0}
 .done-ic{width:64px;height:64px;border-radius:50%;background:var(--accent);color:var(--onaccent);display:grid;place-items:center}
 .done-ic svg{width:30px;height:30px}
 .cal-add{display:flex;flex-wrap:wrap;gap:10px}
@@ -486,7 +505,7 @@ main img,main video{filter:var(--imgfilter,none)}
   <div class="fm-card"><div class="fm-top"><b id="fmTitle">Fortæl om jeres bryllup</b><span class="saved" id="fmSaved" hidden>Gemt</span><button type="button" class="fm-x" id="fmX" aria-label="Luk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
   <div class="fm-prog"><i id="fmProg"></i></div><div class="fm-body" id="fmBody"></div></div>
 </div>
-<script>window.EV={"page": "bryllup", "label": "Bryllup", "title": "Fortæl om jeres bryllup", "steps": [{"id": "dato", "type": "date", "q": "Hvornår skal I giftes?", "help": "Vælg datoen, eller sig til hvis den ikke ligger fast endnu.", "alt": "Datoen ligger ikke fast endnu"}, {"id": "sted", "type": "text", "q": "Hvor skal festen holdes?", "help": "By, festsal eller adresse.", "ph": "Fx Hindsgavl Slot eller en lade på Fyn", "ac": "off"}, {"id": "gaester", "type": "choice", "q": "Cirka hvor mange gæster?", "opts": ["Under 60", "60 til 100", "100 til 150", "Over 150"]}, {"id": "musik", "type": "multi", "q": "Hvor på dagen skal der være musik?", "help": "Vælg gerne flere.", "opts": ["Vielsen", "Reception og velkomst", "Middagen", "Live-sæt til festen", "DJ til sidste dans"]}, {"id": "kontakt", "type": "contact", "q": "Hvem skal vi sende tilbuddet til?", "help": "Vi bruger kun oplysningerne til at give jer et tilbud.", "company": false}]};</script>
+<script>window.EV={"page": "bryllup", "label": "Bryllup", "title": "Fortæl om jeres bryllup", "steps": [{"id": "dato", "type": "date", "q": "Hvornår skal I giftes?", "help": "Vælg datoen, eller sig til hvis den ikke ligger fast endnu.", "alt": "Datoen ligger ikke fast endnu"}, {"id": "sted", "type": "text", "q": "Hvor skal festen holdes?", "help": "By, festsal eller adresse.", "ph": "Fx Hindsgavl Slot eller en lade på Fyn", "ac": "off"}, {"id": "gaester", "type": "choice", "q": "Cirka hvor mange gæster?", "opts": ["Under 60", "60 til 100", "100 til 150", "Over 150"]}, {"id": "musik", "type": "multi", "q": "Hvor på dagen skal der være musik?", "help": "Vælg gerne flere.", "opts": ["Vielsen", "Reception og velkomst", "Middagen", "Live-sæt til festen", "DJ til sidste dans"]}, {"id": "kontakt", "type": "contact", "q": "Hvem skal vi sende tilbuddet til?", "help": "Vi bruger kun oplysningerne til at give jer et tilbud.", "company": false}], "inquiry": true};</script>
 <script src="/ev.js" defer></script>
 </body>
 </html>
