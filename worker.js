@@ -792,8 +792,10 @@ async function handleBook(request, env, ctx) {
 
 // ───────── ansøgning: musikernes ansøgningsform på fuldtbooketmusiker.dk (4/11 2026) ─────────
 // 14/11 2026 (Oskars ordre): KONTAKT -> KALENDER -> SPØRGSMÅL. Ingen kvalificering foran bookingen:
-//  1) navn/telefon/e-mail: lead i D1 + GHL-kontakt med det samme (findes kontakten i forvejen: kun tags + note, intet overskrives)
-//  2) kalenderen kommer af sig selv; alle booker i "Strategisamtale" (engelsk: "Strategy Call"), pipeline "Møde Booket"
+//  1) navn/telefon/e-mail: lead i D1 + Telegram + GHL-kontakt med det samme (tag fbm-ansoegning + note; findes kontakten
+//     i forvejen: kun tags + note, intet overskrives). INGEN opportunity her.
+//  2) kalenderen kommer af sig selv; alle booker i "Strategisamtale" (engelsk: "Strategy Call"). Bookingen opretter/flytter
+//     opportunity'en direkte til "Møde Booket" og sætter fbm-kvalificeret som før (+ fbm-booket)
 //  3) spørgsmålene efter bookingen ("Sidste trin, så Oscar kan forberede samtalen"), gemt pr. svar via /api/lead.
 //     A/B/C-scoren regnes stadig, men KUN som info (D1 leads.score, GHL-felt, admin, Telegram). Den styrer intet.
 // Alle bookinger tæller i Meta (Schedule + Lead). "Afklaringssamtale" og /bekraeftet bruges ikke længere.
@@ -801,7 +803,6 @@ async function handleBook(request, env, ctx) {
 const FBM_APP = {
   pipeline: 'YHh9YrfPgUjeimsRU3Vx',
   stageQ: 'ea77c8f2-e34b-49a8-a48e-1e8b39641669',    // "Møde Booket" (booking)
-  stageLead: '6bca994b-ec12-4da4-9d5a-a5d3f60fce50', // "Lead" (kontakt-trinnet, 14/11 2026; platformen mapper den til 'ny')
   stageC: 'c4371fb8-e3df-41f4-a096-a0ecc7d153c0',    // "Ikke kvalificeret": bruges ikke længere (ingen kvalificering foran bookingen fra 14/11 2026)
   user: 'uHdnK0qAOcJCDq4ruP8Q',                      // Oscar (ejer begge kalendere)
   // svarmuligheder = præcis teksterne i GHL-felterne (SINGLE_OPTIONS skal matche)
@@ -899,26 +900,26 @@ async function fbmContactStep(env, row, ip) {
     const c = await env.DB.prepare(`SELECT COUNT(*) AS n FROM leads INDEXED BY idx_leads_ip WHERE ip = ? AND created_ts > ? AND instr(notified_flags, 'ghlc,') > 0`).bind(ip, Date.now() - 86400000).first();
     if (c && c.n >= MAX_GHL_CONTACTS_PER_IP_DAY) return;
   }
-  await fbmEnsureContact(env, row.id, true).catch(e => console.log('fbm kontakt', String(e && e.message || e)));
+  await fbmEnsureContact(env, row.id).catch(e => console.log('fbm kontakt', String(e && e.message || e)));
 }
 
 // GHL-kontakten til leadet -> { contactId, ours }. ours = vi oprettede den (så må vi rette navn/felter på den).
 // Findes kontakten i forvejen (samme e-mail eller telefon), overskrives INTET: kun tags + note (formen er åben og uden login).
 // Kun én opretter ad gangen (flag 'ghlc' i D1); en booking der kommer imens, venter på kontakt-id'et.
-async function fbmEnsureContact(env, lid, lead = false) {
+async function fbmEnsureContact(env, lid) {
   for (let i = 0; i < 24; i++) {
     const l = await env.DB.prepare('SELECT * FROM leads WHERE id = ?').bind(lid).first();
     if (!l) throw new Error('lead findes ikke');
     if (l.ghl_contact_id) return { contactId: l.ghl_contact_id, ours: String(l.notified_flags).includes('ghlnew,') };
     if (await claimFlag(env, lid, 'ghlc')) {
-      try { return await fbmCreateContact(env, l, lead); }
+      try { return await fbmCreateContact(env, l); }
       catch (e) { await env.DB.prepare(`UPDATE leads SET notified_flags = replace(notified_flags, 'ghlc,', '') WHERE id = ?`).bind(lid).run(); throw e; }
     }
     await new Promise(r => setTimeout(r, 500));
   }
   throw new Error('GHL-kontakten blev ikke oprettet i tide');
 }
-async function fbmCreateContact(env, l, lead) {
+async function fbmCreateContact(env, l) {
   const L = env.GHL_LOCATION_ID, en = fbmEn(l), parts = l.name.trim().split(/\s+/), email = l.email.trim(), phone = e164(l.phone);
   let src = {}; try { src = JSON.parse(l.src_json || '{}'); } catch { }
   const dup = async q => ((await ghl(env, 'GET', `/contacts/search/duplicate?locationId=${L}&${q}`, '2021-07-28').catch(() => ({}))).contact || {}).id || '';
@@ -938,20 +939,19 @@ async function fbmCreateContact(env, l, lead) {
       .catch(e => { console.log('fbm kontakt m. felter', e.message); delete contact.customFields; return ghl(env, 'POST', '/contacts/', '2021-07-28', contact); });
     contactId = c.contact && c.contact.id;
     if (!contactId) throw new Error('GHL gav intet contact.id');
+    await ghl(env, 'POST', `/contacts/${contactId}/notes`, '2021-07-28', { body: `Startede en ansøgning på fuldtbooketmusiker.dk${en ? '/international' : ''} (kontaktinfo udfyldt, ikke booket endnu).` }).catch(e => console.log('fbm note', e.message));
   }
-  // kontakt-trinnet: opportunity i "Lead" i pipelinen "fuldt booket musiker" (bookingen rykker den til "Møde Booket").
-  // Ved booking uden kontakt-trin (lead) springes det over, så stadiet ikke skifter to gange på ét sekund.
-  const opp = lead ? await fbmOpp(env, l, contactId, ours, FBM_APP.stageLead) : false;
-  await env.DB.prepare(`UPDATE leads SET ghl_contact_id = ?, notified_flags = notified_flags || ? WHERE id = ?`).bind(contactId, (ours ? 'ghlnew,' : '') + (opp ? 'oppnew,' : ''), l.id).run();
+  // Ingen opportunity på kontakt-trinnet (Oskars ordre 14/11: GHL skal opføre sig som før). Den oprettes/flyttes først ved
+  // bookingen, direkte til "Møde Booket", så evt. workflows på pipeline-stadier ser præcis det samme som før.
+  await env.DB.prepare(`UPDATE leads SET ghl_contact_id = ?, notified_flags = notified_flags || ? WHERE id = ?`).bind(contactId, ours ? 'ghlnew,' : '', l.id).run();
   return { contactId, ours };
 }
-// Opportunity i pipelinen. mayMove = kontakten eller opportunity'en er vores: upsert (flytter stadiet). Ellers kun oprettelse;
-// har kontakten allerede en opportunity i pipelinen (OPPORTUNITY_NO_DUPLICATE), røres den ikke (den kan være længere i salget).
-async function fbmOpp(env, l, contactId, mayMove, stageId) {
+// Opportunity i pipelinen ved bookingen: upsert til "Møde Booket" som før 14/11 (opretter eller flytter den).
+async function fbmOpp(env, l, contactId, stageId) {
   const cur = await env.DB.prepare('SELECT name, email FROM leads WHERE id = ?').bind(l.id).first() || l;
   const opp = { pipelineId: FBM_APP.pipeline, locationId: env.GHL_LOCATION_ID, contactId, name: (cur.name || cur.email || 'Ansøgning').trim() + (fbmEn(l) ? ' (EN)' : ''),
     status: 'open', pipelineStageId: stageId, source: 'Fuldtbooketmusiker.dk' };
-  try { await ghl(env, 'POST', mayMove ? '/opportunities/upsert' : '/opportunities/', '2021-07-28', opp); return true; }
+  try { await ghl(env, 'POST', '/opportunities/upsert', '2021-07-28', opp); return true; }
   catch (e) { console.log('ghl opportunity', e.message); return false; }
 }
 
@@ -967,7 +967,8 @@ async function fbmGhlBook(env, lead, startMs, endMs, fbm) {
     await ghl(env, 'PUT', `/contacts/${contactId}`, '2021-07-28', { name: cur.name.trim(), firstName: parts[0], lastName: parts.slice(1).join(' ') || '', email: cur.email.trim(), ...(e164(cur.phone) ? { phone: e164(cur.phone) } : {}) })
       .catch(e => console.log('fbm kontakt ret', e.message));
   }
-  await ghl(env, 'POST', `/contacts/${contactId}/tags`, '2021-07-28', { tags: [...fbmTags(lead), 'fbm-booket'] }).catch(e => console.log('fbm tags', e.message));
+  // fbm-kvalificeret som før (alle tæller som kvalificerede fra 14/11; fbm-ikke-kvalificeret sættes aldrig). fbm-booket er nyt
+  await ghl(env, 'POST', `/contacts/${contactId}/tags`, '2021-07-28', { tags: [...fbmTags(lead), 'fbm-kvalificeret', 'fbm-booket'] }).catch(e => console.log('fbm tags', e.message));
   // titlen kan kunden se i invitationen: ingen score i den
   const appt = await ghl(env, 'POST', '/calendars/events/appointments', '2021-04-15', {
     calendarId, locationId, contactId, assignedUserId: F.user, startTime: isoCph(startMs), endTime: isoCph(endMs),
@@ -984,8 +985,8 @@ async function fbmGhlBook(env, lead, startMs, endMs, fbm) {
       ...([src.utm_source, src.utm_campaign, src.utm_content].some(Boolean) ? ['', 'Kilde: ' + [src.utm_source, src.utm_campaign, src.utm_content].filter(Boolean).join(' / ')] : [])].join('\n');
     await Promise.all([
       ghl(env, 'POST', `/contacts/${contactId}/notes`, '2021-07-28', { body: note }).catch(e => console.log('ghl note fejl', e.message)),
-      // "Møde Booket": vores kontakt eller vores opportunity fra kontakt-trinnet rykkes; en eksisterende opportunity røres ikke
-      fbmOpp(env, lead, contactId, ours || String(cur.notified_flags || '').includes('oppnew,'), F.stageQ),
+      // "Møde Booket" som før 14/11 (upsert)
+      fbmOpp(env, lead, contactId, F.stageQ),
       (async () => {
         let meet = meetOf(appt);
         if (!meet && apptId) meet = meetOf(await ghl(env, 'GET', `/calendars/events/appointments/${apptId}`, '2021-04-15').catch(() => null));
