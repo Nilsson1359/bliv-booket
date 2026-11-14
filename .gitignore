@@ -1,3 +1,5 @@
 _site/
 .wrangler/
 node_modules/
+tools/mock_calls.jsonl
+.dev.vars

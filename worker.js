@@ -36,6 +36,13 @@ async function hashedPhone(v) {
   return [await sha256(v)];
 }
 
+// ───────── lokal test: DEV_MOCK ─────────
+// Sættes KUN i .dev.vars (wrangler dev --local), aldrig i wrangler.toml: så går GHL-, Meta- og Telegram-kald til en lokal mock
+// i stedet for de rigtige tjenester (tools/mock_ghl.mjs). Uden DEV_MOCK bruges de rigtige adresser som altid.
+const graphBase = env => env.DEV_MOCK ? env.DEV_MOCK + '/graph' : 'https://graph.facebook.com';
+const tgBase = env => env.DEV_MOCK ? env.DEV_MOCK + '/tg' : 'https://api.telegram.org';
+const ghlBase = env => env.DEV_MOCK ? env.DEV_MOCK + '/ghl' : GHL_BASE;
+
 // ───────── Meta CAPI ─────────
 async function handleConv(request, env) {
   const origin = request.headers.get('Origin') || '';
@@ -63,7 +70,7 @@ async function handleConv(request, env) {
   };
   const payload = { data: [event] };
   if (body.test_event_code) payload.test_event_code = str(body.test_event_code, 40);
-  const r = await fetch(`https://graph.facebook.com/v21.0/${env.META_PIXEL_ID}/events?access_token=${encodeURIComponent(env.META_CAPI_TOKEN)}`, {
+  const r = await fetch(`${graphBase(env)}/v21.0/${env.META_PIXEL_ID}/events?access_token=${encodeURIComponent(env.META_CAPI_TOKEN)}`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
   });
   const res = await r.json().catch(() => ({}));
@@ -410,7 +417,7 @@ const addDays = (ymd, n) => { const [y, m, d] = ymd.split('-').map(Number); retu
 const tgEsc = s => String(s ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 async function tgSend(env, text) {
   if (!env.TG_BOT_TOKEN || !env.TG_CHAT_ID) return;
-  await fetch(`https://api.telegram.org/bot${env.TG_BOT_TOKEN}/sendMessage`, {
+  await fetch(`${tgBase(env)}/bot${env.TG_BOT_TOKEN}/sendMessage`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ chat_id: env.TG_CHAT_ID, text: text.slice(0, 4000), parse_mode: 'HTML', disable_web_page_preview: true }),
   }).catch(() => {});
@@ -427,7 +434,7 @@ function leadText(title, l) {
   const s = [src.utm_source, src.utm_campaign, src.utm_content].filter(Boolean).join(' / ') || src.ref_host;
   if (s) lines.push('🔗 ' + tgEsc(s));
   if (SPLIT.includes(src.ver)) lines.push('🧪 Split-test: ' + src.ver);
-  if (l.score) lines.push('🏷 Lead-score: ' + l.score);
+  if (l.score) lines.push('🏷 Info-score: ' + l.score + ' (styrer ikke noget)');
   if (l.city || l.country) lines.push('📍 ' + tgEsc([l.city, l.country].filter(Boolean).join(', ')));
   lines.push('https://fuldtbooketmusiker.dk/admin');
   return lines.join('\n');
@@ -477,9 +484,17 @@ async function handleLead(request, env, ctx) {
       ip, str(cf.city, 80), str(cf.country, 8))
     .first();
   if (!row) return json({ error: 'too many writes' }, 429); // for mange skrivninger på lid ELLER for mange nye leads fra IP'en
+  if (isApp(b.page)) {
+    // ansøgningen (14/11 2026: kontakt -> kalender -> spørgsmål): kontakt bekræftet = lead i Telegram + GHL-kontakt med det samme,
+    // så den kan følges op, selv om de aldrig booker. Spørgsmålene efter bookingen afsluttes med final:true (gammel kode: extra:true).
+    const fin = b.final === true || b.extra === true;
+    ctx.waitUntil((async () => {
+      if (b.contact === true && fbmContactOk(row)) await fbmContactStep(env, row, ip);
+      if (fin && row.booked_start && await claimFlag(env, lid, 'fin')) await fbmFinalize(env, lid, false);
+    })().catch(e => console.log('lead efterarbejde', String(e && e.message || e))));
+    return json({ ok: true });
+  }
   ctx.waitUntil((async () => {
-    // ansøgningen: oplysningerne efter bookingen (Instagram, hjemmeside, besætning) skrives på GHL-kontakten
-    if (isApp(b.page) && b.extra === true && row.ghl_contact_id) await fbmContactExtra(env, row);
     if (!tgOn(env, b.page)) return;
     if (hasContact(row) && await claimFlag(env, lid, 'contact')) await tgSend(env, leadText('📝 Delvist lead', row));
     if (row.done && await claimFlag(env, lid, 'done')) await tgSend(env, leadText(INQUIRY_PAGES[b.page] ? '💌 Ny forespørgsel' : '✅ Formular udfyldt', row));
@@ -572,7 +587,7 @@ const ghlOn = (env, page) => !!(env.GHL_TOKEN && env.GHL_LOCATION_ID && ghlCalen
 async function ghl(env, method, path, version, body) {
   const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 8000);
   try {
-    const r = await fetch(GHL_BASE + path, {
+    const r = await fetch(ghlBase(env) + path, {
       method, signal: ctl.signal,
       // GHL's Cloudflare afviser kald uden User-Agent (fejl 1010)
       headers: { 'User-Agent': 'fuldtbooketmusiker.dk/1.0', Authorization: 'Bearer ' + env.GHL_TOKEN, Version: version, Accept: 'application/json', ...(body ? { 'Content-Type': 'application/json' } : {}) },
@@ -705,17 +720,12 @@ async function handleBook(request, env, ctx) {
   const lead = await env.DB.prepare('SELECT * FROM leads WHERE id = ?').bind(lid).first();
   if (!lead) return json({ error: 'unknown lead' }, 404);
   if (!hasContact(lead)) return json({ error: 'missing contact' }, 400);
-  // ansøgningen: scoren regnes her på serveren ud fra de gemte svar (aldrig fra browseren)
+  // ansøgningen (14/11 2026): kontakt -> kalender -> spørgsmål. Bookingen kræver kun gyldig kontaktinfo; spørgsmålene og
+  // info-scoren kommer bagefter (fbmFinalize). Alle booker i Strategisamtale, og alle bookinger tæller i Meta (Oskars ordre).
   let fbm = null;
   if (isApp(lead.page)) {
-    let ans = {}; try { ans = JSON.parse(lead.answers_json || '{}'); } catch { }
-    const rules = await fbmRules(env);
-    fbm = fbmScore(ans, rules);
-    if (fbm.missing) return json({ error: 'missing answers' }, 400);
-    if (fbm.knockout) return json({ error: 'not eligible' }, 403);
-    fbm.qualified = fbmQualified(rules).includes(fbm.score);
-    fbm.fbp = str(b.fbp, 120); fbm.fbc = str(b.fbc, 300);
-    fbm.track = b.track === true;   // kun forsiden (window.FBM_LIVE); test-siden /new-form-setup tæller ikke i Meta
+    if (!fbmContactOk(lead)) return json({ error: 'missing contact' }, 400);
+    fbm = { fbp: str(b.fbp, 120), fbc: str(b.fbc, 300), track: b.track === true };   // track: kun forsiden (window.FBM_LIVE); /new-form-setup tæller ikke i Meta
   }
   if (lead.booked_start) {
     if (lead.booked_start === startMs) return json({ ok: true, start: isoCph(lead.booked_start), end: isoCph(lead.booked_end), source: lead.ghl_appt_id ? 'ghl' : 'fallback', already: true });
@@ -731,10 +741,10 @@ async function handleBook(request, env, ctx) {
   const s = await computeSlots(env, lead.page, day, 1);
   if (!(s.slots[day] || []).includes(startMs)) return json({ error: 'slot taken' }, 409);
   const endMs = startMs + s.durationMin * 60000;
-  const claim = await env.DB.prepare(`UPDATE leads SET booked_start = ?1, booked_end = ?2, updated_ts = ?3, done = 1, booked_ip = ?5, score = ?6, booked_at = ?3
+  const claim = await env.DB.prepare(`UPDATE leads SET booked_start = ?1, booked_end = ?2, updated_ts = ?3, done = 1, booked_ip = ?5, booked_at = ?3
       WHERE id = ?4 AND booked_start IS NULL AND NOT EXISTS (SELECT 1 FROM leads o WHERE o.booked_start = ?1)
         AND (?5 = '' OR (SELECT COUNT(*) FROM leads o INDEXED BY idx_leads_booked_ip WHERE o.booked_ip = ?5 AND o.booked_start > ?3) < ${MAX_BOOKINGS_PER_IP})`)
-    .bind(startMs, endMs, Date.now(), lid, ip, fbm ? fbm.score : null).run().catch(() => null); // unik index fanger samtidige bookinger
+    .bind(startMs, endMs, Date.now(), lid, ip).run().catch(() => null); // unik index fanger samtidige bookinger
   if (!claim || (claim.meta && claim.meta.changes) !== 1) {
     const c = ip ? await env.DB.prepare('SELECT COUNT(*) AS n FROM leads INDEXED BY idx_leads_booked_ip WHERE booked_ip = ? AND booked_start > ?').bind(ip, Date.now()).first() : null;
     return c && c.n >= MAX_BOOKINGS_PER_IP ? json({ error: 'too many bookings' }, 429) : json({ error: 'slot taken' }, 409);
@@ -749,19 +759,25 @@ async function handleBook(request, env, ctx) {
         const { contactId, apptId, meet, after } = await ghlBook(env, lead, startMs, endMs, fbm);
         await env.DB.prepare('UPDATE leads SET ghl_contact_id = ?, ghl_appt_id = ?, meet_url = ? WHERE id = ?').bind(contactId, apptId, meet || '', lid).run();
         if (after) ctx.waitUntil(after().catch(e => console.log('ghl efterarbejde', String(e && e.message || e))));
-        // Instagram/tekst sendt fra tak-skærmen mens GHL arbejdede -> skrives på kontakten nu
-        if (fbm) { const row = await env.DB.prepare('SELECT * FROM leads WHERE id = ?').bind(lid).first(); if (row) await fbmContactExtra(env, row).catch(() => {}); }
+        // spørgsmålene blev færdige, mens GHL arbejdede -> svarene skrives på kontakten nu (fbmFinalize er idempotent)
+        if (fbm) { const row = await env.DB.prepare('SELECT notified_flags FROM leads WHERE id = ?').bind(lid).first(); if (row && String(row.notified_flags).includes('fin,')) await fbmFinalize(env, lid, false).catch(() => {}); }
         source = 'ghl';
       } catch (e) { ghlErr = str(e && e.message || e, 300); }
     }
     return { source, ghlErr };
   };
   const followUp = async ({ ghlErr }) => {
-    const booked = { ...lead, booked_start: startMs, booked_end: endMs, score: fbm ? fbm.score : null };
-    // kun kvalificerede bookinger lærer Meta, hvem der er gode (samme event_id som pixel'en i browseren = ingen dobbelttælling)
+    const booked = { ...lead, booked_start: startMs, booked_end: endMs };
+    // ALLE bookinger tæller i Meta (14/11 2026, før kun kvalificerede): Schedule + Lead, samme event_id'er som pixel'en i browseren
+    // (fbm-<lid> og fbm-lead-<lid>) = ingen dobbelttælling. Lead sendes her i stedet for fra /tak, så den også tæller, når
+    // nogen booker og lukker vinduet før spørgsmålene (tak-siden springer sin egen Lead over via sessionStorage bk_conv).
     const en = lead.page === 'international';
-    if (fbm && fbm.qualified && fbmLive(env) && fbm.track) await capiSend(env, { event_name: 'Schedule', event_id: 'fbm-' + lid, url: 'https://fuldtbooketmusiker.dk/' + (en ? 'international/' : ''),
-      ip, ua, fbp: fbm.fbp, fbc: fbm.fbc, name: lead.name, em: lead.email, ph: lead.phone, country: en ? lead.country : 'dk', content_name: en ? 'Ansøgning kvalificeret (EN)' : 'Ansøgning kvalificeret' });
+    if (fbm && fbmLive(env) && fbm.track) {
+      const base = { url: 'https://fuldtbooketmusiker.dk/' + (en ? 'international/' : ''), ip, ua, fbp: fbm.fbp, fbc: fbm.fbc, name: lead.name, em: lead.email, ph: lead.phone, country: en ? lead.country : 'dk' };
+      // content_name er uændret fra før (evt. tilpassede konverteringer i Meta filtrerer på den), selv om alle nu tæller
+      await capiSend(env, { ...base, event_name: 'Schedule', event_id: 'fbm-' + lid, content_name: en ? 'Ansøgning kvalificeret (EN)' : 'Ansøgning kvalificeret' });
+      await capiSend(env, { ...base, event_name: 'Lead', event_id: 'fbm-lead-' + lid, content_name: 'Samtale booket' });
+    }
     // GHL-fejl meldes altid (også i forhåndsvisning): kunden har fået en bekræftelse, så aftalen skal oprettes manuelt
     if (ghlErr) { await tgSend(env, `⚠️ GHL fejlede: ${tgEsc(ghlErr)}\nBookingen er gemt i D1, opret den manuelt i GHL.\n\n` + leadText('📅 Booket', booked)); await claimFlag(env, lid, 'booked'); return; }
     if (!tgOn(env, lead.page)) return;
@@ -770,20 +786,23 @@ async function handleBook(request, env, ctx) {
   let source = ghlOn(env, lead.page) ? 'ghl' : 'fallback';
   if (fbm) ctx.waitUntil(pushGhl().then(followUp).catch(e => console.log('book efterarbejde', String(e && e.message || e))));
   else { const r = await pushGhl(); source = r.source; ctx.waitUntil(followUp(r).catch(e => console.log('book efterarbejde', String(e && e.message || e)))); }
-  // cv = om annonce-konverteringen skal sendes fra browseren (kun kvalificerede ansøgninger; gig-siderne altid)
-  return json({ ok: true, start: isoCph(startMs), end: isoCph(endMs), source, cv: fbm ? (fbm.qualified ? 1 : 0) : 1 });
+  // cv = om annonce-konverteringen skal sendes fra browseren (14/11 2026: altid, også ansøgningen)
+  return json({ ok: true, start: isoCph(startMs), end: isoCph(endMs), source, cv: 1 });
 }
 
 // ───────── ansøgning: musikernes ansøgningsform på fuldtbooketmusiker.dk (4/11 2026) ─────────
-// Ét spørgsmål ad gangen (som Typeform), svar gemmes løbende via /api/lead (page=ansoegning).
-// Covermusik er et hårdt stop før kontaktinfo. Resten scores A/B/C her på serveren:
-// Kvalificerede (valgt i admin, standard A/B) booker i "Strategisamtale", C i "Afklaringssamtale" (begge Oscars, neutrale navne kunden kan se).
-// Kontakt + svar i GHL-felter + tags + pipeline-trin + note. Meta får kun Schedule for kvalificerede.
-// Ingen SMS/mail herfra. FBM_FORM_LIVE != '1' = forhåndsvisning: ingen CAPI, ingen pixel, ingen Telegram.
+// 14/11 2026 (Oskars ordre): KONTAKT -> KALENDER -> SPØRGSMÅL. Ingen kvalificering foran bookingen:
+//  1) navn/telefon/e-mail: lead i D1 + GHL-kontakt med det samme (findes kontakten i forvejen: kun tags + note, intet overskrives)
+//  2) kalenderen kommer af sig selv; alle booker i "Strategisamtale" (engelsk: "Strategy Call"), pipeline "Møde Booket"
+//  3) spørgsmålene efter bookingen ("Sidste trin, så Oscar kan forberede samtalen"), gemt pr. svar via /api/lead.
+//     A/B/C-scoren regnes stadig, men KUN som info (D1 leads.score, GHL-felt, admin, Telegram). Den styrer intet.
+// Alle bookinger tæller i Meta (Schedule + Lead). "Afklaringssamtale" og /bekraeftet bruges ikke længere.
+// Ingen mail herfra. FBM_FORM_LIVE != '1' = forhåndsvisning: ingen CAPI, ingen pixel, ingen Telegram, ingen SMS.
 const FBM_APP = {
   pipeline: 'YHh9YrfPgUjeimsRU3Vx',
-  stageQ: 'ea77c8f2-e34b-49a8-a48e-1e8b39641669',    // "Møde Booket"
-  stageC: 'c4371fb8-e3df-41f4-a096-a0ecc7d153c0',    // "Ikke kvalificeret"
+  stageQ: 'ea77c8f2-e34b-49a8-a48e-1e8b39641669',    // "Møde Booket" (booking)
+  stageLead: '6bca994b-ec12-4da4-9d5a-a5d3f60fce50', // "Lead" (kontakt-trinnet, 14/11 2026; platformen mapper den til 'ny')
+  stageC: 'c4371fb8-e3df-41f4-a096-a0ecc7d153c0',    // "Ikke kvalificeret": bruges ikke længere (ingen kvalificering foran bookingen fra 14/11 2026)
   user: 'uHdnK0qAOcJCDq4ruP8Q',                      // Oscar (ejer begge kalendere)
   // svarmuligheder = præcis teksterne i GHL-felterne (SINGLE_OPTIONS skal matche)
   opts: {
@@ -813,7 +832,8 @@ const tgOn = (env, page) => !isApp(page) || fbmLive(env);
 
 // ─── regler (styres fra /admin -> fanen Ansøgningsform, gemmes i D1 kv 'fbm_rules') ───
 // Hvert svar har et niveau: ok | B | C | stop. Kombinationsregler: "hvis X og Y, så B/C".
-// Score: stop (formen stopper, kan ikke booke) > C > B > A. Kvalificerede scorer vælges også i admin.
+// Score: C > B > A. "stop" er slået fra 14/11 2026 (stopper ikke længere formen) og tæller som C. Reglerne i D1 bevares uændret.
+// "Kvalificerede" (admin) bruges ikke længere til noget, men gemmes stadig.
 // Standard = udgangspunktet fra kaldet 4/11: dem Oscar har lukket spiller 30-100 jobs; 10-20 jobs har ikke pengene.
 const FBM_LEVELS = ['ok', 'B', 'C', 'stop'];
 const FBM_Q = ['jobs', 'pris', 'pris_maal', 'jobs_maal', 'x3', 'cover', 'oms', 'invest'];
@@ -850,12 +870,10 @@ async function fbmRules(env) {
   const r = await kvGet(env.DB, 'fbm_rules', null).catch(() => null);
   return r ? fbmCleanRules(r) : FBM_DEFAULT_RULES;
 }
-const fbmQualified = rules => (rules && rules.qualified) || ['A', 'B'];
-// -> { score: 'A'|'B'|'C', reason } | { knockout } | { missing }   (samme regel-motor som i admin.html, simuleringen)
+// -> { score: 'A'|'B'|'C', reason } | { missing }   (samme regel-motor som i admin.html, simuleringen). Kun info.
 function fbmScore(a, rules) {
   const O = FBM_APP.opts, R = rules || FBM_DEFAULT_RULES, L = FBM_APP.labels;
-  const lv = q => (R.answers[q] && R.answers[q][a[q]]) || 'ok';
-  if (FBM_Q.some(q => a[q] && lv(q) === 'stop')) return { knockout: true };
+  const lv = q => { const l = (R.answers[q] && R.answers[q][a[q]]) || 'ok'; return l === 'stop' ? 'C' : l; };   // stop slået fra = C
   if (FBM_Q.some(q => !O[q].includes(a[q]))) return { missing: true };
   const why = { B: [], C: [] };
   for (const q of FBM_Q) { const l = lv(q); if (l === 'B' || l === 'C') why[l].push(`${L[q]}: ${a[q]}`); }
@@ -867,47 +885,107 @@ function fbmScore(a, rules) {
 const fbmFieldList = (pairs) => pairs.filter(([, v]) => v !== '' && v != null && !(Array.isArray(v) && !v.length)).map(([k, v]) => ({ id: FBM_APP.fields[k], field_value: v }));
 const fbmOptraeder = v => String(v || '').split(', ').filter(x => FBM_APP.optraeder.includes(x));
 
+const fbmContactOk = l => (l.name || '').trim().length >= 2 && validEmail((l.email || '').trim()) && phoneDigits(l.phone).length >= 8;
+const fbmEn = l => l.page === 'international';
+const fbmTags = l => ['fbm-ansoegning', ...(fbmEn(l) ? ['fbm-international', 'sprog-engelsk'] : [])];
+const MAX_GHL_CONTACTS_PER_IP_DAY = 5;
+
+// Kontakt bekræftet i formen (felterne udfyldt og forladt, eller tid valgt): Telegram + GHL-kontakt med det samme
+async function fbmContactStep(env, row, ip) {
+  if (tgOn(env, row.page) && await claimFlag(env, row.id, 'contact')) await tgSend(env, leadText('📝 Nyt lead (kontaktinfo, ikke booket endnu)', row));
+  if (!ghlOn(env, row.page) || row.ghl_contact_id) return;
+  // misbrugs-værn: højst MAX_GHL_CONTACTS_PER_IP_DAY nye GHL-kontakter pr. IP pr. døgn herfra (bookingen opretter den ellers)
+  if (ip) {
+    const c = await env.DB.prepare(`SELECT COUNT(*) AS n FROM leads INDEXED BY idx_leads_ip WHERE ip = ? AND created_ts > ? AND instr(notified_flags, 'ghlc,') > 0`).bind(ip, Date.now() - 86400000).first();
+    if (c && c.n >= MAX_GHL_CONTACTS_PER_IP_DAY) return;
+  }
+  await fbmEnsureContact(env, row.id, true).catch(e => console.log('fbm kontakt', String(e && e.message || e)));
+}
+
+// GHL-kontakten til leadet -> { contactId, ours }. ours = vi oprettede den (så må vi rette navn/felter på den).
+// Findes kontakten i forvejen (samme e-mail eller telefon), overskrives INTET: kun tags + note (formen er åben og uden login).
+// Kun én opretter ad gangen (flag 'ghlc' i D1); en booking der kommer imens, venter på kontakt-id'et.
+async function fbmEnsureContact(env, lid, lead = false) {
+  for (let i = 0; i < 24; i++) {
+    const l = await env.DB.prepare('SELECT * FROM leads WHERE id = ?').bind(lid).first();
+    if (!l) throw new Error('lead findes ikke');
+    if (l.ghl_contact_id) return { contactId: l.ghl_contact_id, ours: String(l.notified_flags).includes('ghlnew,') };
+    if (await claimFlag(env, lid, 'ghlc')) {
+      try { return await fbmCreateContact(env, l, lead); }
+      catch (e) { await env.DB.prepare(`UPDATE leads SET notified_flags = replace(notified_flags, 'ghlc,', '') WHERE id = ?`).bind(lid).run(); throw e; }
+    }
+    await new Promise(r => setTimeout(r, 500));
+  }
+  throw new Error('GHL-kontakten blev ikke oprettet i tide');
+}
+async function fbmCreateContact(env, l, lead) {
+  const L = env.GHL_LOCATION_ID, en = fbmEn(l), parts = l.name.trim().split(/\s+/), email = l.email.trim(), phone = e164(l.phone);
+  let src = {}; try { src = JSON.parse(l.src_json || '{}'); } catch { }
+  const dup = async q => ((await ghl(env, 'GET', `/contacts/search/duplicate?locationId=${L}&${q}`, '2021-07-28').catch(() => ({}))).contact || {}).id || '';
+  let contactId = await dup('email=' + encodeURIComponent(email)) || (phone ? await dup('number=' + encodeURIComponent(phone)) : '');
+  const ours = !contactId;
+  if (!ours) {
+    await ghl(env, 'POST', `/contacts/${contactId}/tags`, '2021-07-28', { tags: fbmTags(l) }).catch(e => console.log('fbm tags', e.message));
+    await ghl(env, 'POST', `/contacts/${contactId}/notes`, '2021-07-28', { body: [`Startede en ansøgning på fuldtbooketmusiker.dk${en ? '/international' : ''}.`,
+      `Kontakten fandtes i forvejen, så navn/telefon/felter er IKKE ændret. Oplyst i formen: ${l.name.trim()} · ${email} · ${l.phone}`].join('\n') }).catch(e => console.log('fbm note', e.message));
+  } else {
+    const contact = { locationId: L, name: l.name.trim(), firstName: parts[0], lastName: parts.slice(1).join(' ') || undefined, email, phone: phone || undefined,
+      tags: fbmTags(l), source: 'fuldtbooketmusiker.dk/' + (en ? 'international' : 'ansoegning'),
+      customFields: fbmFieldList([['utm_source', src.utm_source], ['utm_medium', src.utm_medium], ['utm_campaign', src.utm_campaign], ['utm_content', src.utm_content], ['event_id', 'fbm-' + l.id]]) };
+    Object.keys(contact).forEach(k => contact[k] === undefined && delete contact[k]);
+    // afviser GHL et felt, prøver vi igen uden custom fields
+    const c = await ghl(env, 'POST', '/contacts/', '2021-07-28', contact)
+      .catch(e => { console.log('fbm kontakt m. felter', e.message); delete contact.customFields; return ghl(env, 'POST', '/contacts/', '2021-07-28', contact); });
+    contactId = c.contact && c.contact.id;
+    if (!contactId) throw new Error('GHL gav intet contact.id');
+  }
+  // kontakt-trinnet: opportunity i "Lead" i pipelinen "fuldt booket musiker" (bookingen rykker den til "Møde Booket").
+  // Ved booking uden kontakt-trin (lead) springes det over, så stadiet ikke skifter to gange på ét sekund.
+  const opp = lead ? await fbmOpp(env, l, contactId, ours, FBM_APP.stageLead) : false;
+  await env.DB.prepare(`UPDATE leads SET ghl_contact_id = ?, notified_flags = notified_flags || ? WHERE id = ?`).bind(contactId, (ours ? 'ghlnew,' : '') + (opp ? 'oppnew,' : ''), l.id).run();
+  return { contactId, ours };
+}
+// Opportunity i pipelinen. mayMove = kontakten eller opportunity'en er vores: upsert (flytter stadiet). Ellers kun oprettelse;
+// har kontakten allerede en opportunity i pipelinen (OPPORTUNITY_NO_DUPLICATE), røres den ikke (den kan være længere i salget).
+async function fbmOpp(env, l, contactId, mayMove, stageId) {
+  const cur = await env.DB.prepare('SELECT name, email FROM leads WHERE id = ?').bind(l.id).first() || l;
+  const opp = { pipelineId: FBM_APP.pipeline, locationId: env.GHL_LOCATION_ID, contactId, name: (cur.name || cur.email || 'Ansøgning').trim() + (fbmEn(l) ? ' (EN)' : ''),
+    status: 'open', pipelineStageId: stageId, source: 'Fuldtbooketmusiker.dk' };
+  try { await ghl(env, 'POST', mayMove ? '/opportunities/upsert' : '/opportunities/', '2021-07-28', opp); return true; }
+  catch (e) { console.log('ghl opportunity', e.message); return false; }
+}
+
 async function fbmGhlBook(env, lead, startMs, endMs, fbm) {
-  const locationId = env.GHL_LOCATION_ID, F = FBM_APP;
-  const en = lead.page === 'international';   // engelsk: egne kalendere (engelsk navn/titel i invitationen), tag fbm-international
-  const calendarId = en ? (fbm.qualified ? env.GHL_CALENDAR_FBM_EN_Q : env.GHL_CALENDAR_FBM_EN_U) : (fbm.qualified ? env.GHL_CALENDAR_FBM_Q : env.GHL_CALENDAR_FBM_U);
-  if (!calendarId) throw new Error('kalender-id mangler (GHL_CALENDAR_FBM' + (en ? '_EN' : '') + '_Q/U)');
-  let ans = {}, src = {}; try { ans = JSON.parse(lead.answers_json || '{}'); } catch { } try { src = JSON.parse(lead.src_json || '{}'); } catch { }
-  const parts = (lead.name || '').trim().split(/\s+/);
-  const customFields = fbmFieldList([
-    ...Object.keys(F.opts).map(k => [k, F.opts[k].includes(ans[k]) ? ans[k] : '']),
-    ['score', fbm.score], ['reason', fbm.reason],
-    ['instagram', str(ans.instagram, 200)], ['hjemmeside', str(ans.hjemmeside, 200)], ['optraeder', fbmOptraeder(ans.optraeder)], ['om', str(ans.om, 2000)],
-    ['utm_source', src.utm_source], ['utm_medium', src.utm_medium], ['utm_campaign', src.utm_campaign], ['utm_content', src.utm_content], ['event_id', 'fbm-' + lead.id],
-  ]);
-  const contact = { locationId, name: lead.name || undefined, firstName: parts[0] || undefined, lastName: parts.slice(1).join(' ') || undefined,
-    email: validEmail(lead.email) ? lead.email : undefined, phone: e164(lead.phone) || undefined,
-    tags: ['fbm-ansoegning', 'fbm-score-' + fbm.score.toLowerCase(), fbm.qualified ? 'fbm-kvalificeret' : 'fbm-ikke-kvalificeret', ...(en ? ['fbm-international', 'sprog-engelsk'] : [])],
-    source: 'fuldtbooketmusiker.dk/' + (en ? 'international' : 'ansoegning'), customFields };
-  Object.keys(contact).forEach(k => contact[k] === undefined && delete contact[k]);
-  const c = await ghl(env, 'POST', '/contacts/upsert', '2021-07-28', contact);
-  const contactId = c.contact && c.contact.id;
-  if (!contactId) throw new Error('GHL upsert gav intet contact.id');
+  const locationId = env.GHL_LOCATION_ID, F = FBM_APP, en = fbmEn(lead);
+  // alle booker i Strategisamtale (engelsk: Strategy Call). Afklaringssamtale (C) bruges ikke længere
+  const calendarId = en ? env.GHL_CALENDAR_FBM_EN_Q : env.GHL_CALENDAR_FBM_Q;
+  if (!calendarId) throw new Error('kalender-id mangler (GHL_CALENDAR_FBM' + (en ? '_EN' : '') + '_Q)');
+  const { contactId, ours } = await fbmEnsureContact(env, lead.id);
+  const cur = await env.DB.prepare('SELECT * FROM leads WHERE id = ?').bind(lead.id).first() || lead;
+  if (ours) {   // vores egen kontakt: navn/telefon/mail som de står nu (de kan have rettet en slåfejl efter kontakt-trinnet)
+    const parts = cur.name.trim().split(/\s+/);
+    await ghl(env, 'PUT', `/contacts/${contactId}`, '2021-07-28', { name: cur.name.trim(), firstName: parts[0], lastName: parts.slice(1).join(' ') || '', email: cur.email.trim(), ...(e164(cur.phone) ? { phone: e164(cur.phone) } : {}) })
+      .catch(e => console.log('fbm kontakt ret', e.message));
+  }
+  await ghl(env, 'POST', `/contacts/${contactId}/tags`, '2021-07-28', { tags: [...fbmTags(lead), 'fbm-booket'] }).catch(e => console.log('fbm tags', e.message));
   // titlen kan kunden se i invitationen: ingen score i den
   const appt = await ghl(env, 'POST', '/calendars/events/appointments', '2021-04-15', {
     calendarId, locationId, contactId, assignedUserId: F.user, startTime: isoCph(startMs), endTime: isoCph(endMs),
-    title: `${en ? 'Strategy Call' : 'Strategisamtale'} · ${lead.name || lead.email || lead.phone}`, appointmentStatus: 'confirmed', toNotify: true,
+    title: `${en ? 'Strategy Call' : 'Strategisamtale'} · ${cur.name || cur.email || cur.phone}`, appointmentStatus: 'confirmed', toNotify: true,
   });
   const apptId = appt.id || (appt.appointment && appt.appointment.id) || '';
   const meetOf = a => { const u = String((a && (a.address || (a.appointment && a.appointment.address))) || ''); return MEET_RE.test(u) ? u : ''; };
-  // note, pipeline og Meet-link efter svaret til kunden (sparer et par sekunder på "Booker...")
+  // note, pipeline og Meet-link efter svaret til kunden
   const after = async () => {
-    const extra = [['Instagram', ans.instagram], ['Hjemmeside', ans.hjemmeside], ['Optræder', ans.optraeder], ['Om mig og hvorfor', ans.om]].filter(([, v]) => v);
-    const note = [`Ansøgning fra fuldtbooketmusiker.dk${en ? '/international · ENGELSK, svarede i euro (felterne viser nærmeste kr.-interval), land: ' + (lead.country || '?') : ''} · Lead-score ${fbm.score} (${fbm.qualified ? 'kvalificeret' : 'IKKE kvalificeret'})`, fbm.reason, '',
-      ...(en && ans._eur ? ['Svar i euro: ' + ans._eur, ''] : []),
-      ...Object.keys(F.labels).filter(k => ans[k]).map(k => `${F.labels[k]}: ${ans[k]}`), ...extra.map(([k, v]) => `${k}: ${v}`),
+    let src = {}; try { src = JSON.parse(lead.src_json || '{}'); } catch { }
+    const note = [`Strategisamtale booket fra fuldtbooketmusiker.dk${en ? '/international (ENGELSK, land: ' + (lead.country || '?') + ')' : ''}: ${fbmWhen(startMs)}.`,
+      'Spørgsmålene kommer efter bookingen ("sidste trin"). Svarene lægges på kontakten, når de er udfyldt (eller efter 15 min med det, der er svaret).',
+      ...(!ours ? ['', 'Kontakten fandtes i forvejen, så navn/telefon/felter er ikke ændret.'] : []),
       ...([src.utm_source, src.utm_campaign, src.utm_content].some(Boolean) ? ['', 'Kilde: ' + [src.utm_source, src.utm_campaign, src.utm_content].filter(Boolean).join(' / ')] : [])].join('\n');
     await Promise.all([
       ghl(env, 'POST', `/contacts/${contactId}/notes`, '2021-07-28', { body: note }).catch(e => console.log('ghl note fejl', e.message)),
-      ghl(env, 'POST', '/opportunities/upsert', '2021-07-28', {
-        pipelineId: F.pipeline, locationId, contactId, name: (lead.name || lead.email || 'Ansøgning') + (en ? ' (EN)' : ''), status: 'open',
-        pipelineStageId: fbm.qualified ? F.stageQ : F.stageC, source: 'Fuldtbooketmusiker.dk',
-      }).catch(e => console.log('ghl opportunity fejl', e.message)),
+      // "Møde Booket": vores kontakt eller vores opportunity fra kontakt-trinnet rykkes; en eksisterende opportunity røres ikke
+      fbmOpp(env, lead, contactId, ours || String(cur.notified_flags || '').includes('oppnew,'), F.stageQ),
       (async () => {
         let meet = meetOf(appt);
         if (!meet && apptId) meet = meetOf(await ghl(env, 'GET', `/calendars/events/appointments/${apptId}`, '2021-04-15').catch(() => null));
@@ -917,17 +995,35 @@ async function fbmGhlBook(env, lead, startMs, endMs, fbm) {
   };
   return { contactId, apptId, meet: meetOf(appt), after };
 }
-// Instagram/hjemmeside/besætning fra tak-skærmen -> GHL-kontakten (+ note, så Oscar ser det ved mødet)
-async function fbmContactExtra(env, row) {
-  if (!env.GHL_TOKEN) return;
-  let ans = {}; try { ans = JSON.parse(row.answers_json || '{}'); } catch { }
-  const customFields = fbmFieldList([['instagram', str(ans.instagram, 200)], ['hjemmeside', str(ans.hjemmeside, 200)], ['optraeder', fbmOptraeder(ans.optraeder)], ['om', str(ans.om, 2000)]]);
-  if (!customFields.length) return;
-  if (!(await claimFlag(env, row.id, 'extra'))) return;   // én gang pr. lead (formularen sender kun ved tryk på knappen)
-  await ghl(env, 'PUT', `/contacts/${row.ghl_contact_id}`, '2021-07-28', { customFields });
-  const body = ['Efter booking:', ...[['Instagram', ans.instagram], ['Hjemmeside', ans.hjemmeside], ['Optræder', ans.optraeder]].filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`),
-    ...(ans.om ? ['', 'Om mig og hvorfor:', ans.om] : [])].join('\n');
-  await ghl(env, 'POST', `/contacts/${row.ghl_contact_id}/notes`, '2021-07-28', { body }).catch(() => {});
+
+// Spørgsmålene efter bookingen er færdige (partial=false) eller de forlod dem (partial=true, fra fbmSmsJob efter 15 min):
+// info-score i D1, svar i GHL-felter (kun på vores egen kontakt) + note med alt + Telegram. Idempotent via flag.
+async function fbmFinalize(env, lid, partial) {
+  const l = await env.DB.prepare('SELECT * FROM leads WHERE id = ?').bind(lid).first();
+  if (!l || !l.booked_start) return;
+  let ans = {}; try { ans = JSON.parse(l.answers_json || '{}'); } catch { }
+  const F = FBM_APP, en = fbmEn(l), sc = fbmScore(ans, await fbmRules(env)), n = FBM_Q.filter(q => F.opts[q].includes(ans[q])).length;
+  if (sc.score) await env.DB.prepare('UPDATE leads SET score = ? WHERE id = ?').bind(sc.score, lid).run();
+  if (!partial && tgOn(env, l.page) && await claimFlag(env, lid, 'fintg')) await tgSend(env, leadText(`✅ Ansøgning udfyldt efter booking${sc.score ? ' · info-score ' + sc.score : ''}`, { ...l, score: sc.score || null }));
+  if (!l.ghl_contact_id || !env.GHL_TOKEN) return;   // bookingens GHL-del kalder igen, når kontakten findes
+  if (!(await claimFlag(env, lid, partial ? 'ghlpart' : 'ghlfin'))) return;
+  const ours = String(l.notified_flags).includes('ghlnew,');
+  const extra = [['Instagram', ans.instagram], ['Hjemmeside', ans.hjemmeside], ['Optræder', ans.optraeder]].filter(([, v]) => v);
+  if (ours) {
+    const customFields = fbmFieldList([...FBM_Q.map(k => [k, F.opts[k].includes(ans[k]) ? ans[k] : '']), ['score', sc.score || ''], ['reason', sc.reason || ''],
+      ['instagram', str(ans.instagram, 200)], ['hjemmeside', str(ans.hjemmeside, 200)], ['optraeder', fbmOptraeder(ans.optraeder)], ['om', str(ans.om, 2000)]]);
+    if (customFields.length) await ghl(env, 'PUT', `/contacts/${l.ghl_contact_id}`, '2021-07-28', { customFields }).catch(e => console.log('fbm felter', e.message));
+  }
+  // tags: fbm-sidste-trin-udfyldt / fbm-sidste-trin-mangler (+ info-score som før: fbm-score-a/b/c)
+  await ghl(env, 'POST', `/contacts/${l.ghl_contact_id}/tags`, '2021-07-28', { tags: [partial ? 'fbm-sidste-trin-mangler' : 'fbm-sidste-trin-udfyldt', ...(sc.score ? ['fbm-score-' + sc.score.toLowerCase()] : [])] }).catch(() => {});
+  if (!partial && String(l.notified_flags).includes('ghlpart,')) await ghl(env, 'DELETE', `/contacts/${l.ghl_contact_id}/tags`, '2021-07-28', { tags: ['fbm-sidste-trin-mangler'] }).catch(() => {});
+  const note = [partial ? `Ansøgning IKKE gjort færdig efter booking (${n} af ${FBM_Q.length} spørgsmål besvaret). Det, der er svaret:` : `Ansøgning udfyldt efter booking${en ? ' (ENGELSK, svarede i euro; felterne viser nærmeste kr.-interval)' : ''}.`,
+    ...(sc.score ? [`Info-score ${sc.score} (styrer ikke noget): ${sc.reason}`] : []), '',
+    ...(en && ans._eur ? ['Svar i euro: ' + ans._eur, ''] : []),
+    ...FBM_Q.filter(k => ans[k]).map(k => `${F.labels[k]}: ${ans[k]}`), ...extra.map(([k, v]) => `${k}: ${v}`),
+    ...(ans.om ? ['', 'Om mig og hvorfor:', ans.om] : []),
+    ...(!ours ? ['', 'Kontakten fandtes i forvejen, så felterne er ikke ændret (svarene står kun her).'] : [])].join('\n');
+  await ghl(env, 'POST', `/contacts/${l.ghl_contact_id}/notes`, '2021-07-28', { body: note }).catch(e => console.log('fbm note', e.message));
 }
 // Meta CAPI fra serveren (samme felter som /api/conv)
 async function capiSend(env, e) {
@@ -938,7 +1034,7 @@ async function capiSend(env, e) {
   Object.keys(user_data).forEach(k => user_data[k] === undefined && delete user_data[k]);
   const payload = { data: [{ event_name: e.event_name, event_time: Math.floor(Date.now() / 1000), event_id: e.event_id, event_source_url: e.url, action_source: 'website', user_data,
     custom_data: { content_name: e.content_name || 'Samtale booket', content_category: 'booking' } }] };
-  const r = await fetch(`https://graph.facebook.com/v21.0/${env.META_PIXEL_ID}/events?access_token=${encodeURIComponent(env.META_CAPI_TOKEN)}`, {
+  const r = await fetch(`${graphBase(env)}/v21.0/${env.META_PIXEL_ID}/events?access_token=${encodeURIComponent(env.META_CAPI_TOKEN)}`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
   if (!r.ok) console.log('capi fejl', r.status, str(await r.text().catch(() => ''), 300));
 }
@@ -974,7 +1070,11 @@ function fbmParseReply(t) {
 }
 async function fbmSmsJob(env) {
   if (!env.DB || !env.GHL_TOKEN) return { skipped: true };
-  const cfg = await fbmSmsCfg(env), now = Date.now(), res = { sent: 0, replies: 0 };
+  const cfg = await fbmSmsCfg(env), now = Date.now(), res = { sent: 0, replies: 0, partial: 0 };
+  // 0) booket, men spørgsmålene efter bookingen ikke gjort færdige efter 15 min: det, de nåede at svare, lægges på GHL-kontakten
+  const part = await all(env.DB, `SELECT id FROM leads WHERE page IN ${APP_PAGES_SQL} AND booked_at IS NOT NULL AND booked_at <= ? AND booked_at >= ?
+      AND ghl_contact_id IS NOT NULL AND instr(notified_flags, 'fin,') = 0 AND instr(notified_flags, 'ghlpart,') = 0 ORDER BY booked_at LIMIT 5`, now - FBM_SMS_AFTER, now - 86400000);
+  for (const r of part) { await fbmFinalize(env, r.id, true).catch(e => console.log('fbm delvis', String(e && e.message || e))); res.partial++; }
   // 1) send (kun når formen er live)
   if (cfg.on && fbmLive(env)) {
     const due = await all(env.DB, `SELECT * FROM leads WHERE page IN ${APP_PAGES_SQL} AND booked_at IS NOT NULL AND booked_at <= ? AND booked_at >= ?
@@ -1045,7 +1145,7 @@ async function fbmFormAdmin(env, url) {
   return {
     rules: saved ? fbmCleanRules(saved) : FBM_DEFAULT_RULES, defaults: FBM_DEFAULT_RULES, custom: !!saved, updated: saved && saved.updated || null,
     sms: { ...(await fbmSmsCfg(env)), defaultText: FBM_SMS_DEFAULT.text, afterMin: FBM_SMS_AFTER / 60000 },
-    questions: FBM_Q.map(q => ({ id: q, label: FBM_APP.labels[q], opts: FBM_APP.opts[q] })), live: fbmLive(env),
+    questions: FBM_Q.map(q => ({ id: q, label: FBM_APP.labels[q], opts: FBM_APP.opts[q] })), live: fbmLive(env), stopOff: true,
     rows: rows.map(({ answers_json, ...r }) => { let answers = {}; try { answers = JSON.parse(answers_json || '{}'); } catch { } return { ...r, answers }; }),
   };
 }
@@ -1084,20 +1184,19 @@ async function leadsJSON(env, url) {
     return { ver: v, visitors: (splitVisits.find(x => x.path === `/${g}/${v}`) || {}).visitors || 0,
       started: l.started || 0, contact: l.contact || 0, done: l.done || 0, booked: l.booked || 0 };
   }) }));
-  // ansøgningsformen: hvor mange nåede hvert spørgsmål, hvor mange stoppede, scorer (efter de gemte regler)
-  const rules = await fbmRules(env);
-  const appRows = await all(env.DB, `SELECT answers_json, email, phone, booked_start, score FROM leads WHERE page IN ${APP_PAGES_SQL} AND created_ts >= ?`, from);
-  const app = { started: appRows.length, contact: 0, booked: 0, stopped: 0, a: 0, b: 0, c: 0, extra: 0, ...Object.fromEntries(FBM_Q.map(q => [q, 0])) };
+  // ansøgningsformen (14/11 2026: kontakt -> booket -> spørgsmål): hvor mange nåede hvert trin, info-score for de færdige
+  const appRows = await all(env.DB, `SELECT answers_json, name, email, phone, booked_start, score, notified_flags FROM leads WHERE page IN ${APP_PAGES_SQL} AND created_ts >= ?`, from);
+  const app = { started: appRows.length, contact: 0, booked: 0, final: 0, a: 0, b: 0, c: 0, extra: 0, ...Object.fromEntries(FBM_Q.map(q => [q, 0])) };
   for (const r of appRows) {
     let ans = {}; try { ans = JSON.parse(r.answers_json || '{}'); } catch { }
     for (const q of FBM_Q) if (ans[q]) app[q]++;
-    if (r.email || r.phone) app.contact++;
-    if (fbmScore(ans, rules).knockout) app.stopped++;
+    if (fbmContactOk(r)) app.contact++;
     if (ans.instagram || ans.hjemmeside || ans.om) app.extra++;
+    if (/(^|,)(fin|extra),/.test(String(r.notified_flags))) app.final++;   // extra = færdig i den gamle rækkefølge
     if (r.booked_start) { app.booked++; if (r.score === 'A') app.a++; else if (r.score === 'B') app.b++; else if (r.score === 'C') app.c++; }
   }
   return {
-    funnel, split, ansoegning: { ...app, qualified: fbmQualified(rules), live: fbmLive(env) },
+    funnel, split, ansoegning: { ...app, flow: 'kontakt-foerst', live: fbmLive(env) },
     rows: rows.map(r => {
       let answers = {}, src = {}; try { answers = JSON.parse(r.answers_json || '{}'); } catch { } try { src = JSON.parse(r.src_json || '{}'); } catch { }
       const { answers_json, src_json, ...rest } = r;
@@ -1439,12 +1538,9 @@ export default {
         if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
         return await handleConv(request, env);
       }
-      // formen henter kun hvilke svar der stopper den (scoren holdes på serveren)
-      if (p === '/api/form-config' && request.method === 'GET') {
-        const r = await fbmRules(env), stop = {};
-        for (const [q, m] of Object.entries(r.answers)) for (const [a, l] of Object.entries(m)) if (l === 'stop') (stop[q] ||= []).push(a);
-        return json({ stop });
-      }
+      // stop-svar er slået fra 14/11 2026 (formen bruger ikke længere endpointet). Svarer tomt, så en gammel cachet fbm-form.js
+      // heller ikke stopper nogen
+      if (p === '/api/form-config' && request.method === 'GET') return json({ stop: {} });
       if (p === '/api/lead') {
         if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
         return await handleLead(request, env, ctx);

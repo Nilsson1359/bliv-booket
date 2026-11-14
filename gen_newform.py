@@ -20,7 +20,7 @@ MODAL = '''<!-- ANSØGNINGSFORM (fbm-form.js) -->
   <div class="fbm-back" data-fbm-close></div>
   <div class="fbm-card">
     <div class="fbm-head">
-      <div class="fbm-t"><b id="fbmTitle">Ansøg om en plads</b><span id="fbmStep">Trin 1 af 10</span></div>
+      <div class="fbm-t"><b id="fbmTitle">Ansøg om en plads</b><span id="fbmStep">Gratis samtale · under 1 minut</span></div>
       <button class="fbm-x" type="button" aria-label="Luk" data-fbm-close><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3l10 10M13 3L3 13"/></svg></button>
     </div>
     <div class="fbm-prog" aria-hidden="true"><i id="fbmBar"></i></div>
@@ -32,7 +32,7 @@ MODAL = '''<!-- ANSØGNINGSFORM (fbm-form.js) -->
 <script src="/fbm-form.js" defer></script>
 </body>''' % ('true' if LIVE else 'false')
 if INTL:
-    for a, b in [('Ansøg om en plads', 'Apply for a spot'), ('Trin 1 af 10', 'Step 1 of 10'), ('aria-label="Luk"', 'aria-label="Close"'),
+    for a, b in [('Ansøg om en plads', 'Apply for a spot'), ('Gratis samtale · under 1 minut', 'Free call · under 1 minute'), ('aria-label="Luk"', 'aria-label="Close"'),
                  ('<b>Under 1 minut.</b> Dine svar gemmes undervejs.', '<b>Under 1 minute.</b> Your answers are saved as you go.'),
                  ('Samtalen er gratis og uforpligtende.', 'The call is free, with no obligation.'), ('ANSØGNINGSFORM', 'ANSØGNINGSFORM (engelsk)')]:
         assert a in MODAL, a
@@ -58,8 +58,10 @@ if not LIVE:
 assert 'link.zency.dk' not in out, 'GHL-widget hænger stadig ved'
 
 if LIVE:
-    # tak-siderne efter booking: A/B -> /tak (uændret Meta/GTM/CAPI), C -> /bekraeftet (samme side uden annonce-tracking).
-    # Begge får "sidste trin" (Instagram, hjemmeside, om dig) øverst via fbm-form.js i inline-tilstand.
+    # tak-siden: fra 14/11 2026 lander ALLE her, når spørgsmålene efter bookingen er besvaret. Konverteringen (Meta Schedule + Lead,
+    # GTM, CAPI) sendes allerede ved bookingen fra formen; sessionStorage bk_conv gør, at tak-sidens egen Lead ikke sendes igen.
+    # fbm-form.js i inline-tilstand øverst: "Din ansøgning er komplet" (eller resten af spørgsmålene, hvis de mangler).
+    # /bekraeftet (før: C-scorer uden tracking) bygges stadig, så gamle links virker, men formen sender ingen dertil længere.
     tak = open(D + ('thanks.html' if INTL else 'tak.html'), encoding='utf-8').read()
     INL = ('<section class="fbm-tak"><div class="wrap"><div id="fbmTak" class="fbm-inline" hidden></div></div></section>\n')
     def with_inline(page):

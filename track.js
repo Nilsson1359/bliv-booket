@@ -45,6 +45,10 @@
   // ansøgningsformen (fbm-form.js): første svar = formular rørt, booking gennemført = booket
   addEventListener('bk:interact', function () { if (!interacted) { interacted = true; send('booking_interact'); } });
   addEventListener('bk:booked', function () { send('booked'); });
+  // ansøgningsformen (14/11 2026): første tegn i kontaktfelterne = form_start, hvert besvaret trin = form_field (label = trinnets id)
+  var fStarted = false;
+  addEventListener('bk:start', function () { if (!fStarted) { fStarted = true; send('form_start'); } });
+  addEventListener('bk:field', function (e) { send('form_field', { label: String((e.detail && e.detail.f) || '').slice(0, 40) }); });
   addEventListener('blur', function () {
     setTimeout(function () {
       var a = document.activeElement; if (interacted || !a || a.tagName !== 'IFRAME') return;

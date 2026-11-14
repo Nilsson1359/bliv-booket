@@ -182,18 +182,18 @@ table{width:100%;border-collapse:collapse;font-size:.85rem}th{font-family:var(--
   </div>
 
   <div class="row">
-    <div class="card"><h2>Frafald pr. spørgsmål</h2><div id="appFunnel"></div>
-      <p class="muted" style="margin:12px 0 0;font-size:.8rem">Hvert trin viser, hvor mange der svarede på spørgsmålet i perioden. "Stoppet" = valgte et svar, der stopper formen (kunne ikke booke). Booket A/B/C = den score, de fik, da de bookede.</p></div>
+    <div class="card"><h2>Frafald pr. trin</h2><div id="appFunnel"></div>
+      <p class="muted" style="margin:12px 0 0;font-size:.8rem">Rækkefølgen fra 14/11 2026: kontaktinfo, så kalenderen, så spørgsmålene ("sidste trin"). Hvert trin viser, hvor mange der nåede det i perioden. Score A/B/C er kun info for Oscar (regnet, når alle spørgsmål er besvaret) og styrer hverken kalender, tak-side eller annoncer. Ansøgninger fra før 14/11 havde spørgsmålene før kontakt, så de kan se anderledes ud.</p></div>
   </div>
 
   <div class="row c31 frow">
     <div class="card"><h2>Regler pr. svar</h2>
-      <p class="muted fhelp"><b class="lv ok">OK</b> trækker ikke ned · <b class="lv B">B</b> trækker ned til B · <b class="lv C">C</b> gør leadet til C · <b class="lv stop">Stop</b> stopper formen, så de ikke kan booke. Scoren er den laveste, et svar eller en kombination giver: Stop, så C, så B, ellers A.</p>
+      <p class="muted fhelp"><b>Scoren er kun info fra 14/11 2026:</b> alle kan booke, alle booker i Strategisamtale og tæller i Meta. Den vises her, i Telegram og i GHL-feltet "Ansøgning: Lead-score".<br><b class="lv ok">OK</b> trækker ikke ned · <b class="lv B">B</b> trækker ned til B · <b class="lv C">C</b> gør leadet til C · <b class="lv stop">Stop</b> er <b>slået fra</b> (stopper ikke formen længere) og tæller som C. Scoren er den laveste, et svar eller en kombination giver: C, så B, ellers A.</p>
       <div id="fRules" class="frules"></div>
     </div>
     <div class="fside">
-      <div class="card"><h2>Kvalificerede</h2><div id="fQual" class="fqual"></div>
-        <p class="muted fhelp" style="margin-top:10px">Kvalificerede booker i <b>Strategisamtale</b>, kommer på "Møde Booket" og tæller i Meta. De andre booker i <b>Afklaringssamtale</b> og kommer på "Ikke kvalificeret".</p></div>
+      <div class="card" style="opacity:.6"><h2>Kvalificerede <span class="pill y">slået fra</span></h2><div id="fQual" class="fqual"></div>
+        <p class="muted fhelp" style="margin-top:10px">Slået fra 14/11 2026. Alle booker i <b>Strategisamtale</b>, kommer på "Møde Booket" og tæller i Meta. "Afklaringssamtale" og "Ikke kvalificeret" bruges ikke af formen længere. Valget gemmes stadig, men gør ingenting.</p></div>
       <div class="card"><h2>Kombinationer</h2><p class="muted fhelp">Hvis alle svar i en linje passer, får leadet scoren. Fx 10–29 jobs + under 5.000 kr. = C.</p>
         <div id="fCombos"></div><button class="btn" id="fAddCombo" style="margin-top:10px">+ Tilføj kombination</button></div>
       <div class="card" id="fSmsCard"><div class="smshead"><h2 style="margin:0">SMS efter 15 min</h2><label class="sw"><input type="checkbox" id="fSmsOn"><span></span><b id="fSmsOnTxt">Til</b></label></div>
@@ -204,7 +204,7 @@ table{width:100%;border-collapse:collapse;font-size:.85rem}th{font-family:var(--
         <div class="smsfoot"><span class="muted" id="fSmsStat"></span><span style="flex:1"></span><button class="btn" id="fSmsDef">Standardtekst</button><button class="btn pri" id="fSmsSave" disabled>Gem SMS</button></div>
         <div class="smstest"><input id="fSmsTestNr" type="tel" inputmode="tel" placeholder="Dit nummer" autocomplete="tel"><button class="btn" id="fSmsTestBtn">Send test-SMS</button></div><p class="muted" id="fSmsTestRes" style="font-size:.75rem;margin:6px 0 0"></p></div>
       <div class="card"><h2>Med disse regler</h2><div id="fSim"></div>
-        <p class="muted fhelp" style="margin-top:10px">Regnet på ansøgningerne i perioden med alle svar udfyldt. "Ændret" = ville få en anden score end de fik. Gemte regler gælder fra næste booking; allerede bookede ændres ikke.</p></div>
+        <p class="muted fhelp" style="margin-top:10px">Regnet på ansøgningerne i perioden med alle svar udfyldt. "Ændret" = ville få en anden score end de fik. Gemte regler gælder for de næste, der svarer færdigt; allerede scorede ændres ikke.</p></div>
     </div>
   </div>
 
@@ -284,10 +284,9 @@ async function loadLeads(){
     const st=[['Startet',f.started],['Kontakt',f.contact],['Udfyldt',f.done],['Booket',f.booked]];
     return `<div><h3>${PAGE_NAME[p]}</h3><div class="funnel">${st.map(([l,v])=>`<div class="fstep"><div class="l">${l}</div><div class="v">${fmt(v)}</div><div class="p">${pct(v,f.started)}</div><div class="bar"><i style="width:${f.started?100*v/f.started:0}%"></i></div></div>`).join('')}</div></div>`;}).join('');
   const A=d.ansoegning, aEl=document.getElementById('appFunnel');
-  if(A){const st=[['Startet',A.started],['Jobs i år',A.jobs],['Pris i dag',A.pris],['Ønsket pris',A.pris_maal],['Jobs ønsket',A.jobs_maal],['2–3x pris',A.x3],['Cover/eget',A.cover],['Kontakt',A.contact],['Omsætning',A.oms],['Investering',A.invest],['Booket',A.booked]];
-    const q=new Set(A.qualified||[]);
+  if(A){const st=[['Startet',A.started],['Kontaktinfo',A.contact],['Booket',A.booked],['Jobs i år',A.jobs],['Pris i dag',A.pris],['Ønsket pris',A.pris_maal],['Jobs ønsket',A.jobs_maal],['2–3x pris',A.x3],['Cover/eget',A.cover],['Omsætning',A.oms],['Investering',A.invest],['Instagram/om dig',A.extra],['Færdig',A.final]];
     aEl.innerHTML=`<div class="funnel app">${st.map(([l,v])=>`<div class="fstep"><div class="l">${l}</div><div class="v">${fmt(v||0)}</div><div class="p">${pct(v||0,A.started)}</div><div class="bar"><i style="width:${A.started?100*(v||0)/A.started:0}%"></i></div></div>`).join('')}</div>
-      <div class="appx"><span class="pill">Stoppet <b>${fmt(A.stopped||0)}</b></span>${['a','b','c'].map(k=>`<span class="pill ${q.has(k.toUpperCase())?'g':''}">Booket ${k.toUpperCase()} <b>${fmt(A[k]||0)}</b></span>`).join('')}<span class="pill">Udfyldt efter booking <b>${fmt(A.extra||0)}</b></span>${A.live?'':'<span class="pill y">Forhåndsvisning (ikke live)</span>'}</div>`;}
+      <div class="appx">${['a','b','c'].map(k=>`<span class="pill">Info-score ${k.toUpperCase()} <b>${fmt(A[k]||0)}</b></span>`).join('')}<span class="pill">Booket uden at svare færdigt <b>${fmt(Math.max(0,(A.booked||0)-(A.final||0)))}</b></span>${A.live?'':'<span class="pill y">Forhåndsvisning (ikke live)</span>'}</div>`;}
   else aEl.innerHTML='<div class="empty">Ingen data</div>';
   document.getElementById('split').innerHTML=(d.split||[]).map(g=>{
     const best=Math.max(...g.vers.map(v=>v.visitors?v.booked/v.visitors:0));
@@ -452,12 +451,11 @@ const same=(a,b)=>JSON.stringify(norm(a))===JSON.stringify(norm(b));
 const lvOf=(r,q,a)=>(r.answers[q]&&r.answers[q][a])||'ok';
 const qLabel=id=>(F.questions.find(q=>q.id===id)||{}).label||id;
 // samme motor som fbmScore i worker.js
+// 14/11 2026: stop er slået fra og tæller som C (scoren er kun info)
 function score(a,r){const Q=F.questions;
-  const stops=Q.filter(q=>a[q.id]&&lvOf(r,q.id,a[q.id])==='stop');
-  if(stops.length)return{s:'stop',why:stops.map(q=>q.label+': '+a[q.id]).join('; ')};
   if(Q.some(q=>!q.opts.includes(a[q.id])))return{s:null};
   const why={B:[],C:[]};
-  for(const q of Q){const l=lvOf(r,q.id,a[q.id]);if(l==='B'||l==='C')why[l].push(q.label+': '+a[q.id]);}
+  for(const q of Q){let l=lvOf(r,q.id,a[q.id]);if(l==='stop')l='C';if(l==='B'||l==='C')why[l].push(q.label+': '+a[q.id]);}
   for(const c of r.combos)if(c.if.every(x=>a[x.q]===x.a))why[c.then].push(c.if.map(x=>qLabel(x.q)+': '+x.a).join(' + '));
   if(why.C.length)return{s:'C',why:why.C.join('; ')};if(why.B.length)return{s:'B',why:why.B.join('; ')};return{s:'A',why:'Ingen svar trækker ned'};}
 async function loadForm(){
@@ -482,13 +480,13 @@ function renderForm(){
 }
 function renderSim(){
   const rows=(F.rows||[]).map(r=>({...r,now:score(r.answers,draft),was:score(r.answers,F.rules)}));
-  const full=rows.filter(r=>r.now.s),n=k=>full.filter(r=>r.now.s===k).length,changed=full.filter(r=>r.now.s!==r.was.s).length,q=new Set(draft.qualified);
-  document.getElementById('fSim').innerHTML=`<div class="fsim">${['A','B','C','stop'].map(k=>`<div><b>${n(k)}</b><span class="lv ${k}">${LVN[k]}</span><br><small>${k==='stop'?'kan ikke booke':q.has(k)?'kvalificeret':'ikke kvalificeret'}</small></div>`).join('')}</div>
+  const full=rows.filter(r=>r.now.s),n=k=>full.filter(r=>r.now.s===k).length,changed=full.filter(r=>r.now.s!==r.was.s).length;
+  document.getElementById('fSim').innerHTML=`<div class="fsim">${['A','B','C'].map(k=>`<div><b>${n(k)}</b><span class="lv ${k}">${LVN[k]}</span><br><small>kun info</small></div>`).join('')}</div>
     <p style="margin:10px 0 0;font-size:.85rem">${full.length} ansøgninger med svar${changed?` · <b style="color:var(--warn)">${changed} ville få en anden score</b>`:''}</p>`;
   const tf=ts=>new Date(ts).toLocaleString('da-DK',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
   document.getElementById('fRows').innerHTML=rows.length?'<table class="ltab"><thead><tr><th>Tid</th><th>Navn</th><th>Kontakt</th><th>Score</th><th>Hvorfor</th><th>Status</th><th>Svar</th></tr></thead><tbody>'+rows.map(r=>{
     const sc=r.now.s?`<span class="lv ${r.now.s}">${LVN[r.now.s]}</span>${r.was.s&&r.was.s!==r.now.s?' <span class="muted">før '+LVN[r.was.s]+'</span>':''}`:'<span class="muted">ikke færdig</span>';
-    const st=r.booked_start?`<span class="pill g">Booket ${esc(tf(r.booked_start))}</span>${r.score?' <span class="muted">fik '+esc(r.score)+'</span>':''}${r.ghl_appt_id||Date.now()-r.updated_ts<60000?'':' <span class="pill y" title="Aftalen blev ikke oprettet i GHL. Opret den manuelt.">mangler i GHL</span>'}${r.answers._sms_at?' <span class="pill">'+(r.answers.sms_svar?'SMS besvaret':'SMS sendt')+'</span>':''}`:'<span class="pill">Trin '+(r.step+1)+'</span>';
+    const st=r.booked_start?`<span class="pill g">Booket ${esc(tf(r.booked_start))}</span>${r.score?' <span class="muted">fik '+esc(r.score)+'</span>':''}${r.ghl_appt_id||Date.now()-r.updated_ts<60000?'':' <span class="pill y" title="Aftalen blev ikke oprettet i GHL. Opret den manuelt.">mangler i GHL</span>'}${r.answers._sms_at?' <span class="pill">'+(r.answers.sms_svar?'SMS besvaret':'SMS sendt')+'</span>':''}${/(^|,)(fin|extra),/.test(r.notified_flags||'')?' <span class="pill">Svaret færdigt</span>':' <span class="pill y">Mangler svar</span>'}`:(r.email||r.phone?'<span class="pill">Kun kontaktinfo</span>':'<span class="pill">Startet</span>');
     const ex=[['Instagram','instagram'],['Hjemmeside','hjemmeside'],['Optræder','optraeder'],['Om mig og hvorfor','om'],['SMS-svar','sms_svar']].filter(([,k])=>r.answers[k]).map(([l,k])=>`<b>${l}:</b> ${esc(r.answers[k])}`);
     const ans=[...F.questions.filter(q=>r.answers[q.id]).map(q=>`<b>${esc(q.label)}:</b> ${esc(r.answers[q.id])}`),...ex].join('<br>')||'<span class="muted">–</span>';
     const kon=[r.phone?`<a href="tel:${esc(r.phone.replace(/[^\d+]/g,''))}">${esc(r.phone)}</a>`:'',r.email?`<a href="mailto:${esc(r.email)}">${esc(r.email)}</a>`:''].filter(Boolean).join('<br>')||'<span class="muted">–</span>';

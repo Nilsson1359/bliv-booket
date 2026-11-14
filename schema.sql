@@ -42,7 +42,7 @@ CREATE INDEX IF NOT EXISTS idx_leads_ip ON leads(ip, created_ts);
 CREATE INDEX IF NOT EXISTS idx_leads_booked_ip ON leads(booked_ip, booked_start);
 -- 21/10: meet_url = Google Meet-link fra GHL-aftalen (vises på tak-siden og i kalenderfilen). Eksisterende DB fik den via:
 --   ALTER TABLE leads ADD COLUMN meet_url TEXT;
--- 4/11: score = A/B/C fra ansøgningsformen (page='ansoegning'), sat ved booking. Tilføjet i prod via:
+-- 4/11: score = A/B/C fra ansøgningsformen (page='ansoegning'). Fra 14/11 kun info, sat når spørgsmålene efter bookingen er besvaret. Tilføjet i prod via:
 --   ALTER TABLE leads ADD COLUMN score TEXT;
 
 -- 22/10: salgstal fra GHL (worker.js salesSync/salesJSON). Tabellerne oprettes også automatisk af koden.
