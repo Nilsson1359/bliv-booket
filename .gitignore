@@ -3,3 +3,4 @@ _site/
 node_modules/
 tools/mock_calls.jsonl
 .dev.vars
+.scratch/

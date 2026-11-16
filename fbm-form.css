@@ -131,3 +131,26 @@
   .fcalbox .fnav{margin-top:4px}
   .fbooked{width:100%}
 }
+
+/* 16/11 2026: Oscars GHL-kalender (bookingwidgeten) i formen, kun dansk. Kortet bliver bredere, så kalenderen får sin brede
+   visning; iframen vokser med indholdet (form_embed.js / beskeder fra kalenderen), så det kun er formen, der ruller */
+.fbm.wg .fbm-card{width:min(1040px,100%);height:min(900px,calc(100dvh - 2*clamp(12px,3vw,32px)))}
+.fwstep{gap:18px}
+.fwhead{display:flex;flex-direction:column;gap:14px}
+.fwhead .fh{max-width:60ch}
+.fedit{align-self:flex-start;min-height:32px;padding:0;font-size:.9rem}
+.fwg{position:relative;min-height:560px;margin:0 calc(-1*clamp(4px,1.6vw,20px));border-radius:16px;overflow:hidden}
+.fwg iframe{display:block;width:100%;height:600px;border:0;overflow:hidden;opacity:0;transition:opacity .35s ease;color-scheme:light;background:transparent}
+/* color-scheme:light = samme som kalenderens side; ellers lægger browseren en hvid baggrund bag den (siden er color-scheme:dark) */
+.fwg.ready iframe{opacity:1}
+.fwload{position:absolute;inset:0 0 auto;height:240px;display:flex;align-items:center;justify-content:center;gap:12px;color:var(--ink3);font-size:.92rem;pointer-events:none}
+.fwg.ready .fwload{display:none}
+.fwload .fspin{border-color:color-mix(in srgb,var(--ink) 22%,transparent);border-top-color:var(--ink2)}
+.fwait{min-height:0}
+@media (max-width:720px){
+  .fbm.wg .fbm-card{width:100%;height:100dvh}
+  .fwg{margin:0 -12px;border-radius:12px}
+  .fwhead .fq{font-size:1.65rem}
+}
+/* kalenderen har sin egen tomme top på ca. 64 px på brede skærme: den skjules, så kalenderen sidder lige under teksten */
+@media (min-width:721px){.fwg iframe{margin-top:-56px}.fwhead{margin-bottom:-4px}}

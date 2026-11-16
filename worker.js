@@ -4,6 +4,7 @@
 //  GET  /admin      dashboard (login m. ADMIN_PASSWORD-secret, signeret cookie 30 dage)
 //  GET  /admin/api/stats|heat|visitors|leads  JSON til dashboardet
 //  POST /api/lead, GET /api/slots, POST /api/book  formular + booking på /firmafest og /bryllup (se 'leads' nedenfor)
+//  POST /api/widget-booked  ansøgningen på forsiden: GHL-kalenderens booking bekræftes via GHL-opslag (16/11 2026, se 'GHL-bookingwidgeten')
 //  GET  /admin/api/sales  salgstal fra GHL-pipelinen "fuldt booket musiker" (cron hvert 10. min henter, se 'salg' nedenfor)
 import ADMIN_HTML from './admin.html';
 
@@ -488,9 +489,14 @@ async function handleLead(request, env, ctx) {
     // ansøgningen (14/11 2026: kontakt -> kalender -> spørgsmål): kontakt bekræftet = lead i Telegram + GHL-kontakt med det samme,
     // så den kan følges op, selv om de aldrig booker. Spørgsmålene efter bookingen afsluttes med final:true (gammel kode: extra:true).
     const fin = b.final === true || b.extra === true;
+    // GHL-kalenderen (16/11 2026): når widgeten vises, gemmes det, serveren skal bruge til Meta CAPI, hvis bookingen først
+    // fanges af cron-reserven (fbp/fbc, IP, browser, og om det er forsiden). Kun ansøgningen på dansk.
+    if (b.trk && typeof b.trk === 'object' && b.page === 'ansoegning') await fbmSaveTrk(env, lid, b.trk, request).catch(e => console.log('trk', String(e && e.message || e)));
     ctx.waitUntil((async () => {
       if (b.contact === true && fbmContactOk(row)) await fbmContactStep(env, row, ip);
       if (fin && row.booked_start && await claimFlag(env, lid, 'fin')) await fbmFinalize(env, lid, false);
+      // spørgsmålene blev færdige, før GHL-bookingen var bekræftet: afsluttes, når den bekræftes (fbmWidgetClaim)
+      else if (fin && !row.booked_start) await claimFlag(env, lid, 'finpend');
     })().catch(e => console.log('lead efterarbejde', String(e && e.message || e))));
     return json({ ok: true });
   }
@@ -995,6 +1001,188 @@ async function fbmGhlBook(env, lead, startMs, endMs, fbm) {
     ]);
   };
   return { contactId, apptId, meet: meetOf(appt), after };
+}
+
+// ───────── GHL-bookingwidgeten på forsiden (16/11 2026, Oskars ordre) ─────────
+// Den danske ansøgning bruger Oscars GHL-kalender "Fuldt Booket Musiker - Discovery Call" (widget fI7JGGwe6o7PqtOEECqc på
+// link.zency.dk) i stedet for vores egen kalender. /international bruger stadig vores egen (Strategy Call via /api/book).
+// Rækkefølgen er den samme: kontakt (vores felter: lead i D1 + GHL-kontakt) -> widgeten (forudfyldt med navn/telefon/mail,
+// kunden skriver Instagram/hjemmeside og vælger en tid; GHL opretter selv aftalen) -> "Sidste trin"-spørgsmålene -> /tak.
+// Bookingen registreres sikkert ad to veje, som begge ender i fbmWidgetClaim:
+//  1) browseren hører widgetens postMessage ['msgsndr-booking-complete', {fingerprint, calendarId}] og kalder
+//     POST /api/widget-booked. Serveren slår aftalen op i GHL (kun GET), før leadet markeres booket.
+//  2) cron-reserven (fbmWidgetSweep, */5) finder aftaler i kalenderen fra ansøgere, som browseren ikke nåede at melde (fx lukket fane).
+// fbmWidgetClaim er én atomisk UPDATE i D1 (booked_start IS NULL og aftalen ikke brugt af et andet lead), så hver booking tælles
+// én gang. Meta CAPI (Schedule + Lead) bruger samme event_id'er som pixel'en i browseren (fbm-<lid>, fbm-lead-<lid>).
+// Alle er kvalificerede: tags fbm-kvalificeret + fbm-booket, opportunity i "Møde Booket", D1 booked_at (SMS-jobbet), statistik 'booked'.
+const fbmWidgetCal = env => env.GHL_CALENDAR_FBM_WIDGET || '';
+const fbmApptOk = s => !/cancel|invalid/i.test(String(s || ''));
+// det serveren skal bruge til CAPI, hvis cron-reserven fanger bookingen: fbp/fbc, IP, browser, og om det er forsiden (track)
+// Flettes med det gemte: et senere kald fra tak-siden (uden pixel/track) må ikke slette forsidens fbp/fbc eller track-flaget
+async function fbmSaveTrk(env, lid, t, request) {
+  const old = fbmTrkOf(await env.DB.prepare('SELECT trk_json FROM leads WHERE id = ?').bind(lid).first() || {});
+  const trk = { fbp: str(t.fbp, 120) || old.fbp || '', fbc: str(t.fbc, 300) || old.fbc || '', track: t.track === true || old.track === true,
+    ip: request.headers.get('CF-Connecting-IP') || old.ip || '', ua: str(request.headers.get('User-Agent') || '', 300) || old.ua || '', ts: Date.now() };
+  await env.DB.prepare('UPDATE leads SET trk_json = ? WHERE id = ?').bind(JSON.stringify(trk), lid).run();
+  return trk;
+}
+const fbmTrkOf = l => { try { return JSON.parse(l.trk_json || 'null') || {}; } catch { return {}; } };
+// aftalerne i widget-kalenderen fra 1 time siden til 60 dage frem (ét GHL-kald, tider med tidszone)
+async function fbmWidgetEvents(env) {
+  const cal = fbmWidgetCal(env), now = Date.now();
+  const d = await ghl(env, 'GET', `/calendars/events?locationId=${env.GHL_LOCATION_ID}&calendarId=${cal}&startTime=${now - 3600000}&endTime=${now + 60 * 86400000}`, '2021-04-15');
+  return (d.events || []).filter(e => e && e.id && e.contactId && !e.deleted && e.calendarId === cal && fbmApptOk(e.appointmentStatus || e.appoinmentStatus))
+    .map(e => ({ id: String(e.id), contactId: String(e.contactId), start: Date.parse(e.startTime), end: Date.parse(e.endTime), added: Date.parse(e.dateAdded) || 0, address: String(e.address || '') }))
+    .filter(e => Number.isFinite(e.start));
+}
+// aftaler, der allerede hører til et lead (så samme aftale aldrig tælles to gange)
+const fbmUsedAppts = async env => new Set((await all(env.DB, `SELECT ghl_appt_id FROM leads WHERE ghl_appt_id IS NOT NULL AND ghl_appt_id <> '' AND created_ts > ?`, Date.now() - 120 * 86400000)).map(r => r.ghl_appt_id));
+// den nyeste aftale for en af kontakterne, booket efter at ansøgningen blev startet
+const fbmPickEvent = (events, cids, lead, used) => events
+  .filter(e => cids.includes(e.contactId) && e.added >= lead.created_ts - 10 * 60000 && !used.has(e.id))
+  .sort((a, b) => b.added - a.added)[0] || null;
+// GHL-kontakter med leadets mail eller telefon (kun GET)
+async function fbmDupIds(env, l) {
+  const L = env.GHL_LOCATION_ID, out = [], phone = e164(l.phone);
+  const dup = async q => ((await ghl(env, 'GET', `/contacts/search/duplicate?locationId=${L}&${q}`, '2021-07-28').catch(() => ({}))).contact || {}).id || '';
+  if (validEmail((l.email || '').trim())) out.push(await dup('email=' + encodeURIComponent(l.email.trim())));
+  if (phone) out.push(await dup('number=' + encodeURIComponent(phone)));
+  return [...new Set(out.filter(Boolean))];
+}
+
+// Markerer leadet booket med GHL-aftalen (atomisk) og laver efterarbejdet. -> true hvis DETTE kald fik bookingen (kun én gør).
+// later(fn): HTTP-vejen lægger GHL-/Meta-delen i ctx.waitUntil (kunden får svar med det samme); cron venter på den.
+async function fbmWidgetClaim(env, lead, ev, trk, later) {
+  const now = Date.now(), meet = MEET_RE.test(ev.address) ? ev.address : '';
+  const endMs = Number.isFinite(ev.end) && ev.end > ev.start ? ev.end : ev.start + 60 * 60000;
+  let claimed = false;
+  // idx_leads_booked (unik booked_start) stammer fra vores egen kalender. Har et andet lead samme starttid (fx en aflyst aftale),
+  // gemmes vores 1-3 ms senere (usynligt), så en rigtig booking aldrig afvises af den grund.
+  for (let k = 0; k < 4; k++) {
+    const r = await env.DB.prepare(`UPDATE leads SET booked_start = ?1, booked_end = ?2, booked_at = ?3, updated_ts = ?3, done = 1, booked_ip = ?4, ghl_appt_id = ?5,
+        notified_flags = CASE WHEN ghl_contact_id IS NOT NULL AND ghl_contact_id <> ?6 THEN replace(notified_flags, 'ghlnew,', '') ELSE notified_flags END,
+        ghl_contact_id = ?6, meet_url = ?7
+        WHERE id = ?8 AND booked_start IS NULL AND NOT EXISTS (SELECT 1 FROM leads o WHERE o.ghl_appt_id = ?5)`)
+      .bind(ev.start + k, endMs + k, now, trk.ip || '', ev.id, ev.contactId, meet, lead.id).run().then(x => x, e => ({ err: String(e && e.message || e) }));
+    if (r.err && /UNIQUE/i.test(r.err)) continue;
+    if (r.err) throw new Error(r.err);
+    claimed = (r.meta && r.meta.changes) === 1;
+    break;
+  }
+  if (!claimed) return false;
+  const lid = lead.id, F = FBM_APP, cid = ev.contactId;
+  let l = await env.DB.prepare('SELECT * FROM leads WHERE id = ?').bind(lid).first();
+  const ours = String(l.notified_flags).includes('ghlnew,');
+  // 1) kontakten: Instagram/hjemmeside fra widgetens felt (samme GHL-felt som vores), så "Sidste trin" er udfyldt og SMS'en
+  //    ikke sendes forgæves. Widgetens "Navn" lægger hele navnet i fornavn: på vores egen kontakt deles det igen.
+  try {
+    const c = (await ghl(env, 'GET', `/contacts/${cid}`, '2021-07-28')).contact || {};
+    const raw = str(((c.customFields || []).find(f => f && f.id === F.fields.instagram) || {}).value, 300).trim();
+    if (raw) {
+      let a = {}; try { a = JSON.parse(l.answers_json || '{}'); } catch { }
+      const p = fbmParseReply(raw), add = {};
+      if (!a.instagram && !a.hjemmeside) { if (p.instagram) add.instagram = p.instagram; if (p.hjemmeside) add.hjemmeside = p.hjemmeside; if (!p.instagram && !p.hjemmeside) add.instagram = raw; }
+      if (Object.keys(add).length) await env.DB.prepare('UPDATE leads SET answers_json = json_patch(answers_json, ?) WHERE id = ?').bind(JSON.stringify(add), lid).run();
+    }
+    const parts = (l.name || '').trim().split(/\s+/);
+    if (ours && parts.length > 1 && String(c.firstName || '').trim() === l.name.trim())
+      await ghl(env, 'PUT', `/contacts/${cid}`, '2021-07-28', { firstName: parts[0], lastName: parts.slice(1).join(' ') }).catch(e => console.log('fbm navn', e.message));
+  } catch (e) { console.log('fbm widget kontakt', String(e && e.message || e)); }
+  l = await env.DB.prepare('SELECT * FROM leads WHERE id = ?').bind(lid).first();
+  const rest = async () => {
+    // 2) Meta CAPI: kun fra forsiden (track) og kun når formen er live. Samme event_id'er som pixel'en = ingen dobbelttælling
+    if (fbmLive(env) && trk.track) {
+      const base = { url: 'https://fuldtbooketmusiker.dk/', ip: trk.ip, ua: trk.ua, fbp: trk.fbp, fbc: trk.fbc, name: l.name, em: l.email, ph: l.phone, country: 'dk' };
+      await capiSend(env, { ...base, event_name: 'Schedule', event_id: 'fbm-' + lid, content_name: 'Ansøgning kvalificeret' }).catch(e => console.log('capi', String(e)));
+      await capiSend(env, { ...base, event_name: 'Lead', event_id: 'fbm-lead-' + lid, content_name: 'Samtale booket' }).catch(e => console.log('capi', String(e)));
+      // statistik i /admin: 'booked' på besøgets session (også når browseren blev lukket før den nåede at melde det)
+      if (l.sid) await env.DB.prepare(`INSERT INTO events (ts, type, vid, sid, pv, path) VALUES (?, 'booked', ?, ?, ?, '/')`).bind(Date.now(), l.vid || '', l.sid, 'srv-' + lid.slice(0, 30)).run().catch(() => {});
+    }
+    // 3) GHL: alle er kvalificerede (tags som før + fbm-ghl-kalender), opportunity i "Møde Booket", note
+    await ghl(env, 'POST', `/contacts/${cid}/tags`, '2021-07-28', { tags: [...fbmTags(l), 'fbm-kvalificeret', 'fbm-booket', 'fbm-ghl-kalender'] }).catch(e => console.log('fbm tags', e.message));
+    await fbmOpp(env, l, cid, F.stageQ);
+    let src = {}; try { src = JSON.parse(l.src_json || '{}'); } catch { }
+    const note = [`Discovery Call booket i GHL-kalenderen på fuldtbooketmusiker.dk: ${fbmWhen(ev.start)}.`,
+      'Spørgsmålene kommer efter bookingen ("sidste trin"). Svarene lægges på kontakten, når de er udfyldt (eller efter 15 min med det, der er svaret).',
+      ...(!ours ? ['', 'Kontakten fandtes i forvejen (eller blev oprettet af kalenderen), så navn/telefon/felter er ikke ændret herfra.'] : []),
+      ...([src.utm_source, src.utm_campaign, src.utm_content].some(Boolean) ? ['', 'Kilde: ' + [src.utm_source, src.utm_campaign, src.utm_content].filter(Boolean).join(' / ')] : [])].join('\n');
+    await ghl(env, 'POST', `/contacts/${cid}/notes`, '2021-07-28', { body: note }).catch(e => console.log('ghl note fejl', e.message));
+    // 4) Telegram (kun live) + spørgsmål, der blev færdige, før bookingen var bekræftet
+    if (tgOn(env, l.page) && await claimFlag(env, lid, 'booked')) await tgSend(env, leadText('📅 Booket (GHL-kalenderen)', l));
+    if (String(l.notified_flags).includes('finpend,') && await claimFlag(env, lid, 'fin')) await fbmFinalize(env, lid, false);
+  };
+  await later(() => rest().catch(e => console.log('fbm widget efterarbejde', String(e && e.message || e))));
+  return true;
+}
+const fbmIgOf = l => { let a = {}; try { a = JSON.parse(l.answers_json || '{}'); } catch { } return { instagram: a.instagram || '', hjemmeside: a.hjemmeside || '' }; };
+
+// ─── POST /api/widget-booked  {lid, fbp, fbc, track} ───
+// Browseren melder widgetens "booking gennemført". Svarer {ok, start, end, ig} når aftalen er fundet i GHL,
+// ellers 202 {pending} (browseren prøver igen et par gange; cron-reserven tager den ellers).
+async function handleWidgetBooked(request, env, ctx) {
+  if (!env.DB) return json({ error: 'no db' }, 503);
+  if (!sameOrigin(request)) return json({ error: 'bad origin' }, 403);
+  const { b, err } = await readJSON(request, 2048); if (err) return err;
+  if (BOT_UA.test(request.headers.get('User-Agent') || '')) return json({ error: 'bot' }, 403);
+  const lid = String(b.lid || '');
+  if (!LID_RE.test(lid)) return json({ error: 'bad lid' }, 400);
+  // tæller med i leadets skrive-budget (misbrugs-værn: hvert kald koster GHL-opslag)
+  const lead = await env.DB.prepare(`UPDATE leads SET writes = writes + 1 WHERE id = ? AND writes < ${MAX_LEAD_WRITES} RETURNING *`).bind(lid).first();
+  if (!lead) return json({ error: 'unknown lead' }, 404);
+  if (lead.page !== 'ansoegning') return json({ error: 'bad page' }, 400);
+  const trk = await fbmSaveTrk(env, lid, b, request);
+  const out = (l, already) => json({ ok: true, start: isoCph(l.booked_start), end: l.booked_end ? isoCph(l.booked_end) : null, ig: fbmIgOf(l), already });
+  if (lead.booked_start) return out(lead, true);
+  if (!env.GHL_TOKEN || !env.GHL_LOCATION_ID || !fbmWidgetCal(env)) return json({ error: 'not configured' }, 503);
+  let events;
+  try { events = await fbmWidgetEvents(env); } catch (e) { console.log('widget events', String(e && e.message || e)); return json({ ok: false, pending: true }, 202); }
+  const used = await fbmUsedAppts(env);
+  const cids = [lead.ghl_contact_id].filter(Boolean);
+  let ev = fbmPickEvent(events, cids, lead, used);
+  // fx hvis kontakt-trinnet ikke nåede at oprette kontakten, eller kalenderen lagde bookingen på en anden kontakt
+  if (!ev) ev = fbmPickEvent(events, [...cids, ...await fbmDupIds(env, lead)], lead, used);
+  if (!ev) return json({ ok: false, pending: true }, 202);
+  const got = await fbmWidgetClaim(env, lead, ev, trk, fn => ctx.waitUntil(fn()));
+  const l = await env.DB.prepare('SELECT * FROM leads WHERE id = ?').bind(lid).first();
+  if (!l || !l.booked_start) return json({ ok: false, pending: true }, 202);
+  return out(l, !got);
+}
+
+// Cron-reserve (*/5): ansøgere, der har set widgeten (trk_json) inden for 3 døgn uden en registreret booking, matches med nye
+// aftaler i kalenderen. Først på GHL-kontakten, ellers (højst 3 opslag pr. kørsel, hver aftale kun én gang) på kontaktens mail/
+// telefon, hvis kontakten har tagget fbm-ansoegning. Højst 2 nye bookinger pr. kørsel (Workerens grænse for udgående kald).
+async function fbmWidgetSweep(env) {
+  if (!env.DB || !env.GHL_TOKEN || !fbmWidgetCal(env)) return { skipped: true };
+  const now = Date.now();
+  const pend = await all(env.DB, `SELECT * FROM leads WHERE page = 'ansoegning' AND booked_start IS NULL AND trk_json IS NOT NULL AND created_ts > ? ORDER BY created_ts DESC LIMIT 60`, now - 3 * 86400000);
+  if (!pend.length) return { pending: 0 };
+  const used = await fbmUsedAppts(env), minCreated = Math.min(...pend.map(l => l.created_ts)) - 10 * 60000;
+  const fresh = (await fbmWidgetEvents(env)).filter(e => e.added >= minCreated && !used.has(e.id)).sort((a, b) => a.added - b.added);
+  const res = { pending: pend.length, events: fresh.length, claimed: 0, looked: 0 };
+  if (!fresh.length) return res;
+  const taken = new Set(), MAX_CLAIMS = 2;
+  const claim = async (l, e) => {
+    if (await fbmWidgetClaim(env, l, e, fbmTrkOf(l), fn => fn())) { res.claimed++; taken.add(l.id); used.add(e.id); }
+  };
+  for (const e of fresh) {
+    if (res.claimed >= MAX_CLAIMS) return res;
+    const l = pend.find(x => !taken.has(x.id) && x.ghl_contact_id === e.contactId && e.added >= x.created_ts - 10 * 60000);
+    if (l) await claim(l, e);
+  }
+  const seen = await kvGet(env.DB, 'fbm_widget_seen', {});
+  for (const k of Object.keys(seen)) if (now - seen[k] > 4 * 86400000) delete seen[k];
+  for (const e of fresh) {
+    if (res.claimed >= MAX_CLAIMS || res.looked >= 3) break;
+    if (used.has(e.id) || seen[e.id]) continue;
+    seen[e.id] = now; res.looked++;
+    const c = ((await ghl(env, 'GET', `/contacts/${e.contactId}`, '2021-07-28').catch(() => ({}))).contact) || {};
+    if (!(c.tags || []).includes('fbm-ansoegning')) continue;
+    const em = norm(c.email), ph = phoneDigits(c.phone).slice(-8);
+    const l = pend.find(x => !taken.has(x.id) && e.added >= x.created_ts - 10 * 60000 && ((em && norm(x.email) === em) || (ph.length === 8 && phoneDigits(x.phone).slice(-8) === ph)));
+    if (l) await claim(l, e);
+  }
+  await kvPut(env.DB, 'fbm_widget_seen', seen).catch(() => {});
+  return res;
 }
 
 // Spørgsmålene efter bookingen er færdige (partial=false) eller de forlod dem (partial=true, fra fbmSmsJob efter 15 min):
@@ -1515,7 +1703,11 @@ async function handleIcs(env, url) {
 export default {
   async scheduled(event, env, ctx) {
     // */5: SMS til ansøgere der ikke har udfyldt sidste trin (+ læs deres svar). */10: salgstal fra GHL
-    if (event.cron === '*/5 * * * *') ctx.waitUntil(fbmSmsJob(env).catch(err => console.log('fbmSmsJob', String(err))));
+    // */5 også: cron-reserven for GHL-kalenderen på forsiden (bookinger, browseren ikke nåede at melde), før SMS-jobbet
+    if (event.cron === '*/5 * * * *') ctx.waitUntil((async () => {
+      await fbmWidgetSweep(env).then(r => { if (r && r.claimed) console.log('fbmWidgetSweep', JSON.stringify(r)); }).catch(err => console.log('fbmWidgetSweep', String(err)));
+      await fbmSmsJob(env).catch(err => console.log('fbmSmsJob', String(err)));
+    })());
     else ctx.waitUntil(salesSync(env).catch(err => console.log('salesSync', String(err))));
   },
   async fetch(request, env, ctx) {
@@ -1556,6 +1748,10 @@ export default {
       }
       if (p === '/api/booking' && request.method === 'GET') return await handleBooking(env, url);
       if (p === '/api/ics' && request.method === 'GET') return await handleIcs(env, url);
+      if (p === '/api/widget-booked') {
+        if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
+        return await handleWidgetBooked(request, env, ctx);
+      }
       if (p === '/api/book') {
         if (request.method !== 'POST') return json({ error: 'POST only' }, 405);
         return await handleBook(request, env, ctx);

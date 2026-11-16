@@ -52,3 +52,5 @@ CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT NOT NULL, ts INTEGER N
 CREATE TABLE IF NOT EXISTS sales_deal (opp_id TEXT PRIMARY KEY, via TEXT NOT NULL DEFAULT '', cash INTEGER, updated_ts INTEGER NOT NULL);
 -- 4/11: booked_at = hvornår ansøgningen blev booket (SMS 15 min efter). Tilføjet i prod via:
 --   ALTER TABLE leads ADD COLUMN booked_at INTEGER;
+-- 16/11: trk_json = fbp/fbc/IP/browser/forside-flag fra ansøgningen, gemt når GHL-kalenderen vises (cron-reserven sender CAPI med det). Tilføjet i prod via:
+--   ALTER TABLE leads ADD COLUMN trk_json TEXT;

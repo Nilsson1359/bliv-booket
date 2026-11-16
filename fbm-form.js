@@ -1,5 +1,6 @@
 // Ansøgningsform til fuldtbooketmusiker.dk (4/11 2026, ny rækkefølge 14/11 2026): kontakt -> kalender -> spørgsmål.
-// Svar gemmes løbende via /api/lead (page=ansoegning). Booking via /api/book (alle i Strategisamtale).
+// Svar gemmes løbende via /api/lead (page=ansoegning). Dansk fra 16/11 2026: booking i Oscars GHL-kalender (widget, se 'GHL-kalenderen'),
+// bekræftet via /api/widget-booked. Engelsk (/international): egen kalender via /api/book (Strategy Call).
 // Efter bookingen: spørgsmålene ét ad gangen + Instagram/hjemmeside/om dig til sidst. Scoren regnes kun som info på serveren.
 // window.FBM_LIVE (sat af gen_newform.py) styrer om Meta-pixel/dataLayer får konverteringen. Alle bookinger tælles (fra 14/11).
 // window.FBM_LANG='en' (/international, 8/11 2026): engelske tekster og euro-intervaller, men SAMME svar-værdier (data-v) som den danske,
@@ -12,6 +13,11 @@
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
   var EN = window.FBM_LANG === 'en', t = function (da, en) { return EN ? en : da; };
   var LIVE = window.FBM_LIVE === true, PAGE = EN ? 'international' : 'ansoegning', BASE = EN ? '/international/' : '/';
+  // 16/11 2026 (Oskars ordre): den danske form bruger Oscars GHL-kalender (bookingwidgeten "Fuldt Booket Musiker - Discovery Call")
+  // i stedet for vores egen kalender. Kontakt-trinnet er det samme; widgeten forudfyldes med navn/telefon/mail (URL-parametre) og
+  // åbnes med redirect=false, så den ikke sender siden videre. Når den melder 'msgsndr-booking-complete' (postMessage), bekræfter
+  // serveren aftalen i GHL (/api/widget-booked), og først derefter sendes konverteringen. /international bruger stadig vores egen.
+  var WIDGET = !EN, WCAL = 'fI7JGGwe6o7PqtOEECqc', WORIGIN = 'https://link.zency.dk', WID = 'vG4H4qr8AewGhjtajiHp_1794826570295';
   var arrow = '<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg>';
 
   // svarmulighederne skal være præcis de samme som i worker.js (FBM_APP.opts) og GHL-felterne
@@ -57,7 +63,7 @@
   try { src = JSON.parse(ls('fbm_src') || 'null'); } catch (e) { }
   if (!src) {
     var rh = ''; try { rh = document.referrer ? new URL(document.referrer).hostname : ''; } catch (e) { }
-    src = { ref_host: rh, utm_source: q.get('utm_source') || (q.get('fbclid') ? 'facebook' : q.get('gclid') ? 'google' : ''), utm_medium: q.get('utm_medium') || '', utm_campaign: q.get('utm_campaign') || '', utm_content: q.get('utm_content') || '', landing: location.pathname };
+    src = { ref_host: rh, utm_source: q.get('utm_source') || (q.get('fbclid') ? 'facebook' : q.get('gclid') ? 'google' : ''), utm_medium: q.get('utm_medium') || '', utm_campaign: q.get('utm_campaign') || '', utm_content: q.get('utm_content') || '', fbclid: (q.get('fbclid') || '').slice(0, 150), landing: location.pathname };
     ls('fbm_src', JSON.stringify(src));
   }
 
@@ -74,6 +80,8 @@
   if (typeof S.q !== 'number') { S.q = 0; if (S.booked) while (S.q < QS.length - 1 && S.a[QS[S.q].id]) S.q++; }
   // en samtale, der er overstået, starter en ny ansøgning (kontaktinfo huskes)
   if (S.booked && Date.parse(S.booked.start) < Date.now() - 2 * 3600000) S = fresh(S);
+  // GHL-kalenderen: booket, men endnu ikke bekræftet af serveren (start ukendt). Efter et døgn starter en ny ansøgning
+  if (S.booked && !S.booked.start && !(S.booked.at > Date.now() - 86400000)) S = fresh(S);
   var persist = function () { ls(KEY, JSON.stringify(S)); };
   var ev = function (n, d) { try { dispatchEvent(new CustomEvent(n, d ? { detail: d } : undefined)); } catch (_) { } };   // track.js
 
@@ -83,8 +91,11 @@
   var eur = function () { return ['pris', 'pris_maal', 'oms', 'invest'].filter(function (k) { return S.a[k]; }).map(function (k) { return k + ': ' + labelOf(k, S.a[k]); }).join('; '); };
   var payload = function (f) {
     f = f || {};
-    return { lid: S.lid, page: PAGE, answers: EN ? Object.assign({}, S.a, { _eur: eur() }) : S.a, name: S.name, email: S.email, phone: S.phone,
+    var o = { lid: S.lid, page: PAGE, answers: EN ? Object.assign({}, S.a, { _eur: eur() }) : S.a, name: S.name, email: S.email, phone: S.phone,
       step: S.booked ? 1 + S.q : 0, done: false, src: src, contact: !!f.contact, final: !!f.final, vid: ls('bk_vid') || '', sid: ls('bk_sid') || '' };
+    // GHL-kalenderen vist: det serveren skal bruge til Meta CAPI, hvis bookingen først fanges af dens cron-reserve
+    if (f.trk) o.trk = { fbp: cookie('_fbp'), fbc: cookie('_fbc'), track: LIVE };
+    return o;
   };
   var hasData = function () { return S.name || S.email || S.phone || Object.keys(S.a).length; };
   // f.contact = kontaktinfo bekræftet (GHL-kontakt + Telegram), f.final = spørgsmålene er færdige
@@ -119,7 +130,7 @@
     M.hidden = false; requestAnimationFrame(function () { MC.add('open'); });
     lockScroll(true);
     try { history.replaceState(null, '', location.pathname + location.search + '#ansoeg'); } catch (_) { }
-    if (!S.booked) prefetch();
+    if (!S.booked) { if (WIDGET) loadEmbed(); else prefetch(); }
     render();
   };
   var close = function () {
@@ -167,7 +178,7 @@
   var firstOpen = function () { for (var k = 0; k < NQ - 1; k++) if (!S.a[QS[k].id]) return k; return NQ - 1; };
 
   var render = function () {
-    MC.remove('wide'); MC.toggle('end', !!(S.booked && S.final));
+    MC.remove('wide'); MC.remove('wg'); MC.toggle('end', !!(S.booked && S.final));
     if (S.booked && S.final) return renderDone();
     if (S.booked) return renderQ();
     return renderContact();
@@ -180,16 +191,18 @@
     prog(contactErr() ? 0 : 0.6, t('Gratis samtale · under 1 minut', 'Free call · under 1 minute'));
     B.innerHTML = '<div class="fstep fcontact">' +
       head(t('Gratis strategisamtale med Oscar', 'Free strategy call with Oscar'), t('Hvor skal vi sende din invitation hen?', 'Where should we send your invitation?'),
-        t('Skriv dine oplysninger, så dukker de ledige tider op lige herunder.', 'Enter your details and the open times appear right below.')) +
+        WIDGET ? 'Skriv dine oplysninger, så viser vi Oscars ledige tider.' : t('Skriv dine oplysninger, så dukker de ledige tider op lige herunder.', 'Enter your details and the open times appear right below.')) +
       '<div class="fgrid fcgrid">' +
       '<label class="ff fwide"><span>' + t('Fulde navn', 'Full name') + '</span><input class="fin" id="cName" autocomplete="name" value="' + esc(S.name) + '" placeholder="' + t('Fornavn og efternavn', 'First and last name') + '"></label>' +
       '<label class="ff"><span>' + t('Telefon', 'Phone (with country code)') + '</span><input class="fin" id="cTel" type="tel" inputmode="tel" autocomplete="tel" value="' + esc(S.phone || dialGuess()) + '" placeholder="' + t('12 34 56 78', '+44 7700 900123') + '"></label>' +
       '<label class="ff"><span>E-mail</span><input class="fin" id="cMail" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" value="' + esc(S.email) + '" placeholder="' + t('navn@mail.dk', 'name@email.com') + '"></label></div>' +
       '<p class="ferr" id="fErr" role="alert"></p>' +
       '<p class="fnote">' + t('Vi bruger det kun til din samtale. Ingen nyhedsbreve.', 'We only use this for your call. No newsletters.') + '</p>' +
-      '<div class="fcalwrap" id="cWrap" aria-live="polite"></div></div>';
+      (WIDGET ? '<div class="fnav"><button type="button" class="fbtn" id="cNext">' + t('Vælg din tid', 'Pick your time') + arrow + '</button></div>'
+        : '<div class="fcalwrap" id="cWrap" aria-live="polite"></div>') + '</div>';
     B.scrollTop = 0;
     wireContact();
+    if (WIDGET) $('#cNext').onclick = goWidget;
     drawCal(false);
     focusFirst();
   };
@@ -215,6 +228,7 @@
         if (e.key !== 'Enter') return; e.preventDefault();
         if (k < F.length - 1) { $('#' + F[k + 1][0]).focus(); return; }
         el.blur(); var m = contactErr(); if (m) { err(m); return; }
+        if (WIDGET) { goWidget(); return; }
         scrollTo($('#cWrap'));
       });
     });
@@ -254,7 +268,7 @@
   };
   // kalenderen kommer af sig selv, når kontaktinfoen er gyldig (ingen "Vælg tid"-knap). Bliver stående, hvis de retter bagefter.
   var drawCal = function (left) {
-    var w = $('#cWrap'); if (!w || S.booked) return;
+    var w = $('#cWrap'); if (WIDGET || !w || S.booked) return;
     var ok = !contactErr();
     // ingen pladsholder: kalenderen dukker bare op, når navn, telefon og mail er udfyldt
     if (!ok && !calOn) { w.innerHTML = ''; return; }
@@ -333,6 +347,95 @@
       render();
     }).catch(function () { unlock(); bb.disabled = false; bb.innerHTML = t('Prøv igen', 'Try again') + arrow; cErr(t('Ingen forbindelse. Prøv igen om lidt.', 'No connection. Please try again shortly.')); });
   };
+  // ── GHL-kalenderen (kun dansk, 16/11 2026) ──
+  // form_embed.js (GHL) hentes først, når formen åbnes: den svarer widgetens spørgsmål om sidens URL-parametre og kan styre højden
+  var embedP = null;
+  var loadEmbed = function () {
+    if (embedP || !WIDGET) return; embedP = true;
+    var s = document.createElement('script'); s.src = WORIGIN + '/js/form_embed.js'; s.async = true; document.head.appendChild(s);
+  };
+  var e164 = function (p) { var v = (p || '').replace(/[^\d+]/g, ''); if (!v) return ''; if (v.indexOf('00') === 0) v = '+' + v.slice(2); if (v.charAt(0) !== '+') v = (v.length === 8 ? '+45' : '+') + v; return v; };
+  // forudfyldning: GHL-formen i kalenderen læser first_name/phone/email + de skjulte utm-felter og fbclid fra URL'en (testet 16/11).
+  // redirect=false: kalenderen sender ikke siden videre efter bookingen (ellers sender den hele siden til /tak og formen mister tråden).
+  // OBS: event_id må ikke sendes med: så svarer link.zency.dk 404.
+  var wSrc = function () {
+    var p = [['first_name', S.name.trim()], ['phone', e164(S.phone)], ['email', S.email.trim()],
+      ['utm_source', src.utm_source], ['utm_medium', src.utm_medium], ['utm_campaign', src.utm_campaign], ['utm_content', src.utm_content], ['fbclid', src.fbclid], ['redirect', 'false']];
+    return WORIGIN + '/widget/booking/' + WCAL + '?' + p.filter(function (x) { return x[1]; }).map(function (x) { return x[0] + '=' + encodeURIComponent(x[1]); }).join('&');
+  };
+  var goWidget = function () {
+    $$('.fin', B).forEach(function (el) { el.value = el.value.trim(); });
+    S.name = S.name.trim(); S.email = S.email.trim(); S.phone = S.phone.trim();
+    var m = contactErr(); if (m) { err(m); var bad = nameErr() ? '#cName' : telErr() ? '#cTel' : '#cMail'; $(bad).setAttribute('aria-invalid', 'true'); $(bad).focus(); return; }
+    confirmContact(); saveNow(false, { trk: true });
+    renderWidget();
+  };
+  var sizer = false, wDone = false;
+  var renderWidget = function () {
+    MC.add('wide'); MC.add('wg'); sizer = false;
+    prog(0.6, 'Gratis samtale · vælg din tid');
+    loadEmbed();
+    B.innerHTML = '<div class="fstep fwstep">' +
+      '<div class="fwhead">' + head('Gratis strategisamtale med Oscar', 'Vælg din tid', 'Dine oplysninger er udfyldt. Skriv din Instagram eller hjemmeside, og vælg den tid, der passer dig. 1 time på Google Meet.') +
+      '<button type="button" class="fback fedit" id="wBack">Ret mine oplysninger</button></div>' +
+      '<div class="fwg" id="wBox"><div class="fwload" id="wLoad"><i class="fspin" aria-hidden="true"></i>Henter Oscars kalender</div>' +
+      '<iframe id="' + WID + '" title="Book din samtale med Oscar" allow="payment" scrolling="no" src="' + esc(wSrc()) + '"></iframe></div>' +
+      '<p class="ferr" id="cErr" role="alert"></p></div>';
+    B.scrollTop = 0;
+    var fr = $('#' + WID);
+    fr.addEventListener('load', function () { setTimeout(wReady, 400); });
+    setTimeout(wReady, 6000);
+    $('#wBack').onclick = function () { render(); };
+    ev('bk:interact');   // track.js: formular rørt (kalenderen vist)
+  };
+  var wReady = function () { var b = $('#wBox'); if (b) b.classList.add('ready'); };
+  var setH = function (h) { var fr = $('#' + WID); if (fr && h > 0) { fr.style.height = Math.ceil(h) + 'px'; wReady(); } };
+  // beskeder fra kalenderen: højden (iframe-resizerens præcise tal, ellers GHL's egen) og "booking gennemført"
+  addEventListener('message', function (e) {
+    if (!WIDGET || e.origin !== WORIGIN) return;
+    var fr = $('#' + WID), d = e.data;
+    if (!fr || e.source !== fr.contentWindow) return;
+    if (typeof d === 'string' && d.indexOf('[iFrameSizer]' + WID + ':') === 0) { sizer = true; setH(+d.split(':')[1]); return; }
+    if (!Array.isArray(d)) return;
+    if (d[0] === 'highlevel.setHeight' && d[1] && !sizer) { setH(+d[1].height); return; }
+    if (d[0] === 'msgsndr-booking-complete' && (!d[1] || !d[1].calendarId || d[1].calendarId === WCAL)) widgetBooked();
+  });
+  // kalenderen har booket: serveren bekræfter aftalen i GHL, før den tæller (og før pixel'en sendes)
+  var widgetBooked = function () {
+    if (wDone || (S.booked && S.booked.start)) return; wDone = true;
+    ev('bk:field', { f: 'kalender' });
+    B.innerHTML = '<div class="fstep fwait"><p class="fbooked">' + check + '<span><b>Din tid er booket.</b> Et øjeblik, vi gør de sidste spørgsmål klar.</span></p></div>';
+    B.scrollTop = 0;
+    confirmBooking(0);
+  };
+  // 0-2: kunden venter (ca. 4 sek.); derefter videre til spørgsmålene, og bekræftelsen fortsætter i baggrunden (højst ca. 4 min.).
+  // Bliver den aldrig bekræftet herfra, fanger serverens cron-reserve bookingen (og sender CAPI derfra).
+  var WAIT = [1500, 2500, 4000, 6000, 10000, 15000, 25000, 40000, 60000, 90000];
+  var confirming = false;
+  var confirmBooking = function (n) {
+    confirming = true;
+    var retry = function () {
+      if (n === 2 && !S.booked) { S.booked = { start: null, at: Date.now() }; S.q = firstOpen(); persist(); render(); }
+      if (n < WAIT.length) setTimeout(function () { confirmBooking(n + 1); }, WAIT[n]); else confirming = false;
+    };
+    fetch('/api/widget-booked', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lid: S.lid, fbp: cookie('_fbp'), fbc: cookie('_fbc'), track: LIVE }), keepalive: true })
+      .then(function (r) { return r.json().catch(function () { return {}; }); })
+      .then(function (x) {
+        if (!x || !x.ok || !x.start) return retry();
+        confirming = false;
+        var wasShown = !!S.booked;
+        S.booked = { start: x.start, end: x.end || null };
+        if (x.ig) { if (x.ig.instagram && !S.a.instagram) S.a.instagram = x.ig.instagram; if (x.ig.hjemmeside && !S.a.hjemmeside) S.a.hjemmeside = x.ig.hjemmeside; }
+        if (!wasShown) S.q = firstOpen();
+        persist();
+        fireConv();   // annoncerne: kun bekræftede bookinger, samme event_id'er som serverens CAPI
+        if (!wasShown) render(); else { var bk = $('.fbooked b', B); if (bk && M) bk.innerHTML = when(); }
+      })
+      .catch(retry);
+  };
+  // genindlæst side med en ubekræftet booking: bekræft i baggrunden
+  if (WIDGET && S.booked && !S.booked.start && !S.convFired) setTimeout(function () { confirmBooking(3); }, 800);
+
   // Meta Schedule + Lead og GTM (fbm_qualified_booking + booking_complete), én gang pr. booking, samme event_id'er som serverens
   // CAPI-kald (fbm-<lid> / fbm-lead-<lid>). bk_conv i sessionStorage = tak-siden sender ikke sin egen Lead oveni.
   // Navnene er uændrede fra før 14/11, så triggere i GTM og evt. tilpassede konverteringer i Meta virker som før.
@@ -346,7 +449,7 @@
 
   // ── 2) spørgsmålene efter bookingen ──
   var check = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';
-  var when = function () { return esc(fmtLong(S.booked.start)) + (EN || tz !== CPH ? ' <span class="ftzs">(' + esc(tzName) + ')</span>' : ''); };
+  var when = function () { if (!S.booked.start) return t('i Oscars kalender', 'in Oscar\'s calendar'); return esc(fmtLong(S.booked.start)) + (EN || tz !== CPH ? ' <span class="ftzs">(' + esc(tzName) + ')</span>' : ''); };
   var renderQ = function () {
     var k = Math.max(0, Math.min(S.q, NQ - 1)), st = QS[k], f = (S.name || '').trim().split(/\s+/)[0] || '';
     prog(1 + k, t('Tid booket · sidste trin', 'Call booked · last step'));
@@ -413,7 +516,7 @@
     prog(NP, t('Ansøgning komplet', 'Application complete'));
     if (LIVE && M) {
       try { sessionStorage.setItem('bk_conv', '1'); } catch (e) { }
-      var qs = '?first_name=' + encodeURIComponent((S.name || '').trim().split(/\s+/)[0] || '') + '&start=' + encodeURIComponent(S.booked.start);
+      var qs = '?first_name=' + encodeURIComponent((S.name || '').trim().split(/\s+/)[0] || '') + (S.booked.start ? '&start=' + encodeURIComponent(S.booked.start) : '');
       setTimeout(function () { location.assign(BASE + t('tak', 'thanks') + qs); }, 250);
       return;
     }
@@ -423,12 +526,12 @@
   // ── 3) komplet ──
   var renderDone = function () {
     var b = S.booked, f = (S.name || '').trim().split(/\s+/)[0] || '';
-    var st = new Date(b.start), en = b.end ? new Date(b.end) : new Date(st.getTime() + 60 * 60000);
+    var st = new Date(b.start || Date.now()), en = b.end ? new Date(b.end) : new Date(st.getTime() + 60 * 60000);
     var z = function (d) { return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, ''); };
     var title = t('Strategisamtale med Fuldt Booket Musiker', 'Strategy call with Fully Booked Musician'), det = t('Google Meet. Linket står i din bekræftelsesmail.', 'Google Meet. The link is in your confirmation email.');
     var gcal = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent(title) + '&dates=' + z(st) + '/' + z(en) + '&details=' + encodeURIComponent(det);
     var ics = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Fuldt Booket Musiker//' + t('DA', 'EN'), 'BEGIN:VEVENT', 'UID:' + S.lid + '@fuldtbooketmusiker.dk', 'DTSTAMP:' + z(new Date()), 'DTSTART:' + z(st), 'DTEND:' + z(en), 'SUMMARY:' + title, 'DESCRIPTION:' + det, 'END:VEVENT', 'END:VCALENDAR'].join('\r\n'));
-    var cal = '<div class="fadd"><a class="fbtn sm ghost" href="' + gcal + '" target="_blank" rel="noopener">' + t('Google Kalender', 'Google Calendar') + '</a><a class="fbtn sm ghost" href="' + ics + '" download="' + t('strategisamtale', 'strategy-call') + '.ics">Apple / Outlook</a></div>';
+    var cal = !b.start ? '' : '<div class="fadd"><a class="fbtn sm ghost" href="' + gcal + '" target="_blank" rel="noopener">' + t('Google Kalender', 'Google Calendar') + '</a><a class="fbtn sm ghost" href="' + ics + '" download="' + t('strategisamtale', 'strategy-call') + '.ics">Apple / Outlook</a></div>';
     B.scrollTop = 0;
     if (INL) {
       B.innerHTML = '<div class="fstep fend"><p class="fbooked">' + check + '<span>' + t('<b>Din ansøgning er komplet.</b> Oscar kigger den igennem før jeres samtale.', '<b>Your application is complete.</b> Oscar will review it before your call.') + '</span></p></div>';
