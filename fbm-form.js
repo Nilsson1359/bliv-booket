@@ -256,17 +256,14 @@
   var drawCal = function (left) {
     var w = $('#cWrap'); if (!w || S.booked) return;
     var ok = !contactErr();
-    if (!ok && !calOn) {
-      w.innerHTML = '<div class="fcalph"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg><span>' +
-        t('Ledige tider vises her, når du har skrevet navn, telefon og e-mail.', 'Open times appear here once you have entered your name, phone and email.') + '</span></div>';
-      return;
-    }
+    // ingen pladsholder: kalenderen dukker bare op, når navn, telefon og mail er udfyldt
+    if (!ok && !calOn) { w.innerHTML = ''; return; }
     prog(0.6);
     // dukker kalenderen op, mens de stadig skriver, ruller vi ikke (tastaturet); først når feltet er forladt, og kun én gang
     var roll = function () { if (calRolled || !(left || !/^(INPUT|TEXTAREA)$/.test((document.activeElement || {}).tagName || ''))) return; calRolled = true; setTimeout(function () { if (matchMedia('(max-width:720px)').matches) scrollTo($('#cWrap')); }, 120); };
     if (calOn) return roll();
     calOn = true;
-    w.innerHTML = '<div class="fcalbox"><h4 class="fsub">' + t('Vælg en tid', 'Pick a time') + '</h4><p class="fh">' + t('1 time på Google Meet med Oscar. Du får invitationen på mail med det samme.', '1 hour on Google Meet with Oscar. You will get the invitation by email right away.') + '</p>' +
+    w.innerHTML = '<div class="fcalbox"><h4 class="fsub">' + t('Vælg din dato', 'Pick your date') + '</h4><p class="fh">' + t('1 time på Google Meet med Oscar. Du får invitationen på mail med det samme.', '1 hour on Google Meet with Oscar. You will get the invitation by email right away.') + '</p>' +
       '<div class="fcal"><div class="fdays" id="cDays" role="group" aria-label="' + t('Dag', 'Day') + '"><div class="fskel"></div><div class="fskel"></div><div class="fskel"></div><div class="fskel"></div></div>' +
       '<div class="ftimes" id="cTimes" role="group" aria-label="' + t('Tidspunkt', 'Time') + '"></div></div>' +
       (EN || tz !== CPH ? '<p class="fh ftz">' + t('Tiderne vises i din tidszone (' + esc(tzName) + ').', 'Times are shown in your time zone (' + esc(tzName) + ').') + '</p>' : '') +
