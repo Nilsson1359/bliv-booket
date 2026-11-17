@@ -1084,8 +1084,9 @@ async function fbmWidgetClaim(env, lead, ev, trk, later) {
       if (!a.instagram && !a.hjemmeside) { if (p.instagram) add.instagram = p.instagram; if (p.hjemmeside) add.hjemmeside = p.hjemmeside; if (!p.instagram && !p.hjemmeside) add.instagram = raw; }
       if (Object.keys(add).length) await env.DB.prepare('UPDATE leads SET answers_json = json_patch(answers_json, ?) WHERE id = ?').bind(JSON.stringify(add), lid).run();
     }
-    const parts = (l.name || '').trim().split(/\s+/);
-    if (ours && parts.length > 1 && String(c.firstName || '').trim() === l.name.trim())
+    // også på en kontakt, der fandtes i forvejen, men KUN når det tydeligvis er kalenderens dobbelte navn ("Anna Hansen" + "Hansen")
+    const parts = (l.name || '').trim().split(/\s+/), restName = parts.slice(1).join(' ');
+    if (parts.length > 1 && String(c.firstName || '').trim() === l.name.trim() && (ours || String(c.lastName || '').trim() === restName))
       await ghl(env, 'PUT', `/contacts/${cid}`, '2021-07-28', { firstName: parts[0], lastName: parts.slice(1).join(' ') }).catch(e => console.log('fbm navn', e.message));
   } catch (e) { console.log('fbm widget kontakt', String(e && e.message || e)); }
   l = await env.DB.prepare('SELECT * FROM leads WHERE id = ?').bind(lid).first();
