@@ -156,3 +156,22 @@
 @media (min-width:721px){.fwg iframe{margin-top:-56px}.fwhead{margin-bottom:-4px}}
 /* 17/11: kalenderen er første skærm; på mobil kun overskriften over den, så formularen ses med det samme */
 @media (max-width:720px){.fwhead .fh{display:none}.fwstep{gap:12px}}
+
+/* 17/11 (Oskar): kalender-skærmen uden top- og bundbjælke. Kortet er lige så højt som kalenderen (iframen får sin højde fra
+   form_embed.js / kalenderens egne beskeder), så der hverken er dobbelt rullebjælke eller et tomt felt under den */
+.fbm.wg .fbm-head,.fbm.wg .fbm-prog,.fbm.wg .fbm-foot{display:none}
+.fbm.wg .fbm-card{width:min(1000px,100%);height:auto;max-height:calc(100dvh - 2*clamp(12px,3vw,32px));background:#000;border-color:#262626}
+.fbm.wg .fbm-body{flex:0 1 auto;padding:0}
+.fbm.wg .fwstep{gap:0;min-height:0}
+.fbm.wg .fwg{margin:0;border-radius:0;min-height:480px}
+.fbm.wg .fwg.ready{min-height:0}
+.fbm.wg .fwstep>.ferr:empty{display:none}
+.fwx{display:none}
+.fbm.wg .fwx{display:grid;place-items:center;position:absolute;top:12px;right:12px;z-index:3;width:34px;height:34px;padding:0;border-radius:50%;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.6);color:#fff;cursor:pointer;transition:background .2s,transform .2s}
+@media (hover:hover){.fbm.wg .fwx:hover{background:rgba(255,255,255,.12);transform:rotate(90deg)}}
+@media (max-width:720px){
+  .fbm.wg{padding:0;align-items:flex-end}
+  .fbm.wg .fbm-card{width:100%;height:auto;max-height:100dvh;border:0;border-radius:18px 18px 0 0}
+  .fbm.wg .fwg{margin:0;border-radius:0}
+  .fbm.wg .fwx{top:10px;right:10px}
+}

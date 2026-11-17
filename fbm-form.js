@@ -372,8 +372,13 @@
     loadEmbed();
     if (M) try { history.replaceState(null, '', location.pathname + location.search + '#ansoeg-' + S.lid.slice(0, 13)); } catch (_) { }
     saveNow(false, { trk: true, shown: true, force: true });
+    // 17/11 (Oskar): ingen top- og bundbjælke og ingen tekst over; kalenderen fylder popup'en, kun et lille luk-kryds i hjørnet
+    if (M && !$('.fwx', M)) {
+      var xb = document.createElement('button'); xb.type = 'button'; xb.className = 'fwx'; xb.setAttribute('aria-label', 'Luk');
+      xb.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13"/></svg>';
+      xb.addEventListener('click', close); $('.fbm-card', M).appendChild(xb);
+    }
     B.innerHTML = '<div class="fstep fwstep">' +
-      '<div class="fwhead">' + head('Gratis strategisamtale med Oscar', 'Book din samtale', 'Skriv dine oplysninger, og vælg den tid, der passer dig. 1 time på Google Meet med Oscar.') + '</div>' +
       '<div class="fwg" id="wBox"><div class="fwload" id="wLoad"><i class="fspin" aria-hidden="true"></i>Henter Oscars kalender</div>' +
       '<iframe id="' + WID + '" title="Book din samtale med Oscar" allow="payment" scrolling="no" src="' + esc(wSrc()) + '"></iframe></div>' +
       '<p class="ferr" id="cErr" role="alert"></p></div>';
@@ -397,6 +402,7 @@
     if (d[0] === 'set-sticky-contacts' && d[1] === '_ud' && typeof d[2] === 'string') {
       var u = null; try { u = JSON.parse(d[2]); } catch (x) { }
       var id = u && (u.id || u.customer_id);
+      if (u) { var nm = String(u.full_name || u.name || [u.first_name, u.last_name].filter(Boolean).join(' ') || '').trim(); if (nm) S.name = nm.slice(0, 120); if (u.email) S.email = String(u.email).slice(0, 160); if (u.phone) S.phone = String(u.phone).slice(0, 40); persist(); }
       if (id && /^[A-Za-z0-9]{10,40}$/.test(id) && id !== S.cid) { S.cid = id; persist(); saveNow(false, { trk: true, force: true }); }
       ev('bk:field', { f: 'kalender-formular' });
       return;
@@ -428,9 +434,6 @@
         confirming = false;
         var wasShown = !!S.booked;
         S.booked = { start: x.start, end: x.end || null };
-        // kontaktoplysningerne kommer fra GHL-kalenderens formular (bruges til hilsen og tak-siden)
-        if (x.name) S.name = x.name; if (x.email) S.email = x.email; if (x.phone) S.phone = x.phone;
-        if (x.ig) { if (x.ig.instagram && !S.a.instagram) S.a.instagram = x.ig.instagram; if (x.ig.hjemmeside && !S.a.hjemmeside) S.a.hjemmeside = x.ig.hjemmeside; }
         if (!wasShown) S.q = firstOpen();
         persist();
         fireConv();   // annoncerne: kun bekræftede bookinger, samme event_id'er som serverens CAPI
@@ -464,10 +467,11 @@
     var html;
     if (st.type === 'extra') {
       var ex = S.a, crew = (ex.optraeder || '').split(', ').filter(Boolean);
-      html = intro + head(kick, st.q, st.help) +
-        '<div class="fgrid two">' +
+      html = intro + head(kick, WIDGET ? 'Til sidst: fortæl lidt om dig selv' : st.q, WIDGET ? 'Så kan Oscar bruge samtalen på din plan i stedet for det grundlæggende. Din Instagram eller hjemmeside har vi fra kalenderen.' : st.help) +
+        (WIDGET ? '' : '<div class="fgrid two">' +
         '<label class="ff"><span>Instagram</span><input class="fin" id="xIg" data-1p-ignore data-lpignore="true" data-form-type="other" autocomplete="off" autocapitalize="off" spellcheck="false" value="' + esc(ex.instagram || '') + '" placeholder="' + t('@ditnavn', '@yourname') + '"></label>' +
         '<label class="ff"><span>' + t('Hjemmeside', 'Website') + '</span><input class="fin" id="xWeb" data-1p-ignore data-lpignore="true" data-form-type="other" autocomplete="off" type="url" inputmode="url" autocapitalize="off" spellcheck="false" value="' + esc(ex.hjemmeside || '') + '" placeholder="' + t('www.ditnavn.dk', 'www.yourname.com') + '"></label></div>' +
+        '') +
         '<label class="ff"><span>' + t('Om dig, og hvorfor du gerne vil have flere jobs', 'About you, and why you want more gigs') + '</span><textarea class="fin fta" id="xOm" data-1p-ignore data-lpignore="true" data-form-type="other" autocomplete="off" rows="4" maxlength="2000" placeholder="' + t('Fx hvad du spiller, hvor længe du har spillet, og hvad du gerne vil nå det næste år', 'E.g. what you play, how long you have been playing, and what you want to achieve in the next year') + '">' + esc(ex.om || '') + '</textarea></label>' +
         '<p class="ff"><span>' + t('Hvordan optræder du?', 'How do you perform?') + '</span></p><div class="fchips" role="group" aria-label="' + t('Hvordan optræder du?', 'How do you perform?') + '">' + ['Solo', 'Duo', 'Trio / band'].map(function (o) { return '<button type="button" class="fchip" data-v="' + o + '" aria-pressed="' + (crew.indexOf(o) > -1) + '">' + o + '</button>'; }).join('') + '</div>' +
         '<p class="ferr" id="fErr" role="alert"></p><div class="fnav"><button type="button" class="fbtn" id="xSend">' + t('Færdiggør min ansøgning', 'Complete my application') + arrow + '</button>' + (k > 0 ? '<button type="button" class="fback" id="fBack">' + t('Tilbage', 'Back') + '</button>' : '') + '</div>';
@@ -501,13 +505,13 @@
   };
   var wireExtra = function () {
     var ig = $('#xIg'), web = $('#xWeb'), om = $('#xOm');
-    var sync = function () { S.a.instagram = ig.value.trim(); S.a.hjemmeside = web.value.trim(); S.a.om = om.value.trim(); S.a.optraeder = $$('.fchip[aria-pressed=true]', B).map(function (x) { return x.dataset.v; }).join(', '); persist(); };
-    [ig, web, om].forEach(function (el) { el.addEventListener('input', function () { sync(); err(''); saveSoon(); }); });
+    var sync = function () { if (ig) S.a.instagram = ig.value.trim(); if (web) S.a.hjemmeside = web.value.trim(); S.a.om = om.value.trim(); S.a.optraeder = $$('.fchip[aria-pressed=true]', B).map(function (x) { return x.dataset.v; }).join(', '); persist(); };
+    [ig, web, om].filter(Boolean).forEach(function (el) { el.addEventListener('input', function () { sync(); err(''); saveSoon(); }); });
     $$('.fchip', B).forEach(function (c) { c.addEventListener('click', function () { c.setAttribute('aria-pressed', c.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'); sync(); saveSoon(); }); });
     $('#xSend').addEventListener('click', function () {
       sync();
       var a = S.a;
-      if (!a.instagram && !a.hjemmeside && !a.optraeder && !a.om) { err(t('Udfyld mindst ét felt, så Oscar kan forberede sig.', 'Fill in at least one field so Oscar can prepare.')); return; }
+      if (!WIDGET && !a.instagram && !a.hjemmeside && !a.optraeder && !a.om) { err(t('Udfyld mindst ét felt, så Oscar kan forberede sig.', 'Fill in at least one field so Oscar can prepare.')); return; }
       var btn = $('#xSend'); btn.disabled = true; btn.innerHTML = '<i class="fspin" aria-hidden="true"></i>' + t('Sender', 'Sending');
       saveNow(false, { final: true }).then(function (ok) {
         if (!ok) { btn.disabled = false; btn.innerHTML = t('Prøv igen', 'Try again') + arrow; err(t('Det blev ikke sendt. Prøv igen.', 'It was not sent. Please try again.')); return; }

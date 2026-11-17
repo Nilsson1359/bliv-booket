@@ -1047,15 +1047,17 @@ const fbmUsedAppts = async env => new Set((await all(env.DB, `SELECT ghl_appt_id
 // Sessionen (lid) oprettes, når formen åbnes, uden navn/mail. Widgeten opretter selv GHL-kontakten, og GHL gemmer sidens
 // adresse, IP og browser på kontakten (lastAttributionSource). Vores side har #ansoeg-<lid-start> i adressen, mens kalenderen
 // vises, så kontakten bærer sessionens id. Sikkerhed for en kobling (højst først):
-//   3 = sessionens id i kontaktens side-adresse, 2 = widgetens kontakt-id (set-sticky-contacts) / samme kontakt eller mail,
-//   1 = samme IP + browser fra formens side, 0 = ingen. Uden kobling bruges tidspunktet, og leadet markeres 'usikker' (admin + Telegram).
+//   3 = sessionens id i kontaktens side-adresse, 2 = samme GHL-kontakt/mail, som SERVEREN allerede har på leadet,
+//   1 = samme IP + browser fra formens side, 0 = ingen. Et kontakt-id, browseren sender, er aldrig bevis (sikkerhed 17/11).
+// Kun 1-3 bindes via browseren. Uden kobling: kun cron-reserven, og kun når det er entydigt (én session i tidsvinduet);
+// leadet markeres 'usikker' (admin + Telegram). Er det ikke entydigt, bindes intet, og det meldes til Telegram.
 const fbmLidTag = lid => 'ansoeg-' + String(lid).slice(0, 13);
 const fbmAttr = c => [c && c.lastAttributionSource, c && c.attributionSource].filter(Boolean);
 const fbmFromForm = c => fbmAttr(c).some(a => /fuldtbooketmusiker\.dk/i.test(String(a.url || '')));
 function fbmMatchScore(c, l, trk) {
   if (!c || !c.id) return 0;
   if (fbmAttr(c).some(a => String(a.url || '').includes('#' + fbmLidTag(l.id)))) return 3;
-  if (trk.cid === c.id || l.ghl_contact_id === c.id || (validEmail(l.email) && norm(c.email) === norm(l.email))) return 2;
+  if (l.ghl_contact_id === c.id || (validEmail(l.email) && norm(c.email) === norm(l.email))) return 2;
   if (fbmFromForm(c) && trk.ip && trk.ua && fbmAttr(c).some(a => a.ip === trk.ip && a.userAgent === trk.ua)) return 1;
   return 0;
 }
@@ -1140,7 +1142,6 @@ async function fbmWidgetClaim(env, lead, ev, trk, c, unsure, later) {
   await later(() => rest().catch(e => console.log('fbm widget efterarbejde', String(e && e.message || e))));
   return true;
 }
-const fbmIgOf = l => { let a = {}; try { a = JSON.parse(l.answers_json || '{}'); } catch { } return { instagram: a.instagram || '', hjemmeside: a.hjemmeside || '' }; };
 
 // ─── POST /api/widget-booked  {lid, fbp, fbc, track, url, cid, n} ───
 // Browseren melder widgetens "booking gennemført" (n = forsøg nr.). Svarer {ok, start, end, name, email, phone, ig}, når aftalen er
@@ -1157,7 +1158,8 @@ async function handleWidgetBooked(request, env, ctx) {
   if (!lead) return json({ error: 'unknown lead' }, 404);
   if (lead.page !== 'ansoegning') return json({ error: 'bad page' }, 400);
   const trk = await fbmSaveTrk(env, lid, b, request);
-  const out = (l, already) => json({ ok: true, start: isoCph(l.booked_start), end: l.booked_end ? isoCph(l.booked_end) : null, name: l.name, email: l.email, phone: l.phone, ig: fbmIgOf(l), already });
+  // ALDRIG persondata i svaret (sikkerhed 17/11): kun tidspunktet for sessionens egen, sikkert koblede booking
+  const out = (l, already) => json({ ok: true, start: isoCph(l.booked_start), end: l.booked_end ? isoCph(l.booked_end) : null, already: !!already });
   if (lead.booked_start) return out(lead, true);
   if (!env.GHL_TOKEN || !env.GHL_LOCATION_ID || !fbmWidgetCal(env)) return json({ error: 'not configured' }, 503);
   const pending = () => json({ ok: false, pending: true }, 202);
@@ -1174,17 +1176,9 @@ async function handleWidgetBooked(request, env, ctx) {
     if (sc && (!best || sc > best.sc)) best = { e, c, sc };
     if (sc >= 2) break;
   }
-  let unsure = false;
-  if (!best) {
-    // ingen kobling: først fra 3. forsøg (GHL kan være et par sekunder om at vise vores egen aftale), og kun en aftale oprettet
-    // inden for 3 min. før beskeden fra formens side. Den tætteste vælges og markeres 'usikker'.
-    if ((Number(b.n) || 0) < 2) return pending();
-    const near = pool.filter(e => e.added >= now - 3 * 60000);
-    for (const e of near.slice(0, 2)) { const c = await fbmGetContact(env, e.contactId); if (c && (fbmFromForm(c) || !fbmAttr(c).length)) { best = { e, c, sc: 0 }; break; } }
-    if (!best) return pending();
-    unsure = true;
-  }
-  const got = await fbmWidgetClaim(env, lead, best.e, trk, best.c, unsure, fn => ctx.waitUntil(fn()));
+  // ingen stærk kobling: browseren får 'pending', og cron-reserven afgør det (entydigt eller slet ikke)
+  if (!best) return pending();
+  const got = await fbmWidgetClaim(env, lead, best.e, trk, best.c, false, fn => ctx.waitUntil(fn()));
   const l = await env.DB.prepare('SELECT * FROM leads WHERE id = ?').bind(lid).first();
   if (!l || !l.booked_start) return pending();
   return out(l, !got);
@@ -1218,8 +1212,14 @@ async function fbmWidgetSweep(env) {
     let unsure = false;
     if (!best) {
       if (!fbmFromForm(c)) continue;   // en aftale fra et andet sted (Oscars egne links) røres ikke
-      const win = open.filter(x => x.shown <= e.added + 60000 && e.added - x.shown <= 60 * 60000 && (!x.trk.cid || x.trk.cid === c.id)).sort((a, b) => b.shown - a.shown);
-      if (!win.length) continue;
+      // tidsvindue: sessioner, der viste kalenderen højst 60 min. før aftalen. Kun ENTYDIGT (præcis én session, og ingen anden
+      // ny ukoblet aftale fra formen i samme vindue) bindes og tælles; ellers kun en besked til admin.
+      const win = open.filter(x => x.shown <= e.added + 60000 && e.added - x.shown <= 60 * 60000);
+      const rivals = fresh.filter(o => o.id !== e.id && !used.has(o.id) && Math.abs(o.added - e.added) <= 60 * 60000).length;
+      if (win.length !== 1 || rivals) {
+        if (win.length) await tgSend(env, `⚠️ GHL-kalenderen: en booking (${tgEsc(fbmWhen(e.start))}) kunne ikke kobles sikkert til et besøg på siden (${win.length} mulige besøg). Den er IKKE talt i Meta. Kontakt-id ${tgEsc(c.id)}.\nhttps://fuldtbooketmusiker.dk/admin`);
+        continue;
+      }
       best = win[0]; unsure = true;
     }
     if (await fbmWidgetClaim(env, best.l, e, best.trk, c, unsure, fn => fn())) { res.claimed++; if (unsure) res.unsure++; taken.add(best.l.id); used.add(e.id); }
