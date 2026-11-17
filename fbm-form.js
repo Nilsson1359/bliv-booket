@@ -101,6 +101,7 @@
   var hasData = function () { return S.name || S.email || S.phone || Object.keys(S.a).length; };
   // f.contact = kontaktinfo bekræftet (GHL-kontakt + Telegram), f.final = spørgsmålene er færdige
   var saveNow = function (beacon, f) {
+    f = f || {};   // kaldes også uden indstillinger (luk-krydset, visibilitychange, saveSoon)
     clearTimeout(tSave); persist();
     if (!hasData() && !f.force) return Promise.resolve(true);   // force: GHL-kalenderens anonyme session (intet udfyldt endnu)
     var body = JSON.stringify(payload(f));
