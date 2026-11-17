@@ -40,11 +40,17 @@ http.createServer((req, res) => {
       const em = u.searchParams.get('email') || '';
       return json(res, 200, { contact: em === 'findes@test.dk' ? { id: 'existing-contact-1' } : null });
     }
-    if (req.method === 'POST' && g === '/__event') { const e = { id: 'mock-evt-' + (++n), calendarId: 'fI7JGGwe6o7PqtOEECqc', appointmentStatus: 'confirmed', deleted: false, address: 'https://meet.google.com/abc-defg-hij', dateAdded: new Date().toISOString(), ...b }; events.push(e); return json(res, 200, e); }
+    // {contactId, startTime, endTime, contact?}: contact = kontakten som widgeten ville have oprettet den (navn, mail, lastAttributionSource ...)
+    if (req.method === 'POST' && g === '/__event') {
+      const { contact, ...rest } = b || {};
+      if (contact) contacts.set(rest.contactId, { id: rest.contactId, dateAdded: new Date().toISOString(), tags: [], ...contact, widget: true });
+      const e = { id: 'mock-evt-' + (++n), calendarId: 'fI7JGGwe6o7PqtOEECqc', appointmentStatus: 'confirmed', deleted: false, address: 'https://meet.google.com/abc-defg-hij', dateAdded: new Date().toISOString(), ...rest }; events.push(e); return json(res, 200, e);
+    }
     if (req.method === 'POST' && g === '/contacts/') { const id = 'mock-contact-' + (++n); contacts.set(id, { id, ...b, tags: b.tags || [] }); return json(res, 201, { contact: { id } }); }
     if (req.method === 'GET' && (m = g.match(/^\/contacts\/([^/]+)$/))) {
       const c = contacts.get(m[1]) || { id: m[1], tags: ['fbm-ansoegning'] };
       // widgetens "Navn" lægger hele navnet i fornavn, og Instagram-feltet er udfyldt
+      if (c.widget) return json(res, 200, { contact: c });
       return json(res, 200, { contact: { ...c, firstName: [c.firstName, c.lastName].filter(Boolean).join(' '), customFields: [{ id: 'yPp3j9zZMHmE7BJfkpS8', value: '@mock_musiker' }] } });
     }
     if (req.method === 'POST' && g === '/opportunities/' && b && b.contactId === 'existing-contact-1') return json(res, 400, { message: 'Can not create duplicate opportunity for the contact.', error: 'OPPORTUNITY_NO_DUPLICATE' });

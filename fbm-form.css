@@ -154,3 +154,5 @@
 }
 /* kalenderen har sin egen tomme top på ca. 64 px på brede skærme: den skjules, så kalenderen sidder lige under teksten */
 @media (min-width:721px){.fwg iframe{margin-top:-56px}.fwhead{margin-bottom:-4px}}
+/* 17/11: kalenderen er første skærm; på mobil kun overskriften over den, så formularen ses med det samme */
+@media (max-width:720px){.fwhead .fh{display:none}.fwstep{gap:12px}}

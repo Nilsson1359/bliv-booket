@@ -94,14 +94,15 @@
     var o = { lid: S.lid, page: PAGE, answers: EN ? Object.assign({}, S.a, { _eur: eur() }) : S.a, name: S.name, email: S.email, phone: S.phone,
       step: S.booked ? 1 + S.q : 0, done: false, src: src, contact: !!f.contact, final: !!f.final, vid: ls('bk_vid') || '', sid: ls('bk_sid') || '' };
     // GHL-kalenderen vist: det serveren skal bruge til Meta CAPI, hvis bookingen først fanges af dens cron-reserve
-    if (f.trk) o.trk = { fbp: cookie('_fbp'), fbc: cookie('_fbc'), track: LIVE };
+    // shown = kalenderen vises nu (sessionens start), url = event_source_url, cid = GHL-kontakten, widgeten selv har meldt
+    if (f.trk) o.trk = { fbp: cookie('_fbp'), fbc: cookie('_fbc'), track: LIVE, url: location.origin + location.pathname + location.search, shown: !!f.shown, cid: S.cid || '' };
     return o;
   };
   var hasData = function () { return S.name || S.email || S.phone || Object.keys(S.a).length; };
   // f.contact = kontaktinfo bekræftet (GHL-kontakt + Telegram), f.final = spørgsmålene er færdige
   var saveNow = function (beacon, f) {
     clearTimeout(tSave); persist();
-    if (!hasData()) return Promise.resolve(true);
+    if (!hasData() && !f.force) return Promise.resolve(true);   // force: GHL-kalenderens anonyme session (intet udfyldt endnu)
     var body = JSON.stringify(payload(f));
     if (beacon && navigator.sendBeacon) { try { navigator.sendBeacon('/api/lead', new Blob([body], { type: 'application/json' })); return Promise.resolve(true); } catch (e) { } }
     if (inflight && !f) { again = true; return Promise.resolve(true); }
@@ -142,7 +143,7 @@
     $$('a[href="#ansoeg"],#applyBtn,[data-book]').forEach(function (a) { a.addEventListener('click', open); });
     $$('[data-fbm-close]', M).forEach(function (x) { x.addEventListener('click', close); });
     addEventListener('keydown', function (e) { if (e.key === 'Escape' && !M.hidden) close(); });
-    if (location.hash === '#ansoeg' || location.hash === '#book') setTimeout(open, 60);
+    if (/^#(ansoeg|book)/.test(location.hash)) setTimeout(open, 60);
   }
 
   // statuslinje uden trin-tæller: hurtig i starten, langsommere mod slutningen, aldrig 100 % før alt er sendt
@@ -181,7 +182,7 @@
     MC.remove('wide'); MC.remove('wg'); MC.toggle('end', !!(S.booked && S.final));
     if (S.booked && S.final) return renderDone();
     if (S.booked) return renderQ();
-    return renderContact();
+    return WIDGET ? renderWidget() : renderContact();   // dansk (17/11): GHL-kalenderen er første skærm, intet kontakttrin foran
   };
 
   // ── 1) kontakt + kalender på samme skærm ──
@@ -202,7 +203,6 @@
         : '<div class="fcalwrap" id="cWrap" aria-live="polite"></div>') + '</div>';
     B.scrollTop = 0;
     wireContact();
-    if (WIDGET) $('#cNext').onclick = goWidget;
     drawCal(false);
     focusFirst();
   };
@@ -228,7 +228,6 @@
         if (e.key !== 'Enter') return; e.preventDefault();
         if (k < F.length - 1) { $('#' + F[k + 1][0]).focus(); return; }
         el.blur(); var m = contactErr(); if (m) { err(m); return; }
-        if (WIDGET) { goWidget(); return; }
         scrollTo($('#cWrap'));
       });
     });
@@ -363,21 +362,18 @@
       ['utm_source', src.utm_source], ['utm_medium', src.utm_medium], ['utm_campaign', src.utm_campaign], ['utm_content', src.utm_content], ['fbclid', src.fbclid], ['redirect', 'false']];
     return WORIGIN + '/widget/booking/' + WCAL + '?' + p.filter(function (x) { return x[1]; }).map(function (x) { return x[0] + '=' + encodeURIComponent(x[1]); }).join('&');
   };
-  var goWidget = function () {
-    $$('.fin', B).forEach(function (el) { el.value = el.value.trim(); });
-    S.name = S.name.trim(); S.email = S.email.trim(); S.phone = S.phone.trim();
-    var m = contactErr(); if (m) { err(m); var bad = nameErr() ? '#cName' : telErr() ? '#cTel' : '#cMail'; $(bad).setAttribute('aria-invalid', 'true'); $(bad).focus(); return; }
-    confirmContact(); saveNow(false, { trk: true });
-    renderWidget();
-  };
   var sizer = false, wDone = false;
+  // 17/11 2026 (Oskars ordre): popup'en åbner direkte med GHL-kalenderen og dens egen formular (navn, telefon, mail, Instagram).
+  // Ved åbning oprettes en anonym ansøgnings-session i D1 (lid + fbp/fbc/utm/fbclid/IP/browser/adresse), så serveren kan koble
+  // bookingen og sende CAPI. Sidens adresse får #ansoeg-<lid-start>: GHL gemmer adressen på kontakten, så aftalen kan kobles sikkert.
   var renderWidget = function () {
     MC.add('wide'); MC.add('wg'); sizer = false;
-    prog(0.6, 'Gratis samtale · vælg din tid');
+    prog(0.08, 'Gratis samtale · 1 time med Oscar');
     loadEmbed();
+    if (M) try { history.replaceState(null, '', location.pathname + location.search + '#ansoeg-' + S.lid.slice(0, 13)); } catch (_) { }
+    saveNow(false, { trk: true, shown: true, force: true });
     B.innerHTML = '<div class="fstep fwstep">' +
-      '<div class="fwhead">' + head('Gratis strategisamtale med Oscar', 'Vælg din tid', 'Dine oplysninger er udfyldt. Skriv din Instagram eller hjemmeside, og vælg den tid, der passer dig. 1 time på Google Meet.') +
-      '<button type="button" class="fback fedit" id="wBack">Ret mine oplysninger</button></div>' +
+      '<div class="fwhead">' + head('Gratis strategisamtale med Oscar', 'Book din samtale', 'Skriv dine oplysninger, og vælg den tid, der passer dig. 1 time på Google Meet med Oscar.') + '</div>' +
       '<div class="fwg" id="wBox"><div class="fwload" id="wLoad"><i class="fspin" aria-hidden="true"></i>Henter Oscars kalender</div>' +
       '<iframe id="' + WID + '" title="Book din samtale med Oscar" allow="payment" scrolling="no" src="' + esc(wSrc()) + '"></iframe></div>' +
       '<p class="ferr" id="cErr" role="alert"></p></div>';
@@ -385,7 +381,6 @@
     var fr = $('#' + WID);
     fr.addEventListener('load', function () { setTimeout(wReady, 400); });
     setTimeout(wReady, 6000);
-    $('#wBack').onclick = function () { render(); };
     ev('bk:interact');   // track.js: formular rørt (kalenderen vist)
   };
   var wReady = function () { var b = $('#wBox'); if (b) b.classList.add('ready'); };
@@ -398,6 +393,14 @@
     if (typeof d === 'string' && d.indexOf('[iFrameSizer]' + WID + ':') === 0) { sizer = true; setH(+d.split(':')[1]); return; }
     if (!Array.isArray(d)) return;
     if (d[0] === 'highlevel.setHeight' && d[1] && !sizer) { setH(+d[1].height); return; }
+    // widgetens formular er sendt: den melder GHL-kontaktens id (bruges til at koble aftalen sikkert, også af cron-reserven)
+    if (d[0] === 'set-sticky-contacts' && d[1] === '_ud' && typeof d[2] === 'string') {
+      var u = null; try { u = JSON.parse(d[2]); } catch (x) { }
+      var id = u && (u.id || u.customer_id);
+      if (id && /^[A-Za-z0-9]{10,40}$/.test(id) && id !== S.cid) { S.cid = id; persist(); saveNow(false, { trk: true, force: true }); }
+      ev('bk:field', { f: 'kalender-formular' });
+      return;
+    }
     if (d[0] === 'msgsndr-booking-complete' && (!d[1] || !d[1].calendarId || d[1].calendarId === WCAL)) widgetBooked();
   });
   // kalenderen har booket: serveren bekræfter aftalen i GHL, før den tæller (og før pixel'en sendes)
@@ -418,13 +421,15 @@
       if (n === 2 && !S.booked) { S.booked = { start: null, at: Date.now() }; S.q = firstOpen(); persist(); render(); }
       if (n < WAIT.length) setTimeout(function () { confirmBooking(n + 1); }, WAIT[n]); else confirming = false;
     };
-    fetch('/api/widget-booked', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lid: S.lid, fbp: cookie('_fbp'), fbc: cookie('_fbc'), track: LIVE }), keepalive: true })
+    fetch('/api/widget-booked', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lid: S.lid, fbp: cookie('_fbp'), fbc: cookie('_fbc'), track: LIVE, url: location.origin + location.pathname + location.search, cid: S.cid || '', n: n }), keepalive: true })
       .then(function (r) { return r.json().catch(function () { return {}; }); })
       .then(function (x) {
         if (!x || !x.ok || !x.start) return retry();
         confirming = false;
         var wasShown = !!S.booked;
         S.booked = { start: x.start, end: x.end || null };
+        // kontaktoplysningerne kommer fra GHL-kalenderens formular (bruges til hilsen og tak-siden)
+        if (x.name) S.name = x.name; if (x.email) S.email = x.email; if (x.phone) S.phone = x.phone;
         if (x.ig) { if (x.ig.instagram && !S.a.instagram) S.a.instagram = x.ig.instagram; if (x.ig.hjemmeside && !S.a.hjemmeside) S.a.hjemmeside = x.ig.hjemmeside; }
         if (!wasShown) S.q = firstOpen();
         persist();
@@ -461,9 +466,9 @@
       var ex = S.a, crew = (ex.optraeder || '').split(', ').filter(Boolean);
       html = intro + head(kick, st.q, st.help) +
         '<div class="fgrid two">' +
-        '<label class="ff"><span>Instagram</span><input class="fin" id="xIg" autocomplete="off" autocapitalize="off" spellcheck="false" value="' + esc(ex.instagram || '') + '" placeholder="' + t('@ditnavn', '@yourname') + '"></label>' +
-        '<label class="ff"><span>' + t('Hjemmeside', 'Website') + '</span><input class="fin" id="xWeb" type="url" inputmode="url" autocapitalize="off" spellcheck="false" value="' + esc(ex.hjemmeside || '') + '" placeholder="' + t('www.ditnavn.dk', 'www.yourname.com') + '"></label></div>' +
-        '<label class="ff"><span>' + t('Om dig, og hvorfor du gerne vil have flere jobs', 'About you, and why you want more gigs') + '</span><textarea class="fin fta" id="xOm" rows="4" maxlength="2000" placeholder="' + t('Fx hvad du spiller, hvor længe du har spillet, og hvad du gerne vil nå det næste år', 'E.g. what you play, how long you have been playing, and what you want to achieve in the next year') + '">' + esc(ex.om || '') + '</textarea></label>' +
+        '<label class="ff"><span>Instagram</span><input class="fin" id="xIg" data-1p-ignore data-lpignore="true" data-form-type="other" autocomplete="off" autocapitalize="off" spellcheck="false" value="' + esc(ex.instagram || '') + '" placeholder="' + t('@ditnavn', '@yourname') + '"></label>' +
+        '<label class="ff"><span>' + t('Hjemmeside', 'Website') + '</span><input class="fin" id="xWeb" data-1p-ignore data-lpignore="true" data-form-type="other" autocomplete="off" type="url" inputmode="url" autocapitalize="off" spellcheck="false" value="' + esc(ex.hjemmeside || '') + '" placeholder="' + t('www.ditnavn.dk', 'www.yourname.com') + '"></label></div>' +
+        '<label class="ff"><span>' + t('Om dig, og hvorfor du gerne vil have flere jobs', 'About you, and why you want more gigs') + '</span><textarea class="fin fta" id="xOm" data-1p-ignore data-lpignore="true" data-form-type="other" autocomplete="off" rows="4" maxlength="2000" placeholder="' + t('Fx hvad du spiller, hvor længe du har spillet, og hvad du gerne vil nå det næste år', 'E.g. what you play, how long you have been playing, and what you want to achieve in the next year') + '">' + esc(ex.om || '') + '</textarea></label>' +
         '<p class="ff"><span>' + t('Hvordan optræder du?', 'How do you perform?') + '</span></p><div class="fchips" role="group" aria-label="' + t('Hvordan optræder du?', 'How do you perform?') + '">' + ['Solo', 'Duo', 'Trio / band'].map(function (o) { return '<button type="button" class="fchip" data-v="' + o + '" aria-pressed="' + (crew.indexOf(o) > -1) + '">' + o + '</button>'; }).join('') + '</div>' +
         '<p class="ferr" id="fErr" role="alert"></p><div class="fnav"><button type="button" class="fbtn" id="xSend">' + t('Færdiggør min ansøgning', 'Complete my application') + arrow + '</button>' + (k > 0 ? '<button type="button" class="fback" id="fBack">' + t('Tilbage', 'Back') + '</button>' : '') + '</div>';
     } else {
