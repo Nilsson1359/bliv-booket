@@ -1047,9 +1047,9 @@ const fbmUsedAppts = async env => new Set((await all(env.DB, `SELECT ghl_appt_id
 // Sessionen (lid) oprettes, når formen åbnes, uden navn/mail. Widgeten opretter selv GHL-kontakten, og GHL gemmer sidens
 // adresse, IP og browser på kontakten (lastAttributionSource). Vores side har #ansoeg-<lid-start> i adressen, mens kalenderen
 // vises, så kontakten bærer sessionens id. Sikkerhed for en kobling (højst først):
-//   3 = sessionens id i kontaktens side-adresse, 2 = samme GHL-kontakt/mail, som SERVEREN allerede har på leadet,
-//   1 = samme IP + browser fra formens side, 0 = ingen. Et kontakt-id, browseren sender, er aldrig bevis (sikkerhed 17/11).
-// Kun 1-3 bindes via browseren. Uden kobling: kun cron-reserven, og kun når det er entydigt (én session i tidsvinduet);
+//   3 = sessionens id i kontaktens side-adresse, 2 = en GHL-kontakt serveren selv har oprettet for sessionen,
+//   1 = samme mail (kan sættes af browseren) eller samme IP + browser, 0 = ingen. Et kontakt-id fra browseren er aldrig bevis.
+// Kun 2-3 bindes via browseren; 1 og 0 kun af cron-reserven, entydigt og markeret 'usikker'. Uden kobling: kun cron-reserven, og kun når det er entydigt (én session i tidsvinduet);
 // leadet markeres 'usikker' (admin + Telegram). Er det ikke entydigt, bindes intet, og det meldes til Telegram.
 const fbmLidTag = lid => 'ansoeg-' + String(lid).slice(0, 13);
 const fbmAttr = c => [c && c.lastAttributionSource, c && c.attributionSource].filter(Boolean);
@@ -1057,7 +1057,9 @@ const fbmFromForm = c => fbmAttr(c).some(a => /fuldtbooketmusiker\.dk/i.test(Str
 function fbmMatchScore(c, l, trk) {
   if (!c || !c.id) return 0;
   if (fbmAttr(c).some(a => String(a.url || '').includes('#' + fbmLidTag(l.id)))) return 3;
-  if (l.ghl_contact_id === c.id || (validEmail(l.email) && norm(c.email) === norm(l.email))) return 2;
+  // 2 kun når serveren SELV har oprettet kontakten for netop denne session (ghlnew). Mail kan browseren sætte, så den er svag.
+  if (l.ghl_contact_id === c.id && String(l.notified_flags || '').includes('ghlnew,')) return 2;
+  if (validEmail(l.email) && norm(c.email) === norm(l.email)) return 1;
   if (fbmFromForm(c) && trk.ip && trk.ua && fbmAttr(c).some(a => a.ip === trk.ip && a.userAgent === trk.ua)) return 1;
   return 0;
 }
@@ -1173,8 +1175,7 @@ async function handleWidgetBooked(request, env, ctx) {
   for (const e of pool.slice(0, 4)) {
     const c = await fbmGetContact(env, e.contactId); if (!c) continue;
     const sc = fbmMatchScore(c, lead, trk);
-    if (sc && (!best || sc > best.sc)) best = { e, c, sc };
-    if (sc >= 2) break;
+    if (sc >= 2) { best = { e, c, sc }; break; }   // svagere koblinger (mail, IP + browser) afgøres kun af cron-reserven
   }
   // ingen stærk kobling: browseren får 'pending', og cron-reserven afgør det (entydigt eller slet ikke)
   if (!best) return pending();
@@ -1208,8 +1209,14 @@ async function fbmWidgetSweep(env) {
     const c = await fbmGetContact(env, e.contactId); if (!c) continue;
     const open = pend.filter(x => !taken.has(x.l.id) && e.added >= x.shown - 2 * 60000);
     let best = null;
-    for (const x of open) { const sc = fbmMatchScore(c, x.l, x.trk); if (sc && (!best || sc > best.sc)) best = { ...x, sc }; }
+    const scored = open.map(x => ({ ...x, sc: fbmMatchScore(c, x.l, x.trk) })).filter(x => x.sc);
+    for (const x of scored) if (x.sc >= 2 && (!best || x.sc > best.sc)) best = x;
     let unsure = false;
+    if (!best && scored.length) {
+      // svag kobling (mail eller IP + browser): kun hvis præcis én session passer; ellers kun besked til admin
+      if (scored.length === 1) { best = scored[0]; unsure = true; }
+      else { await tgSend(env, `⚠️ GHL-kalenderen: en booking (${tgEsc(fbmWhen(e.start))}) passer svagt på ${scored.length} besøg. Den er IKKE koblet eller talt i Meta. Kontakt-id ${tgEsc(c.id)}.\nhttps://fuldtbooketmusiker.dk/admin`); continue; }
+    }
     if (!best) {
       if (!fbmFromForm(c)) continue;   // en aftale fra et andet sted (Oscars egne links) røres ikke
       // tidsvindue: sessioner, der viste kalenderen højst 60 min. før aftalen. Kun ENTYDIGT (præcis én session, og ingen anden
