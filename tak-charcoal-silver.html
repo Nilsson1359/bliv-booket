@@ -998,28 +998,8 @@ Booker gerne Oscar igen :-)</p><div class="who"><div class="av">M</div><div clas
 })();
 </script>
 
-<!-- Konvertering (24/9): tak-siden nås kun efter gennemført booking i GHL/zency.
-     Meta: standard-event Lead m. eventID (klar til CAPI-dedup). GTM: dataLayer-event
-     'booking_complete' som trigger for Google Ads/GA4-konvertering. Kun én gang pr. session. -->
-<script>
-(function(){
-  try{ if(sessionStorage.getItem('bk_conv')) return; sessionStorage.setItem('bk_conv','1'); }catch(e){}
-  var id='bk-'+Date.now()+'-'+Math.random().toString(36).slice(2,10);
-  if(window.fbq) fbq('track','Lead',{content_name:'Samtale booket',content_category:'booking'},{eventID:id});
-  window.dataLayer=window.dataLayer||[];
-  window.dataLayer.push({event:'booking_complete',event_id:id});
-  // Server-side kopi via Conversions API (Worker-relay, samme event_id = dedup hos Meta).
-  // Sendes lidt forsinket så pixelen når at sætte _fbp-cookien.
-  var q=new URLSearchParams(location.search), ck=function(n){var m=document.cookie.match('(?:^|; )'+n+'=([^;]*)');return m?decodeURIComponent(m[1]):''};
-  var qv=function(k){var v=(q.get(k)||'').trim();return /\{\{|\}\}|%7B%7B/i.test(v)?'':v;};
-  var fullName=(qv('name')||qv('first_name')).split(/\s+/);
-  setTimeout(function(){
-    try{ fetch('/api/conv',{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,body:JSON.stringify({
-      event_name:'Lead',event_id:id,url:location.href.split('?')[0],fbp:ck('_fbp'),fbc:ck('_fbc'),
-      fn:fullName[0]||'',ln:fullName.slice(1).join(' '),em:qv('email'),ph:qv('phone')
-    })}).catch(function(){}); }catch(e){}
-  },800);
-})();
-</script>
+<!-- Konvertering: sendes IKKE herfra længere (22/11 2026). Bookingen sendes til Meta (Schedule + Lead) og GTM fra formen
+     (fbm-form.js fireConv) og fra serveren (CAPI) med samme event_id'er. Den gamle Lead herfra (tilfældigt id) kunne give en
+     falsk Lead, hvis nogen åbnede tak-siden direkte eller i en ny fane. -->
 </body>
 </html>

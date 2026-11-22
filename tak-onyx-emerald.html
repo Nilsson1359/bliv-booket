@@ -824,7 +824,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <div class="ty-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12.5l4.5 4.5L19 7"/></svg></div>
       <h1>Din samtale er booket, <em id="tyName">og du har taget første skridt.</em></h1>
       <p class="lead">Du får en bekræftelse og en kalender-invitation på mail inden for et minut. <b>Det vigtigste nu:</b> accepter invitationen, så samtalen ligger fast i din kalender.</p>
-      <div class="cta-row"><span class="tagpill">Gratis · 30 min · online</span></div>
+      <div class="cta-row"><span class="tagpill">Gratis · 1 time · online</span></div>
     </div>
     <div class="when" id="when">
       <span class="k">Din samtale</span>
@@ -843,7 +843,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="sh rv"><div class="stack"><span class="eyebrow">Næste skridt</span><h2>Tre ting, der sikrer, at du får mest ud af samtalen</h2></div></div>
     <div class="steps3 lines">
       <div class="step imp"><span class="n">01 · Vigtigst</span><b>Accepter kalender-invitationen</b><p>Åbn mailen fra Bliv Booket og tryk "Ja" på invitationen. Tjek spam eller Kampagner-fanen, hvis den ikke er i indbakken.</p></div>
-      <div class="step"><span class="n">02</span><b>Sæt 30 minutter af, uforstyrret</b><p>Vær ved en computer med kamera og rolig baggrund. Link til mødet står i mailen. Samtalen holdes online.</p></div>
+      <div class="step"><span class="n">02</span><b>Sæt en time af, uforstyrret</b><p>Vær ved en computer med kamera og rolig baggrund. Link til mødet står i mailen. Samtalen holdes online.</p></div>
       <div class="step"><span class="n">03</span><b>Kan du ikke nå det, så ombook</b><p>Brug ombook-linket i mailen i stedet for at udeblive. Så holder vi pladsen til en anden musiker, og du får en ny tid.</p></div>
     </div>
   </div>
@@ -944,13 +944,15 @@ Booker gerne Oscar igen :-)</p><div class="who"><div class="av">M</div><div clas
     <p class="mono" style="color:rgba(244,239,231,.55)">Alle anmeldelser kan ses på <a href="https://dk.trustpilot.com/review/oscartjoensson.dk" target="_blank" rel="noopener" style="color:inherit">Trustpilot</a></p>
   </div>
 </section>
-<footer><div class="wrap"><span>© 2026 Bliv Booket™</span><span>Fuldt booket musiker på 90 dage</span></div></footer>
+<footer><div class="wrap"><span>© 2026 Bliv Booket™</span><span>Fuldt booket musiker på 90 dage</span><div class="legal"><a href="/privacy">Privacy Policy</a></div></div></footer>
 <script>document.querySelectorAll(".dg").forEach(d=>d.classList.add("dark"));</script>
 <script>
 (function(){
   document.documentElement.classList.add('js');
   const q=new URLSearchParams(location.search);
-  const name=(q.get('name')||q.get('first_name')||'').trim();
+  // GHL sender nogle gange flettefelter uudfyldt ({{contact.first_name}}): behandl dem som tomme
+  const qv=k=>{const v=(q.get(k)||'').trim();return /\{\{|\}\}|%7B%7B/i.test(v)?'':v;};
+  const name=(qv('name')||qv('first_name')).split(/\s+/)[0]||'';
   if(name){document.getElementById('tyName').textContent=name+'.';}
   // Robust parsing of whatever GHL sends: ISO, "Sep 29, 2026 2:00 PM", "29/09/2026 14:00", or date + time params
   const MON={jan:0,feb:1,mar:2,apr:3,may:4,maj:4,jun:5,jul:6,aug:7,sep:8,oct:9,okt:9,nov:10,dec:11};
@@ -966,12 +968,12 @@ Booker gerne Oscar igen :-)</p><div class="who"><div class="av">M</div><div clas
     if(m&&MON[m[2].toLowerCase()]!=null)return new Date(+m[3],MON[m[2].toLowerCase()],+m[1],+(m[4]||0),+(m[5]||0));
     return null;
   }
-  let start=parseWhen(q.get('start')||q.get('appointment_start')||q.get('start_time')||'');
-  if(!start&&q.get('date')){start=parseWhen(q.get('date')+' '+(q.get('time')||'00:00'));}
+  let start=parseWhen(qv('start')||qv('appointment_start')||qv('start_time')||'');
+  if(!start&&qv('date')){start=parseWhen(qv('date')+' '+(qv('time')||'00:00'));}
   if(start&&isNaN(start))start=null;
   const pad=n=>String(n).padStart(2,'0');
   if(start&&!isNaN(start)){
-    const end=new Date(start.getTime()+30*60000);
+    const end=new Date(start.getTime()+60*60000);
     document.getElementById('whenText').textContent=start.toLocaleDateString('da-DK',{weekday:'long',day:'numeric',month:'long'})+' kl. '+start.toLocaleTimeString('da-DK',{hour:'2-digit',minute:'2-digit'});
     const fmt=d=>d.getUTCFullYear()+pad(d.getUTCMonth()+1)+pad(d.getUTCDate())+'T'+pad(d.getUTCHours())+pad(d.getUTCMinutes())+'00Z';
     const g=document.getElementById('gcal');g.href=g.href+'&dates='+fmt(start)+'/'+fmt(end);
@@ -990,27 +992,8 @@ Booker gerne Oscar igen :-)</p><div class="who"><div class="av">M</div><div clas
 })();
 </script>
 
-<!-- Konvertering (24/9): tak-siden nås kun efter gennemført booking i GHL/zency.
-     Meta: standard-event Lead m. eventID (klar til CAPI-dedup). GTM: dataLayer-event
-     'booking_complete' som trigger for Google Ads/GA4-konvertering. Kun én gang pr. session. -->
-<script>
-(function(){
-  try{ if(sessionStorage.getItem('bk_conv')) return; sessionStorage.setItem('bk_conv','1'); }catch(e){}
-  var id='bk-'+Date.now()+'-'+Math.random().toString(36).slice(2,10);
-  if(window.fbq) fbq('track','Lead',{content_name:'Samtale booket',content_category:'booking'},{eventID:id});
-  window.dataLayer=window.dataLayer||[];
-  window.dataLayer.push({event:'booking_complete',event_id:id});
-  // Server-side kopi via Conversions API (Worker-relay, samme event_id = dedup hos Meta).
-  // Sendes lidt forsinket så pixelen når at sætte _fbp-cookien.
-  var q=new URLSearchParams(location.search), ck=function(n){var m=document.cookie.match('(?:^|; )'+n+'=([^;]*)');return m?decodeURIComponent(m[1]):''};
-  var fullName=(q.get('name')||q.get('first_name')||'').trim().split(/\s+/);
-  setTimeout(function(){
-    try{ fetch('/api/conv',{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,body:JSON.stringify({
-      event_name:'Lead',event_id:id,url:location.href.split('?')[0],fbp:ck('_fbp'),fbc:ck('_fbc'),
-      fn:fullName[0]||'',ln:fullName.slice(1).join(' '),em:q.get('email')||'',ph:q.get('phone')||''
-    })}).catch(function(){}); }catch(e){}
-  },800);
-})();
-</script>
+<!-- Konvertering: sendes IKKE herfra længere (22/11 2026). Bookingen sendes til Meta (Schedule + Lead) og GTM fra formen
+     (fbm-form.js fireConv) og fra serveren (CAPI) med samme event_id'er. Den gamle Lead herfra (tilfældigt id) kunne give en
+     falsk Lead, hvis nogen åbnede tak-siden direkte eller i en ny fane. -->
 </body>
 </html>

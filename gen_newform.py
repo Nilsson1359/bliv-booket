@@ -80,7 +80,8 @@ if LIVE:
     c, a2 = re.subn(r'<!-- Meta Pixel Code -->.*?<!-- End Meta Pixel Code -->\n', '', c, count=1, flags=re.S)
     c, a3 = re.subn(r'<!-- Google Tag Manager \(noscript\) -->.*?<!-- End Google Tag Manager \(noscript\) -->\n', '', c, count=1, flags=re.S)
     c, a4 = re.subn(r'<!-- Konvertering \(24/9\).*?</script>\n', '', c, count=1, flags=re.S)
-    assert (a1, a2, a3, a4) == (1, 1, 1, 1), ('tracking på tak-siden ikke fundet', a1, a2, a3, a4)
+    # a4: tak-sidens egen Lead-blok er fjernet 22/11 2026 (konverteringen sendes fra formen + CAPI), så 0 er også ok
+    assert (a1, a2, a3) == (1, 1, 1) and a4 in (0, 1), ('tracking på tak-siden ikke fundet', a1, a2, a3, a4)
     assert 'fbq(' not in c and 'googletagmanager' not in c and '/api/conv' not in c, 'tracking hænger ved på /bekraeftet'
     if '<meta name="robots"' not in c: c = c.replace('</head>', '<meta name="robots" content="noindex,nofollow">\n</head>', 1)
     open(D + ('confirmed.html' if INTL else 'bekraeftet.html'), 'w', encoding='utf-8').write(with_inline(c))
