@@ -1242,7 +1242,7 @@ async function fbmWidgetSweep(env) {
 // flyttet siden (stadiet uændret siden oprettelsen), som er mindst 5 min og højst 3 døgn gamle, og hvor kontakten ikke har en aktiv
 // aftale (i nogen kalender) med start efter kortet blev lavet. Kort, vi har flyttet, og som senere får en aftale (fx booket uden at
 // siden fangede det), flyttes tilbage til "Møde Booket". Bookinger via siden flytter selv kortet til "Møde Booket" (fbmOpp).
-// Meta røres ikke: Schedule + Lead sendes stadig kun ved en booking. Husk (D1 kv 'fbm_opp_lead'): {oppId: {ts, appt?, back?, chk?}}.
+// Meta røres ikke: Schedule + Lead sendes stadig kun ved en booking. Loggen viser kun opportunity-id'er, aldrig navne. Husk (D1 kv 'fbm_opp_lead'): {oppId: {ts, appt?, back?, chk?}}.
 const FBM_STAGE_LEAD = '6bca994b-ec12-4da4-9d5a-a5d3f60fce50';   // "Lead" i pipelinen "fuldt booket musiker"
 async function fbmHasAppt(env, cid, sinceMs) {
   const d = await ghl(env, 'GET', `/contacts/${cid}/appointments`, '2021-07-28');   // fejl kaster: så flyttes intet
@@ -1265,9 +1265,9 @@ async function fbmLeadStageSweep(env, dry) {
     if (Math.abs(ts(o.lastStageChangeAt) - made) > 5000) continue;          // nogen har flyttet kortet: rør det ikke
     if (!(o.attributions || []).some(a => a && a.mediumId === cal)) continue;  // ikke lavet af widgeten
     looked++;
-    if (await fbmHasAppt(env, o.contactId, made)) { mem[o.id] = { ts: now, appt: 1 }; res.kept.push(o.name); continue; }   // rigtigt møde
+    if (await fbmHasAppt(env, o.contactId, made)) { mem[o.id] = { ts: now, appt: 1 }; res.kept.push(o.id); continue; }   // rigtigt møde
     if (!dry) await ghl(env, 'PUT', `/opportunities/${o.id}`, '2021-07-28', { pipelineId: F.pipeline, pipelineStageId: FBM_STAGE_LEAD });
-    mem[o.id] = { ts: now, chk: now }; res.moved.push(o.name);
+    mem[o.id] = { ts: now, chk: now }; res.moved.push(o.id);
     await save();
   }
   // 2) kort, vi flyttede til "Lead", som nu har en aftale -> tilbage til "Møde Booket" (højst 2 opslag, ældst tjekkede først)
@@ -1278,7 +1278,7 @@ async function fbmLeadStageSweep(env, dry) {
     const m = mem[o.id]; m.chk = now;
     if (await fbmHasAppt(env, o.contactId, ts(o.createdAt))) {
       if (!dry) await ghl(env, 'PUT', `/opportunities/${o.id}`, '2021-07-28', { pipelineId: F.pipeline, pipelineStageId: F.stageQ });
-      m.back = 1; res.back.push(o.name);
+      m.back = 1; res.back.push(o.id);
     }
   }
   await save();
