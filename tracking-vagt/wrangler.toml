@@ -1,0 +1,22 @@
+# Ugentligt tracking-tjek (22/11 2026, Oskar): sammenligner bookinger og leads i vores databaser med det, Meta har modtaget,
+# og scanner de live sider for pixel-fejl. Sender resultatet som FarPreben på Telegram. Kun læsning: skriver intet nogen steder.
+name = "tracking-vagt"
+main = "worker.js"
+compatibility_date = "2026-09-01"
+workers_dev = false
+
+[triggers]
+crons = ["0 7 * * 1"]   # mandag kl. 08 (dansk vintertid), 09 om sommeren
+
+[[d1_databases]]
+binding = "FBM"          # fuldtbooketmusiker.dk (bookinger, besøg)
+database_name = "fbm-analytics"
+database_id = "3a75c854-14a7-4193-ac09-a13e17a6ff22"
+
+[[d1_databases]]
+binding = "PLAT"         # platformen (kunder, pixels, leads). Kun SELECT.
+database_name = "fbm-client"
+database_id = "e1529be3-2592-40c1-a9c5-6bcaea1c244c"
+
+# secrets: META_TOKEN (system-bruger "Fuldt Booket v2", kun læsning af pixel-statistik), TG_TOKEN + TG_CHAT (FarPreben_bot -> Oskar).
+# FarPreben pollles af Byens Maler CRM: denne Worker SENDER kun (sendMessage), aldrig getUpdates.
