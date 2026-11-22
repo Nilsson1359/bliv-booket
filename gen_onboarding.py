@@ -16,7 +16,7 @@ FORM_ID = 'zqMwbdFBvHqQL3FB7XB3'
 
 head = src[:src.index('</style>') + len('</style>')]
 # drop GTM + Meta Pixel + track.js
-head = re.sub(r'<!-- Google Tag Manager -->.*?<script src="/track.js" async></script>\n', '', head, flags=re.S)
+head = re.sub(r'<!-- (?:Google Tag Manager|GTM fjernet|Meta Pixel Code).*?<script src="/track.js" async></script>\n', '', head, count=1, flags=re.S)
 head = re.sub(r'<title>.*?</title>', '<title>Onboarding · Bliv Booket</title>', head)
 assert 'fbq(' not in head and 'googletagmanager' not in head and '<style>' in head
 

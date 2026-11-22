@@ -3,13 +3,7 @@
 <head>
 <meta charset="utf-8">
 <script>if(location.protocol==="http:"&&!/^(localhost|127\.)/.test(location.hostname))location.replace("https://"+location.host+location.pathname+location.search+location.hash)</script>
-<!-- Google Tag Manager -->
-<script>if(!/[?&]nt=1\b/.test(location.search))(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-})(window,document,'script','dataLayer','GTM-KT972CQV');</script>
-<!-- End Google Tag Manager -->
+<!-- GTM fjernet 22/11 2026: containeren GTM-KT972CQV havde kun ét tag, en Meta-pixel-PageView oven i pixlen herunder (= dobbelt PageView). -->
 <!-- Meta Pixel Code -->
 <script>
 if(!/[?&]nt=1\b/.test(location.search)){
@@ -21,6 +15,7 @@ n.queue=[];t=b.createElement(e);t.async=!0;
 t.src=v;s=b.getElementsByTagName(e)[0];
 s.parentNode.insertBefore(t,s)}(window, document,'script',
 'https://connect.facebook.net/en_US/fbevents.js');
+fbq.disablePushState = true;   // ingen ekstra PageView, når adressen ændres (#ansoeg-…, ankre); én sidevisning = én PageView
 fbq('init', '1708597793574696');
 fbq('track', 'PageView');
 }
@@ -811,10 +806,6 @@ h1{font-weight:600;font-size:clamp(2.4rem,4.4vw,4rem);line-height:1.02}h1 em{fon
 </style>
 </head>
 <body>
-<!-- Google Tag Manager (noscript) -->
-<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KT972CQV"
-height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
-<!-- End Google Tag Manager (noscript) -->
 
 <header class="nav" id="nav"><div class="wrap">
   <a class="logo" href="index.html" aria-label="Bliv Booket"><span class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>Bliv Booket<sup>™</sup></a>

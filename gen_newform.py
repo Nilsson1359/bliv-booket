@@ -51,7 +51,7 @@ if not LIVE:
     out, n2 = re.subn(r'<!-- Meta Pixel Code -->.*?<!-- End Meta Pixel Code -->\n', '', out, count=1, flags=re.S)
     out, n3 = re.subn(r'<!-- Google Tag Manager \(noscript\) -->.*?<!-- End Google Tag Manager \(noscript\) -->\n', '', out, count=1, flags=re.S)
     out, n4 = re.subn(r'<script src="/track.js" async></script>\n', '', out, count=1)
-    assert (n1, n2, n3, n4) == (1, 1, 1, 1), ('tracking-blokke ikke fundet', n1, n2, n3, n4)
+    assert n1 in (0, 1) and n3 in (0, 1) and (n2, n4) == (1, 1), ('tracking-blokke ikke fundet', n1, n2, n3, n4)   # GTM fjernet 22/11 2026
     out = out.replace('<meta name="robots" content="noindex">', '<meta name="robots" content="noindex,nofollow">')
     out = out.replace('<title>Bliv Booket</title>', '<title>Bliv Booket · ny ansøgningsform</title>')
 
@@ -81,7 +81,7 @@ if LIVE:
     c, a3 = re.subn(r'<!-- Google Tag Manager \(noscript\) -->.*?<!-- End Google Tag Manager \(noscript\) -->\n', '', c, count=1, flags=re.S)
     c, a4 = re.subn(r'<!-- Konvertering \(24/9\).*?</script>\n', '', c, count=1, flags=re.S)
     # a4: tak-sidens egen Lead-blok er fjernet 22/11 2026 (konverteringen sendes fra formen + CAPI), så 0 er også ok
-    assert (a1, a2, a3) == (1, 1, 1) and a4 in (0, 1), ('tracking på tak-siden ikke fundet', a1, a2, a3, a4)
+    assert a2 == 1 and a1 in (0, 1) and a3 in (0, 1) and a4 in (0, 1), ('tracking på tak-siden ikke fundet', a1, a2, a3, a4)   # GTM fjernet 22/11 2026
     assert 'fbq(' not in c and 'googletagmanager' not in c and '/api/conv' not in c, 'tracking hænger ved på /bekraeftet'
     if '<meta name="robots"' not in c: c = c.replace('</head>', '<meta name="robots" content="noindex,nofollow">\n</head>', 1)
     open(D + ('confirmed.html' if INTL else 'bekraeftet.html'), 'w', encoding='utf-8').write(with_inline(c))
