@@ -1235,6 +1235,56 @@ async function fbmWidgetSweep(env) {
   return res;
 }
 
+// ─── Et lead er ikke et møde (22/11 2026, Oskars ordre) ───
+// GHL-kalenderen (widgeten) opretter selv kontakt + opportunity i "Møde Booket", så snart dens formular er sendt, FØR en tid er valgt.
+// Så stod halve ansøgninger som møder i GHL og i platformen (Charlie 22/11). Kort fra widgeten uden en aftale flyttes til "Lead"
+// (platformen viser dem som "ny"). Kun kort, som widgeten selv har lavet (attribution mediumId = widget-kalenderen), som ingen har
+// flyttet siden (stadiet uændret siden oprettelsen), som er mindst 5 min og højst 3 døgn gamle, og hvor kontakten ikke har en aktiv
+// aftale (i nogen kalender) med start efter kortet blev lavet. Kort, vi har flyttet, og som senere får en aftale (fx booket uden at
+// siden fangede det), flyttes tilbage til "Møde Booket". Bookinger via siden flytter selv kortet til "Møde Booket" (fbmOpp).
+// Meta røres ikke: Schedule + Lead sendes stadig kun ved en booking. Husk (D1 kv 'fbm_opp_lead'): {oppId: {ts, appt?, back?, chk?}}.
+const FBM_STAGE_LEAD = '6bca994b-ec12-4da4-9d5a-a5d3f60fce50';   // "Lead" i pipelinen "fuldt booket musiker"
+async function fbmHasAppt(env, cid, sinceMs) {
+  const d = await ghl(env, 'GET', `/contacts/${cid}/appointments`, '2021-07-28');   // fejl kaster: så flyttes intet
+  return (d.events || []).some(e => e && !e.deleted && fbmApptOk(e.appointmentStatus || e.appoinmentStatus)
+    && !(Date.parse(String(e.startTime || '').replace(' ', 'T') + (/[zZ]|[+-]\d\d:?\d\d$/.test(String(e.startTime || '')) ? '' : 'Z')) < sinceMs - 86400000));
+}
+async function fbmLeadStageSweep(env, dry) {
+  if (!env.DB || !env.GHL_TOKEN || !env.GHL_LOCATION_ID || !fbmWidgetCal(env)) return { skipped: true };
+  const F = FBM_APP, cal = fbmWidgetCal(env), now = Date.now(), ts = v => Date.parse(v || '') || 0, res = { moved: [], back: [], kept: [] };
+  const mem = await kvGet(env.DB, 'fbm_opp_lead', {});
+  for (const k of Object.keys(mem)) if (now - mem[k].ts > 14 * 86400000) delete mem[k];
+  const save = () => dry ? null : kvPut(env.DB, 'fbm_opp_lead', mem).catch(e => console.log('fbm_opp_lead', String(e)));
+  const q = `/opportunities/search?location_id=${env.GHL_LOCATION_ID}&pipeline_id=${F.pipeline}&status=open&order=added_desc&limit=20&pipeline_stage_id=`;
+  // 1) nye widget-kort i "Møde Booket" uden aftale -> "Lead" (højst 3 opslag pr. kørsel)
+  let looked = 0;
+  for (const o of ((await ghl(env, 'GET', q + F.stageQ, '2021-07-28')).opportunities || [])) {
+    if (looked >= 3) break;
+    const made = ts(o.createdAt);
+    if (!made || now - made < 5 * 60000 || now - made > 3 * 86400000 || mem[o.id]) continue;
+    if (Math.abs(ts(o.lastStageChangeAt) - made) > 5000) continue;          // nogen har flyttet kortet: rør det ikke
+    if (!(o.attributions || []).some(a => a && a.mediumId === cal)) continue;  // ikke lavet af widgeten
+    looked++;
+    if (await fbmHasAppt(env, o.contactId, made)) { mem[o.id] = { ts: now, appt: 1 }; res.kept.push(o.name); continue; }   // rigtigt møde
+    if (!dry) await ghl(env, 'PUT', `/opportunities/${o.id}`, '2021-07-28', { pipelineId: F.pipeline, pipelineStageId: FBM_STAGE_LEAD });
+    mem[o.id] = { ts: now, chk: now }; res.moved.push(o.name);
+    await save();
+  }
+  // 2) kort, vi flyttede til "Lead", som nu har en aftale -> tilbage til "Møde Booket" (højst 2 opslag, ældst tjekkede først)
+  const ours = ((await ghl(env, 'GET', q + FBM_STAGE_LEAD, '2021-07-28')).opportunities || [])
+    .filter(o => { const m = mem[o.id]; return m && !m.appt && !m.back && now - m.ts < 3 * 86400000 && ts(o.lastStageChangeAt) <= m.ts + 60000; })
+    .sort((a, b) => (mem[a.id].chk || 0) - (mem[b.id].chk || 0)).slice(0, 2);
+  for (const o of ours) {
+    const m = mem[o.id]; m.chk = now;
+    if (await fbmHasAppt(env, o.contactId, ts(o.createdAt))) {
+      if (!dry) await ghl(env, 'PUT', `/opportunities/${o.id}`, '2021-07-28', { pipelineId: F.pipeline, pipelineStageId: F.stageQ });
+      m.back = 1; res.back.push(o.name);
+    }
+  }
+  await save();
+  return res;
+}
+
 // Spørgsmålene efter bookingen er færdige (partial=false) eller de forlod dem (partial=true, fra fbmSmsJob efter 15 min):
 // info-score i D1, svar i GHL-felter (kun på vores egen kontakt) + note med alt + Telegram. Idempotent via flag.
 async function fbmFinalize(env, lid, partial) {
@@ -1757,6 +1807,7 @@ export default {
     if (event.cron === '*/5 * * * *') ctx.waitUntil((async () => {
       await fbmWidgetSweep(env).then(r => { if (r && r.claimed) console.log('fbmWidgetSweep', JSON.stringify(r)); }).catch(err => console.log('fbmWidgetSweep', String(err)));
       await fbmSmsJob(env).catch(err => console.log('fbmSmsJob', String(err)));
+      await fbmLeadStageSweep(env).then(r => { if (r && (r.moved?.length || r.back?.length)) console.log('fbmLeadStageSweep', JSON.stringify(r)); }).catch(err => console.log('fbmLeadStageSweep', String(err)));
     })());
     else ctx.waitUntil(salesSync(env).catch(err => console.log('salesSync', String(err))));
   },
