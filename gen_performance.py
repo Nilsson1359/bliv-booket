@@ -45,7 +45,6 @@ SECTION = f'''<!-- SÅDAN BETALER DU (performance, gen_performance.py) -->
         <div class="pay-row"><span>Opstart</span><b>0 kr.</b></div>
         <div class="pay-row"><span>Hver måned</span><b>0 kr.</b></div>
         <div class="pay-row"><span>Et booket job</span><b>En aftalt andel</b></div>
-        <div class="pay-row"><span>Annoncer hos Meta</span><b>Betaler du selv</b></div>
         <div class="pay-row tot"><span>Ingen jobs</span><b>0 kr. til os</b></div>
         <p class="pay-note">Andelen aftaler vi med dig, før vi går i gang, så du altid ved, hvad et job giver dig.</p>
       </div>
