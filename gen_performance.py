@@ -18,7 +18,7 @@ CK = '<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="curren
 rep('<span class="pill"><span>Et 90-dages <span class="nw">gjort-for-dig-system</span></span></span>',
     '<span class="pill"><span>Ingen fast pris. <span class="nw">Du betaler kun for jobs</span></span></span>')
 rep('På 90 dage hjælper vi dig med at finde de rigtige kunder, vise hvorfor de skal vælge dig og bygge et system, der skaber nye henvendelser, også når du ikke selv leder efter jobs.',
-    'Vi finder de rigtige kunder, viser hvorfor de skal vælge dig og bygger et system, der skaber nye henvendelser. Du betaler ingenting for at komme i gang. Vi tager en andel af de jobs, vi skaffer dig. Ingen jobs, ingen regning.')
+    'Vi finder de rigtige kunder, viser hvorfor de skal vælge dig og bygger et system, der skaber nye henvendelser. Du betaler os ingenting for at komme i gang. Vi tager en andel af de jobs, vi skaffer dig. Ingen jobs, ingen regning fra os.')
 rep('<div><b>90 dage</b>fra start til fuld kalender</div>', '<div><b>0 kr. i fast pris</b>du betaler kun, når du bliver booket</div>')
 rep('<p class="fx-sub">90 dage · Gjort for dig · Du møder op til de gigs, vi booker ind til dig.</p>',
     '<p class="fx-sub">Ingen fast pris · Gjort for dig · Du betaler kun for de jobs, vi booker ind til dig.</p>')
@@ -32,12 +32,12 @@ SECTION = f'''<!-- SÅDAN BETALER DU (performance, gen_performance.py) -->
   <div class="wrap stack-lg">
     <div class="sh rv">
       <div class="stack"><span class="eyebrow">Sådan betaler du</span><h2>Du betaler kun, når vi skaffer dig et job</h2></div>
-      <p class="lead">Ingen opstartspris og ingen månedlig regning. Vi tjener kun penge, når du gør. Derfor har vi samme mål som dig: flere gode jobs i din kalender.</p>
+      <p class="lead">Ingen opstartspris og ingen månedlig regning fra os. Vi tjener kun penge, når du gør. Derfor har vi samme mål som dig: flere gode jobs i din kalender.</p>
     </div>
     <div class="pay-steps">
-      <div class="pc rv"><span class="pay-n">1</span><p class="h4">Vi bygger det hele</p><p>Videoer, annoncer, side og opfølgning. Det koster dig 0 kr. at komme i gang.</p></div>
+      <div class="pc rv"><span class="pay-n">1</span><p class="h4">Vi bygger det hele</p><p>Videoer, annoncer, side og opfølgning. Du betaler os 0 kr. for at komme i gang.</p></div>
       <div class="pc rv" data-d="1"><span class="pay-n">2</span><p class="h4">Kunden booker dig</p><p>Du spiller jobbet og får betalingen fra kunden, præcis som du plejer.</p></div>
-      <div class="pc rv" data-d="2"><span class="pay-n">3</span><p class="h4">Vi får en andel af jobbet</p><p>Kun af de jobs, der kommer gennem systemet. Dine egne kunder og anbefalinger røres ikke.</p></div>
+      <div class="pc rv" data-d="2"><span class="pay-n">3</span><p class="h4">Vi får en andel af jobbet</p><p>Når et job er booket, får vi vores andel. Resten er dit.</p></div>
     </div>
     <div class="two top">
       <div class="pc rv stack pay-calc" style="gap:14px">
@@ -45,12 +45,13 @@ SECTION = f'''<!-- SÅDAN BETALER DU (performance, gen_performance.py) -->
         <div class="pay-row"><span>Opstart</span><b>0 kr.</b></div>
         <div class="pay-row"><span>Hver måned</span><b>0 kr.</b></div>
         <div class="pay-row"><span>Et booket job</span><b>En aftalt andel</b></div>
-        <div class="pay-row tot"><span>Ingen jobs</span><b>Ingen regning</b></div>
+        <div class="pay-row"><span>Annoncer hos Meta</span><b>Betaler du selv</b></div>
+        <div class="pay-row tot"><span>Ingen jobs</span><b>0 kr. til os</b></div>
         <p class="pay-note">Andelen aftaler vi med dig, før vi går i gang, så du altid ved, hvad et job giver dig.</p>
       </div>
       <div class="stack rv" data-d="2" style="gap:14px">
-        <div class="pair"><p class="big">Vi tager risikoen sammen med dig.</p><p class="lead">Du skal ikke betale for et forløb og håbe på, at det virker. Hvis systemet ikke skaffer dig jobs, har det ikke kostet dig noget.</p></div>
-        <ul class="pay-list"><li>0 kr. i opstart og 0 kr. om måneden</li><li>Du betaler kun for bookede jobs</li><li>Du ser hver henvendelse og hvert job i din egen app</li></ul>
+        <div class="pair"><p class="big">Vi tager risikoen sammen med dig.</p><p class="lead">Du skal ikke betale for et forløb og håbe på, at det virker. Hvis systemet ikke skaffer dig jobs, får vi ingenting.</p></div>
+        <ul class="pay-list"><li>0 kr. til os i opstart og om måneden</li><li>Du betaler kun for bookede jobs</li><li>Du ser hver henvendelse og hvert job i din egen app</li></ul>
         <div><a class="btn" href="#ansoeg" data-magnet>Ansøg nu om en plads <span class="ar" aria-hidden="true">{CK}</span></a></div>
       </div>
     </div>
@@ -64,7 +65,7 @@ CSS = '''<style>/* performance (gen_performance.py): kun temaets variabler */
 .pay-steps .pc{display:flex;flex-direction:column;gap:8px}
 .pay-n{font-family:var(--serif,Georgia,serif);font-size:2.2rem;line-height:1;color:var(--accent)}
 .pay-calc .pay-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);color:var(--ink2)}
-.pay-calc .pay-row b{color:var(--ink);font-size:1.2rem;text-align:right}
+.pay-calc .pay-row span{white-space:nowrap}.pay-calc .pay-row b{color:var(--ink);font-size:1.2rem;text-align:right}
 .pay-calc .pay-row.tot{border-bottom:0}.pay-calc .pay-row.tot b{color:var(--accent);font-size:1.5rem}
 .pay-note{color:var(--ink2);margin:0}
 .pay-list{list-style:none;margin:0;padding:0;display:grid;gap:10px}
