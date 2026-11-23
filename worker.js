@@ -425,7 +425,7 @@ async function tgSend(env, text) {
 }
 function leadText(title, l) {
   let ans = {}; try { ans = JSON.parse(l.answers_json || '{}'); } catch { }
-  const lines = [`<b>${tgEsc(title)} · ${tgEsc(LEAD_PAGES[l.page] || l.page)}</b>`];
+  const lines = [`<b>${tgEsc(title)} · ${tgEsc(LEAD_PAGES[l.page] || l.page)}${l.page === 'ansoegning' && fbmPerf(l) ? ' · /performance' : ''}</b>`];
   if (l.name) lines.push('👤 ' + tgEsc(l.name));
   if (l.phone) lines.push('📞 ' + tgEsc(e164(l.phone) || l.phone));
   if (l.email) lines.push('✉️ ' + tgEsc(l.email));
@@ -894,7 +894,15 @@ const fbmOptraeder = v => String(v || '').split(', ').filter(x => FBM_APP.optrae
 
 const fbmContactOk = l => (l.name || '').trim().length >= 2 && validEmail((l.email || '').trim()) && phoneDigits(l.phone).length >= 8;
 const fbmEn = l => l.page === 'international';
-const fbmTags = l => ['fbm-ansoegning', ...(fbmEn(l) ? ['fbm-international', 'sprog-engelsk'] : [])];
+// /performance (23/11 2026): ansøgeren har set tilbuddet "betal kun for jobs" (split-test mod forsiden). Sælgeren skal vide det.
+// Siden: kalenderens adresse (trk.url), ellers den første side i besøget (src.landing, sendes fra første gem, før GHL-kontakten laves)
+const fbmPerf = l => {
+  const isP = p => /^\/performance\/?$/.test(String(p || ''));
+  try { const u = fbmTrkOf(l).url; if (u) return isP(new URL(u).pathname); } catch { }
+  try { return isP(JSON.parse(l.src_json || '{}').landing); } catch { return false; }
+};
+const PERF_NOTE = ' Kom fra /performance: har set tilbuddet "ingen fast pris, betal kun en andel af de jobs, vi skaffer".';
+const fbmTags = l => ['fbm-ansoegning', ...(fbmEn(l) ? ['fbm-international', 'sprog-engelsk'] : []), ...(fbmPerf(l) ? ['fbm-performance'] : [])];
 const MAX_GHL_CONTACTS_PER_IP_DAY = 5;
 
 // Kontakt bekræftet i formen (felterne udfyldt og forladt, eller tid valgt): Telegram + GHL-kontakt med det samme
@@ -933,11 +941,11 @@ async function fbmCreateContact(env, l) {
   const ours = !contactId;
   if (!ours) {
     await ghl(env, 'POST', `/contacts/${contactId}/tags`, '2021-07-28', { tags: fbmTags(l) }).catch(e => console.log('fbm tags', e.message));
-    await ghl(env, 'POST', `/contacts/${contactId}/notes`, '2021-07-28', { body: [`Startede en ansøgning på fuldtbooketmusiker.dk${en ? '/international' : ''}.`,
+    await ghl(env, 'POST', `/contacts/${contactId}/notes`, '2021-07-28', { body: [`Startede en ansøgning på fuldtbooketmusiker.dk${en ? '/international' : ''}.${fbmPerf(l) ? PERF_NOTE : ''}`,
       `Kontakten fandtes i forvejen, så navn/telefon/felter er IKKE ændret. Oplyst i formen: ${l.name.trim()} · ${email} · ${l.phone}`].join('\n') }).catch(e => console.log('fbm note', e.message));
   } else {
     const contact = { locationId: L, name: l.name.trim(), firstName: parts[0], lastName: parts.slice(1).join(' ') || undefined, email, phone: phone || undefined,
-      tags: fbmTags(l), source: 'fuldtbooketmusiker.dk/' + (en ? 'international' : 'ansoegning'),
+      tags: fbmTags(l), source: 'fuldtbooketmusiker.dk/' + (en ? 'international' : fbmPerf(l) ? 'performance' : 'ansoegning'),
       customFields: fbmFieldList([['utm_source', src.utm_source], ['utm_medium', src.utm_medium], ['utm_campaign', src.utm_campaign], ['utm_content', src.utm_content], ['event_id', 'fbm-' + l.id]]) };
     Object.keys(contact).forEach(k => contact[k] === undefined && delete contact[k]);
     // afviser GHL et felt, prøver vi igen uden custom fields
@@ -945,7 +953,7 @@ async function fbmCreateContact(env, l) {
       .catch(e => { console.log('fbm kontakt m. felter', e.message); delete contact.customFields; return ghl(env, 'POST', '/contacts/', '2021-07-28', contact); });
     contactId = c.contact && c.contact.id;
     if (!contactId) throw new Error('GHL gav intet contact.id');
-    await ghl(env, 'POST', `/contacts/${contactId}/notes`, '2021-07-28', { body: `Startede en ansøgning på fuldtbooketmusiker.dk${en ? '/international' : ''} (kontaktinfo udfyldt, ikke booket endnu).` }).catch(e => console.log('fbm note', e.message));
+    await ghl(env, 'POST', `/contacts/${contactId}/notes`, '2021-07-28', { body: `Startede en ansøgning på fuldtbooketmusiker.dk${en ? '/international' : ''} (kontaktinfo udfyldt, ikke booket endnu).${fbmPerf(l) ? PERF_NOTE : ''}` }).catch(e => console.log('fbm note', e.message));
   }
   // Ingen opportunity på kontakt-trinnet (Oskars ordre 14/11: GHL skal opføre sig som før). Den oprettes/flyttes først ved
   // bookingen, direkte til "Møde Booket", så evt. workflows på pipeline-stadier ser præcis det samme som før.
@@ -985,7 +993,7 @@ async function fbmGhlBook(env, lead, startMs, endMs, fbm) {
   // note, pipeline og Meet-link efter svaret til kunden
   const after = async () => {
     let src = {}; try { src = JSON.parse(lead.src_json || '{}'); } catch { }
-    const note = [`Strategisamtale booket fra fuldtbooketmusiker.dk${en ? '/international (ENGELSK, land: ' + (lead.country || '?') + ')' : ''}: ${fbmWhen(startMs)}.`,
+    const note = [`Strategisamtale booket fra fuldtbooketmusiker.dk${en ? '/international (ENGELSK, land: ' + (lead.country || '?') + ')' : ''}: ${fbmWhen(startMs)}.${fbmPerf(lead) ? PERF_NOTE : ''}`,
       'Spørgsmålene kommer efter bookingen ("sidste trin"). Svarene lægges på kontakten, når de er udfyldt (eller efter 15 min med det, der er svaret).',
       ...(!ours ? ['', 'Kontakten fandtes i forvejen, så navn/telefon/felter er ikke ændret.'] : []),
       ...([src.utm_source, src.utm_campaign, src.utm_content].some(Boolean) ? ['', 'Kilde: ' + [src.utm_source, src.utm_campaign, src.utm_content].filter(Boolean).join(' / ')] : [])].join('\n');
