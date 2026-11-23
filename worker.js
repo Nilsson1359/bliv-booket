@@ -901,7 +901,7 @@ const fbmPerf = l => {
   try { const u = fbmTrkOf(l).url; if (u) return isP(new URL(u).pathname); } catch { }
   try { return isP(JSON.parse(l.src_json || '{}').landing); } catch { return false; }
 };
-const PERF_NOTE = ' Kom fra /performance: har set tilbuddet "ingen fast pris, betal kun en andel af de jobs, vi skaffer".';
+const PERF_NOTE = ' Kom fra /performance: har set tilbuddet "du betaler kun for de gigs, der kommer igennem os".';
 const fbmTags = l => ['fbm-ansoegning', ...(fbmEn(l) ? ['fbm-international', 'sprog-engelsk'] : []), ...(fbmPerf(l) ? ['fbm-performance'] : [])];
 const MAX_GHL_CONTACTS_PER_IP_DAY = 5;
 
