@@ -1829,6 +1829,9 @@ export default {
       const host = Object.keys(OSCAR_HOSTS).find(h => OSCAR_HOSTS[h] === p.replace(/\//g, ''));
       return Response.redirect(`https://${host}/${url.search}`, 301);
     }
+    // Onboarding sker nu i platformen, når musikeren logger ind (Oskar 23/11: intet nyt i GHL). Den gamle GHL-formular på
+    // /onboarding er erstattet af et link videre til platformens login (gen_onboarding.py bygger stadig siden, men den vises ikke).
+    if (!gig && (p === '/onboarding' || p === '/onboarding/' || p === '/onboarding.html')) return Response.redirect('https://client.fuldtbooketmusiker.dk/login', 302);
     try {
       if (p === '/api/sales-feed' || p.startsWith('/api/sales-feed/')) {
         if (!(await salesFeedOk(request, env))) return json({ error: 'unauthorized' }, 401);
