@@ -158,7 +158,7 @@ const all = async (db, sql, ...p) => (await db.prepare(sql).bind(...p).all()).re
 const one = async (db, sql, ...p) => (await db.prepare(sql).bind(...p).first()) || {};
 
 // Hvad tæller som hvad på fuldtbooketmusiker.dk (engelsk version under /international/ tæller med i samme funnel; skelnes via path)
-const isFront = p => p === '/' || p === '/international/';
+const isFront = p => p === '/' || p === '/international/' || p === '/performance';   // /performance: forsiden med performance-modellen (23/11)
 const isTak = p => p === '/tak' || p === '/international/thanks';
 const CONF = {
   ctaType: 'booking_open', callsMails: false, sections: false,

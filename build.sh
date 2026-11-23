@@ -16,6 +16,8 @@ cp privacy.html _site/privacy.html       # engelsk privatlivspolitik for fuldtbo
 cp fbm-form.js _site/fbm-form.js && python3 gen_newform.py >/dev/null
 # LIVE fra 4/11 2026 (Oskars ordre): forsiden bruger ansøgningsformen i stedet for GHL-kalender-pop-up'en. Slå fra ved at fjerne linjen.
 python3 gen_newform.py --live >/dev/null
+# /performance (Oskar 23/11 2026): forsiden med performance-modellen (betal kun for jobs), bygget fra _site/index.html. Forsiden selv er uændret.
+python3 gen_performance.py
 # ENGELSK version (8/11 2026): /international (+ /international/thanks og /confirmed). Kilde: international.html + tak-international.html
 mkdir -p _site/international && cp international.html _site/international/index.html && cp tak-international.html _site/international/thanks.html && perl -pi -e 's#(["\x27(])media/#$1/media/#g' _site/international/index.html _site/international/thanks.html && python3 gen_newform.py --intl >/dev/null
 cp _headers _site/_headers
